@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Orbit · Your Content Calendar</title>
+
+<!--
+  ============================================================
+  ORBIT CLIENT DASHBOARD  ·  client.html
+  Read-only, server-scoped mirror. Deploy in the wwatelier/orbit repo
+  alongside index.html. A client signs in with Google and sees ONLY
+  their own rows, returned by the clientRows back-end action.
+
+  TWO THINGS TO SET before going live (search for "SET THIS"):
+    1. WEB_APP_URL - copy the exact same value from index.html
+    2. DEMO        - set to false once WEB_APP_URL is filled in
+
+  Access is by secret link: each client opens  client.html?k=THEIR_KEY
+  The server matches the key to one client and returns only that client's
+  rows, so no other client's data ever reaches the browser. No login.
+
+  While DEMO is true, the page shows sample Ice data and ignores the key,
+  so you can review the layout. It never touches the Sheet in that mode.
+  ============================================================
+-->
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --bg:#ffffff;
+    --text:#37352F;
+    --text-soft:#787774;
+    --text-faint:#9B9A97;
+    --line:#E9E9E7;
+    --line-soft:rgba(55,53,47,.09);
+    --hover:#F7F7F5;
+    --hover2:#EFEFEE;
+    --link:#2383E2;
+
+    --yellow-bg:#FDECC8; --yellow-tx:#402C1B;
+    --orange-bg:#FADEC9; --orange-tx:#49290E;
+    --purple-bg:#E8DEEE; --purple-tx:#492F64;
+    --pink-bg:#F5E0E9;   --pink-tx:#4C2337;
+    --blue-bg:#D3E5EF;   --blue-tx:#183347;
+    --green-bg:#DBEDDB;  --green-tx:#1C3829;
+    --red-bg:#FFE2DD;    --red-tx:#5D1715;
+    --gray-bg:#E3E2E0;   --gray-tx:#32302C;
+
+    --today:#2383E2;
+    --radius:6px;
+    --font: ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,"Noto Sans Thai",Arial,sans-serif,"Apple Color Emoji","Segoe UI Emoji";
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:var(--font);
+    font-size:14px;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:var(--link);text-decoration:none}
+  a:hover{text-decoration:underline}
+  :focus-visible{outline:2px solid var(--today);outline-offset:1px;border-radius:3px}
+
+  .wrap{max-width:960px;margin:0 auto;padding:0 24px 80px}
+
+  /* ---------- page header ---------- */
+  header.page{
+    max-width:960px;margin:0 auto;padding:40px 24px 8px;
+    display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;
+  }
+  .ptitle{font-size:34px;font-weight:700;letter-spacing:-.01em;line-height:1.2;display:flex;gap:10px;align-items:center}
+  .ptitle .ico{font-size:32px}
+  .who{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text-soft);padding-top:8px}
+  .who b{color:var(--text);font-weight:600}
+  .who button{
+    font:inherit;font-size:13px;color:var(--text-soft);background:none;
+    border:1px solid var(--line);border-radius:5px;padding:5px 10px;cursor:pointer;
+  }
+  .who button:hover{background:var(--hover);color:var(--text)}
+  .demo-tag{
+    display:inline-flex;align-items:center;font-size:12px;font-weight:500;
+    color:var(--yellow-tx);background:var(--yellow-bg);border-radius:3px;padding:2px 8px;
+  }
+
+  /* ---------- sign-in ---------- */
+  .gate{max-width:420px;margin:12vh auto 0;text-align:center;padding:0 24px}
+  .gate .ico{font-size:40px}
+  .gate h1{font-size:26px;font-weight:700;line-height:1.2;margin:14px 0 10px}
+  .gate p{color:var(--text-soft);margin:0 0 26px}
+  #gbtn{display:flex;justify-content:center;min-height:44px}
+  .gate .note{margin-top:20px;font-size:12.5px;color:var(--text-faint)}
+
+  /* ---------- sections ---------- */
+  .sec{margin-top:34px}
+  h2.sh{
+    font-size:20px;font-weight:600;margin:0 0 10px;color:var(--text);
+    display:flex;align-items:center;gap:8px;
+  }
+  h2.sh .count{font-size:14px;font-weight:500;color:var(--text-faint)}
+
+  /* ---------- pills / tags ---------- */
+  .pill{
+    display:inline-flex;align-items:center;font-size:12px;font-weight:500;line-height:18px;
+    padding:1px 8px;border-radius:3px;white-space:nowrap;
+  }
+  .pill.yellow{background:var(--yellow-bg);color:var(--yellow-tx)}
+  .pill.orange{background:var(--orange-bg);color:var(--orange-tx)}
+  .pill.purple{background:var(--purple-bg);color:var(--purple-tx)}
+  .pill.pink{background:var(--pink-bg);color:var(--pink-tx)}
+  .pill.blue{background:var(--blue-bg);color:var(--blue-tx)}
+  .pill.green{background:var(--green-bg);color:var(--green-tx)}
+  .pill.red{background:var(--red-bg);color:var(--red-tx)}
+  .pill.gray{background:var(--gray-bg);color:var(--gray-tx)}
+
+  /* ---------- waiting list ---------- */
+  .list{border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+  .wrow{padding:12px 14px;border-top:1px solid var(--line)}
+  .wrow:first-child{border-top:none}
+  .wrow:hover{background:var(--hover)}
+  .wrow .top{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+  .wrow .id{font-weight:600;font-variant-numeric:tabular-nums}
+  .wrow .title{flex:1;min-width:200px}
+  .wrow .meta{margin-top:5px;font-size:13px;color:var(--text-soft);display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+  .wrow .meta .due.soon{color:var(--red-tx);font-weight:600}
+  .allclear{border:1px solid var(--line);border-radius:var(--radius);padding:16px 16px;color:var(--text-soft);background:var(--hover)}
+  .allclear b{color:var(--text);font-weight:600}
+
+  /* ---------- week strip (one day per row) ---------- */
+  .week{display:flex;flex-direction:column;gap:6px}
+  .day{border:1px solid var(--line);border-radius:var(--radius);padding:10px 12px;display:flex;gap:14px;align-items:baseline}
+  .day.today{border-color:var(--today);box-shadow:0 0 0 1px var(--today) inset}
+  .day .dlabel{font-size:12.5px;font-weight:500;color:var(--text-soft);flex:0 0 104px}
+  .day.today .dlabel{color:var(--today)}
+  .day .dbody{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px}
+  .day .ditem{display:flex;align-items:center;gap:8px;min-width:0}
+  .day .ditem .did{font-weight:600;font-variant-numeric:tabular-nums;font-size:13px;flex-shrink:0}
+  .day .ditem .dt{color:var(--text-soft);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .day .empty{color:var(--line);font-weight:600}
+
+  /* ---------- view tabs ---------- */
+  .allhead{display:flex;align-items:center;gap:16px;border-bottom:1px solid var(--line);margin-bottom:14px}
+  .allhead h2.sh{margin:0 12px 0 0}
+  .tabs{display:flex;gap:2px}
+  .tabs button{
+    font:inherit;font-size:13px;font-weight:500;color:var(--text-soft);background:none;border:none;
+    padding:7px 10px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;
+  }
+  .tabs button:hover{color:var(--text);background:var(--hover)}
+  .tabs button[aria-pressed="true"]{color:var(--text);border-bottom-color:var(--text)}
+
+  /* ---------- table ---------- */
+  .tablewrap{border:1px solid var(--line);border-radius:var(--radius);overflow-x:auto;-webkit-overflow-scrolling:touch}
+  table{width:100%;min-width:460px;border-collapse:collapse;font-size:14px}
+  thead th{
+    text-align:left;font-weight:500;font-size:12px;color:var(--text-soft);
+    padding:8px 12px;border-bottom:1px solid var(--line);white-space:nowrap;background:#FBFBFA;
+  }
+  tbody td{padding:10px 12px;border-top:1px solid var(--line);vertical-align:top}
+  tbody tr:first-child td{border-top:none}
+  tbody tr:hover{background:var(--hover)}
+  td.id{font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+  td.title{min-width:170px}
+  td.date{white-space:nowrap;color:var(--text-soft);font-variant-numeric:tabular-nums}
+  .fmt{font-size:12px;color:var(--text-faint)}
+
+  /* ---------- board ---------- */
+  .board{display:grid;grid-template-columns:1fr;gap:16px}
+  .col > h3{font-size:12px;font-weight:600;color:var(--text-soft);margin:0 0 8px;display:flex;align-items:center;gap:7px}
+  .col > h3 .n{color:var(--text-faint);font-weight:500}
+  .card{border:1px solid var(--line);border-radius:var(--radius);padding:10px 11px;box-shadow:0 1px 2px rgba(15,15,15,.05);margin-bottom:8px;background:#fff}
+  .card:hover{background:var(--hover)}
+  .card .cid{font-weight:600;font-variant-numeric:tabular-nums;font-size:12.5px;color:var(--text-soft)}
+  .card .ctitle{margin:4px 0 8px;font-size:14px;line-height:1.4}
+  .card .cfoot{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;color:var(--text-soft)}
+  .card .cfoot .date{font-variant-numeric:tabular-nums}
+
+  /* ---------- calendar ---------- */
+  .calbar{display:flex;align-items:center;gap:6px;margin-bottom:10px}
+  .calbar .m{font-size:15px;font-weight:600;min-width:150px}
+  .calbar button{
+    font:inherit;color:var(--text-soft);background:none;border:1px solid var(--line);
+    border-radius:5px;width:28px;height:28px;cursor:pointer;line-height:1;
+  }
+  .calbar button:hover{background:var(--hover);color:var(--text)}
+  .calbar .today-btn{width:auto;padding:0 10px;font-size:13px}
+  .cal-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:var(--radius)}
+  .cal{min-width:680px;display:grid;grid-template-columns:repeat(7,1fr)}
+  .cal .wd{font-size:11px;color:var(--text-soft);padding:7px 8px;border-left:1px solid var(--line);border-bottom:1px solid var(--line);background:#FBFBFA}
+  .cal .wd:first-child{border-left:none}
+  .cal .cell{min-height:98px;border-left:1px solid var(--line);border-top:1px solid var(--line);padding:5px 5px 7px;overflow:hidden}
+  .cal .cell:nth-child(7n+1){border-left:none}
+  .cal .cell.out{background:#FCFCFB}
+  .cal .cell .dn{font-size:12px;color:var(--text-soft);width:22px;height:22px;display:flex;align-items:center;justify-content:center;border-radius:50%;margin-bottom:3px}
+  .cal .cell.out .dn{color:var(--text-faint)}
+  .cal .cell.today .dn{background:var(--today);color:#fff;font-weight:600}
+  .chip{
+    display:block;font-size:12px;line-height:1.35;padding:2px 6px;border-radius:3px;margin-bottom:3px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:default;
+  }
+  a.chip{cursor:pointer}
+  a.chip:hover{text-decoration:none;filter:brightness(.97)}
+  .chip.yellow{background:var(--yellow-bg);color:var(--yellow-tx)}
+  .chip.orange{background:var(--orange-bg);color:var(--orange-tx)}
+  .chip.purple{background:var(--purple-bg);color:var(--purple-tx)}
+  .chip.pink{background:var(--pink-bg);color:var(--pink-tx)}
+  .chip.blue{background:var(--blue-bg);color:var(--blue-tx)}
+  .chip.green{background:var(--green-bg);color:var(--green-tx)}
+  .chip.red{background:var(--red-bg);color:var(--red-tx)}
+  .chip.gray{background:var(--gray-bg);color:var(--gray-tx)}
+  .chip .cnum{font-weight:600;font-variant-numeric:tabular-nums}
+
+  .hidden{display:none !important}
+  .err{background:var(--red-bg);color:var(--red-tx);border:1px solid #EBC9C4;border-radius:var(--radius);padding:16px 18px;margin-top:12vh}
+
+  /* ---------- top notice ---------- */
+  .notice{
+    display:flex;gap:10px;align-items:flex-start;background:var(--hover);
+    border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px;color:var(--text-soft);
+  }
+  .notice .ni{flex-shrink:0;font-size:16px;line-height:1.4}
+  .notice b{color:var(--text);font-weight:600}
+
+  /* ---------- published section ---------- */
+  .morewrap{display:flex;justify-content:center;margin-top:12px}
+  .morewrap button, .pager button{
+    font:inherit;font-size:13px;font-weight:500;color:var(--text);background:none;
+    border:1px solid var(--line);border-radius:6px;padding:7px 16px;cursor:pointer;
+  }
+  .morewrap button:hover, .pager button:hover{background:var(--hover)}
+  .pager{display:flex;align-items:center;justify-content:center;gap:16px;margin-top:12px}
+  .pager button:disabled{color:var(--text-faint);opacity:.5;cursor:default}
+  .pager button:disabled:hover{background:none}
+  .pager .pmeta{font-size:12.5px;color:var(--text-soft);font-variant-numeric:tabular-nums}
+  .pub-hide{display:flex;justify-content:center;margin-top:8px}
+  .pub-hide button{font:inherit;font-size:12.5px;color:var(--text-soft);background:none;border:none;cursor:pointer;padding:4px}
+  .pub-hide button:hover{color:var(--text);text-decoration:underline}
+
+  @media (max-width:560px){
+    header.page{padding:26px 18px 6px}
+    .wrap{padding:0 18px 72px}
+    .ptitle{font-size:29px}
+    .ptitle .ico{font-size:27px}
+    .allhead{flex-wrap:wrap;gap:6px}
+    .allhead h2.sh{flex-basis:100%}
+  }
+  @media (min-width:600px){
+    .board{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
+  }
+  @media (min-width:920px){
+    .board{grid-template-columns:repeat(4,minmax(0,1fr));align-items:start}
+    .cal{min-width:0}
+  }
+</style>
+</head>
+<body>
+
+<!-- SIGN-IN GATE -->
+<div id="gate" class="gate hidden">
+  <div class="ico">📅</div>
+  <h1>Your content calendar</h1>
+  <p>Sign in with the Google account WWA shared this with to see your schedule and anything waiting on you.</p>
+  <div id="gbtn"></div>
+  <div class="note">You get a read-only view of your own content only. Approvals still happen on each Notion copy page.</div>
+</div>
+
+<!-- ERROR -->
+<div id="error" class="wrap hidden"><div class="err" id="error-msg"></div></div>
+
+<!-- APP -->
+<div id="app" class="hidden">
+  <header class="page">
+    <div class="ptitle"><span class="ico">📅</span><span id="client-name">Your content calendar</span></div>
+    <div class="who" id="who"></div>
+  </header>
+
+  <div class="wrap">
+    <section class="sec" id="sec-notice" style="margin-top:24px">
+      <div class="notice">
+        <div>This is your live view. There's nothing for you to update. Your WWA team keeps everything current for you. If something needs a decision from you, it appears under <b>Waiting on you</b> below.</div>
+      </div>
+    </section>
+
+    <section class="sec" id="sec-waiting">
+      <h2 class="sh">Waiting on you <span class="count" id="waiting-count"></span></h2>
+      <div id="waiting-body"></div>
+    </section>
+
+    <section class="sec" id="sec-week">
+      <h2 class="sh" id="week-title">This week</h2>
+      <div class="week" id="week"></div>
+    </section>
+
+    <section class="sec" id="sec-all">
+      <div class="allhead">
+        <h2 class="sh">All your pieces <span class="count" id="all-count"></span></h2>
+        <div class="tabs" role="group" aria-label="View">
+          <button id="btn-board" aria-pressed="true">Board</button>
+          <button id="btn-table" aria-pressed="false">Table</button>
+          <button id="btn-cal" aria-pressed="false">Calendar</button>
+        </div>
+      </div>
+      <div id="view-board" class="board"></div>
+      <div id="view-table" class="tablewrap hidden"></div>
+      <div id="view-cal" class="hidden"></div>
+    </section>
+
+    <section class="sec" id="sec-published">
+      <h2 class="sh">Published <span class="count" id="pub-count"></span></h2>
+      <div id="published-body"></div>
+    </section>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   CONFIG
+   ============================================================ */
+const WEB_APP_URL = "PASTE_WEB_APP_URL_HERE";   // SET THIS (copy from index.html)
+const DEMO        = true;                        // SET THIS to false once WEB_APP_URL is filled in
+
+/* ============================================================
+   STAGE CLASSIFIER  (client-facing wording)
+   Matches on keyword / leading number so glyph changes don't break it.
+   Groups: waiting · progress · ready · published · closed
+   ============================================================ */
+function classify(stageRaw){
+  const s = (stageRaw||"").trim();
+  if (/Unselected/i.test(s))                              return {group:"closed",    label:"Not used",             tone:"gray",   note:"counts to quota"};
+  if (/Rolled\s*Over/i.test(s))                           return {group:"closed",    label:"Rolled over",          tone:"gray"};
+  if (/^10\b/.test(s) || /Published/i.test(s))            return {group:"published", label:"Published",            tone:"green"};
+  if (/^9\b/.test(s)  || /Ready to Publish/i.test(s))     return {group:"ready",     label:"Ready to publish",     tone:"green"};
+  if (/^🚩/.test(s)   || /Required Client Input/i.test(s))return {group:"waiting",   label:"Your input needed",    tone:"pink"};
+  if (/^2\b/.test(s)  || /Copywriting Ready for Review/i.test(s)) return {group:"waiting", label:"Copy to review",  tone:"yellow"};
+  if (/^4\b/.test(s)  || /Waiting for Voiceover/i.test(s))return {group:"waiting",   label:"Voiceover / video needed", tone:"purple"};
+  if (/^7\b/.test(s)  || /Content Ready for Review/i.test(s)) return {group:"waiting", label:"Content to review", tone:"orange"};
+  return {group:"progress", label:"In progress", tone:"blue"};
+}
+function stageRank(stageRaw){
+  const m = (stageRaw||"").trim().match(/^(\d{1,2})\b/);
+  if (m) return parseInt(m[1],10);
+  if (/^🚩/.test(stageRaw)) return 0;
+  return 99;
+}
+
+/* ============================================================
+   DATE HELPERS  (dates are plain YYYY-MM-DD)
+   ============================================================ */
+const DOW = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const MONF = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+function parseDate(s){
+  if(!s) return null;
+  const m = String(s).trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(!m) return null;
+  return new Date(+m[1], +m[2]-1, +m[3]);
+}
+function today0(){ const d=new Date(); d.setHours(0,0,0,0); return d; }
+function fmtShort(d){ return d ? DOW[d.getDay()]+" "+d.getDate()+" "+MON[d.getMonth()] : ""; }
+function isoOf(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function daysAway(d){ return d ? Math.round((d - today0())/86400000) : null; }
+function awayText(n){
+  if(n===null) return "";
+  if(n<0) return Math.abs(n)+" day"+(Math.abs(n)===1?"":"s")+" ago";
+  if(n===0) return "TODAY";
+  if(n===1) return "tomorrow";
+  return n+" days away";
+}
+function atRisk(row){
+  const n = daysAway(parseDate(row.publishDate));
+  return n!==null && n>=0 && n<=2 && stageRank(row.stage) < 9;
+}
+function toneFor(row){ return atRisk(row) ? {tone:"red",label:"At risk"} : classify(row.stage); }
+
+/* ============================================================
+   RENDER
+   ============================================================ */
+let STATE = { rows:[], client:"" };
+let CAL = { y:null, m:null };
+let PUB = { open:false, page:0, size:20 };
+const isPublished = r => classify(r.stage).group === "published";
+
+function render(data){
+  STATE.rows = (data.rows||[]).slice();
+  STATE.client = data.client || "";
+  const t = today0(); CAL.y = t.getFullYear(); CAL.m = t.getMonth();
+  PUB.open = false; PUB.page = 0;
+
+  document.getElementById("client-name").textContent =
+    STATE.client ? STATE.client+" · content calendar" : "Your content calendar";
+
+  renderWaiting();
+  renderWeek();
+  renderTable();
+  renderBoard();
+  renderCalendar();
+  renderPublished();
+  document.getElementById("all-count").textContent = STATE.rows.filter(r=>!isPublished(r)).length;
+
+  document.getElementById("gate").classList.add("hidden");
+  document.getElementById("app").classList.remove("hidden");
+}
+
+function renderWaiting(){
+  const items = STATE.rows
+    .filter(r => classify(r.stage).group === "waiting")
+    .sort((a,b)=> (parseDate(a.publishDate)||8e15) - (parseDate(b.publishDate)||8e15));
+  document.getElementById("waiting-count").textContent = items.length || "";
+  const body = document.getElementById("waiting-body");
+  if(!items.length){
+    body.innerHTML = '<div class="allclear"><b>You\u2019re all caught up.</b> Nothing needs you right now.</div>';
+    return;
+  }
+  const rows = items.map(r=>{
+    const c = classify(r.stage);
+    const n = daysAway(parseDate(r.publishDate));
+    const soon = (n!==null && n<=2) ? "soon" : "";
+    const link = r.copyLink ? '<a href="'+esc(r.copyLink)+'" target="_blank" rel="noopener">Open in Notion</a>' : "";
+    return '<div class="wrow"><div class="top">'
+      + '<span class="id">'+esc(r.pieceId)+'</span>'
+      + '<span class="title">'+esc(r.title)+'</span>'
+      + '<span class="pill '+c.tone+'">'+esc(c.label)+'</span></div>'
+      + '<div class="meta"><span class="due '+soon+'">Posting '+fmtShort(parseDate(r.publishDate))
+      + (n!==null?" ("+awayText(n)+")":"")+'</span>'+link+'</div></div>';
+  }).join("");
+  body.innerHTML = '<div class="list">'+rows+'</div>';
+}
+
+function renderWeek(){
+  const mon = today0();
+  mon.setDate(mon.getDate() - ((mon.getDay()+6)%7));
+  document.getElementById("week-title").textContent = "This week \u00b7 "+fmtShort(mon);
+  const byDate = {};
+  STATE.rows.forEach(r=>{ const d=parseDate(r.publishDate); if(d){ (byDate[isoOf(d)]=byDate[isoOf(d)]||[]).push(r); } });
+
+  let html = "";
+  for(let i=0;i<6;i++){
+    const d = new Date(mon); d.setDate(mon.getDate()+i);
+    const iso = isoOf(d);
+    const isToday = iso === isoOf(today0());
+    const list = byDate[iso] || [];
+    let body;
+    if(!list.length){
+      body = '<span class="empty">\u2014</span>';
+    } else {
+      body = list.map(r=>{
+        const c = toneFor(r);
+        return '<div class="ditem"><span class="pill '+c.tone+'">'+esc(c.label)+'</span>'
+          + '<span class="did">'+esc(r.pieceId)+'</span>'
+          + '<span class="dt">'+esc(r.title)+'</span></div>';
+      }).join("");
+    }
+    html += '<div class="day '+(isToday?"today":"")+'">'
+      + '<div class="dlabel">'+DOW[d.getDay()]+" "+d.getDate()+" "+MON[d.getMonth()]+'</div>'
+      + '<div class="dbody">'+body+'</div></div>';
+  }
+  document.getElementById("week").innerHTML = html;
+}
+
+function pillFor(r){ const c = toneFor(r); return '<span class="pill '+c.tone+'">'+esc(c.label)+'</span>'; }
+
+function renderTable(){
+  const rows = STATE.rows.filter(r=>!isPublished(r)).sort((a,b)=> (parseDate(a.publishDate)||8e15) - (parseDate(b.publishDate)||8e15));
+  const body = rows.map(r=>{
+    const link = r.copyLink ? '<a href="'+esc(r.copyLink)+'" target="_blank" rel="noopener">Open</a>' : '<span class="fmt">\u2014</span>';
+    return '<tr><td class="id">'+esc(r.pieceId)+'</td>'
+      + '<td class="title">'+esc(r.title)+'<div class="fmt">'+esc(r.format||"")+(r.platform?" \u00b7 "+esc(r.platform):"")+'</div></td>'
+      + '<td class="date">'+fmtShort(parseDate(r.publishDate))+'</td>'
+      + '<td>'+pillFor(r)+'</td><td>'+link+'</td></tr>';
+  }).join("");
+  document.getElementById("view-table").innerHTML =
+    '<table><thead><tr><th>ID</th><th>Title</th><th>Posting</th><th>Status</th><th>Copy</th></tr></thead><tbody>'
+    + (body || '<tr><td colspan="5" style="color:var(--text-soft);padding:18px 12px">No pieces yet.</td></tr>')
+    + '</tbody></table>';
+}
+
+function renderBoard(){
+  const cols = [
+    {key:"waiting",   name:"Waiting on you"},
+    {key:"progress",  name:"In progress"},
+    {key:"ready",     name:"Ready to publish"},
+    {key:"closed",    name:"Closed"},
+  ];
+  const html = cols.map(col=>{
+    const items = STATE.rows
+      .filter(r=>classify(r.stage).group===col.key)
+      .sort((a,b)=> (parseDate(a.publishDate)||8e15) - (parseDate(b.publishDate)||8e15));
+    const cards = items.map(r=>{
+      const link = r.copyLink ? '<a href="'+esc(r.copyLink)+'" target="_blank" rel="noopener">Open</a>' : "";
+      return '<div class="card"><div class="cid">'+esc(r.pieceId)+'</div>'
+        + '<div class="ctitle">'+esc(r.title)+'</div>'
+        + '<div class="cfoot"><span class="date">'+fmtShort(parseDate(r.publishDate))+'</span>'+link+'</div>'
+        + '<div style="margin-top:8px">'+pillFor(r)+'</div></div>';
+    }).join("");
+    return '<div class="col"><h3>'+col.name+' <span class="n">'+items.length+'</span></h3>'
+      + (cards || '<div class="fmt" style="padding:2px">\u2014</div>')+'</div>';
+  }).join("");
+  document.getElementById("view-board").innerHTML = html;
+}
+
+function renderCalendar(){
+  const y = CAL.y, m = CAL.m;
+  const byDate = {};
+  STATE.rows.forEach(r=>{ const d=parseDate(r.publishDate); if(d){ (byDate[isoOf(d)]=byDate[isoOf(d)]||[]).push(r); } });
+
+  const first = new Date(y,m,1);
+  const start = new Date(first);
+  start.setDate(1 - ((first.getDay()+6)%7)); // Monday on/before the 1st
+  const last = new Date(y,m+1,0);
+  const cells = [];
+  let d = new Date(start);
+  while(d <= last || cells.length % 7 !== 0){ cells.push(new Date(d)); d.setDate(d.getDate()+1); if(cells.length>42) break; }
+
+  const wd = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map(x=>'<div class="wd">'+x+'</div>').join("");
+  const todayIso = isoOf(today0());
+
+  const grid = cells.map(cd=>{
+    const iso = isoOf(cd);
+    const out = cd.getMonth()!==m ? " out" : "";
+    const isToday = iso===todayIso ? " today" : "";
+    const list = byDate[iso] || [];
+    const chips = list.map(r=>{
+      const c = toneFor(r);
+      const label = '<span class="cnum">'+esc(r.pieceId)+'</span> '+esc(r.title);
+      return r.copyLink
+        ? '<a class="chip '+c.tone+'" href="'+esc(r.copyLink)+'" target="_blank" rel="noopener" title="'+esc(r.title)+'">'+label+'</a>'
+        : '<span class="chip '+c.tone+'" title="'+esc(r.title)+'">'+label+'</span>';
+    }).join("");
+    return '<div class="cell'+out+isToday+'"><div class="dn">'+cd.getDate()+'</div>'+chips+'</div>';
+  }).join("");
+
+  document.getElementById("view-cal").innerHTML =
+    '<div class="calbar">'
+    + '<button id="cal-prev" aria-label="Previous month">\u2039</button>'
+    + '<button id="cal-next" aria-label="Next month">\u203a</button>'
+    + '<span class="m">'+MONF[m]+" "+y+'</span>'
+    + '<button class="today-btn" id="cal-today">Today</button>'
+    + '</div>'
+    + '<div class="cal-scroll"><div class="cal">'+wd+grid+'</div></div>';
+
+  document.getElementById("cal-prev").addEventListener("click", ()=>{ CAL.m--; if(CAL.m<0){CAL.m=11;CAL.y--;} renderCalendar(); });
+  document.getElementById("cal-next").addEventListener("click", ()=>{ CAL.m++; if(CAL.m>11){CAL.m=0;CAL.y++;} renderCalendar(); });
+  document.getElementById("cal-today").addEventListener("click", ()=>{ const t=today0(); CAL.y=t.getFullYear(); CAL.m=t.getMonth(); renderCalendar(); });
+}
+
+function renderPublished(){
+  const items = STATE.rows.filter(isPublished)
+    .sort((a,b)=> (parseDate(b.publishDate)|| -8e15) - (parseDate(a.publishDate)|| -8e15)); // latest first
+  const sec = document.getElementById("sec-published");
+  const body = document.getElementById("published-body");
+  document.getElementById("pub-count").textContent = items.length || "";
+
+  if(!items.length){ sec.classList.add("hidden"); return; }
+  sec.classList.remove("hidden");
+
+  if(!PUB.open){
+    body.innerHTML = '<div class="morewrap"><button id="pub-toggle">View published content ('+items.length+')</button></div>';
+    document.getElementById("pub-toggle").addEventListener("click", ()=>{ PUB.open=true; PUB.page=0; renderPublished(); });
+    return;
+  }
+
+  const pages = Math.max(1, Math.ceil(items.length / PUB.size));
+  if(PUB.page > pages-1) PUB.page = pages-1;
+  const startI = PUB.page*PUB.size;
+  const shown = items.slice(startI, startI+PUB.size);
+
+  const rows = shown.map(r=>{
+    const link = r.copyLink ? '<a href="'+esc(r.copyLink)+'" target="_blank" rel="noopener">Open</a>' : '<span class="fmt">\u2014</span>';
+    return '<tr><td class="id">'+esc(r.pieceId)+'</td>'
+      + '<td class="title">'+esc(r.title)+'<div class="fmt">'+esc(r.format||"")+(r.platform?" \u00b7 "+esc(r.platform):"")+'</div></td>'
+      + '<td class="date">'+fmtShort(parseDate(r.publishDate))+'</td>'
+      + '<td>'+link+'</td></tr>';
+  }).join("");
+
+  let html = '<div class="tablewrap"><table>'
+    + '<thead><tr><th>ID</th><th>Title</th><th>Posted</th><th>Copy</th></tr></thead>'
+    + '<tbody>'+rows+'</tbody></table></div>'
+    + '<div class="pager">'
+    + '<button id="pub-prev"'+(PUB.page===0?' disabled':'')+'>Previous</button>'
+    + '<span class="pmeta">'+(startI+1)+'\u2013'+(startI+shown.length)+' of '+items.length+' \u00b7 page '+(PUB.page+1)+' of '+pages+'</span>'
+    + '<button id="pub-next"'+(PUB.page>=pages-1?' disabled':'')+'>Next</button>'
+    + '</div>'
+    + '<div class="pub-hide"><button id="pub-collapse">Hide published content</button></div>';
+  body.innerHTML = html;
+
+  const prev=document.getElementById("pub-prev"), next=document.getElementById("pub-next");
+  if(prev && !prev.disabled) prev.addEventListener("click", ()=>{ PUB.page--; renderPublished(); });
+  if(next && !next.disabled) next.addEventListener("click", ()=>{ PUB.page++; renderPublished(); });
+  document.getElementById("pub-collapse").addEventListener("click", ()=>{ PUB.open=false; renderPublished(); });
+}
+
+function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m])); }
+
+/* view tabs */
+document.getElementById("btn-table").addEventListener("click", ()=>setView("table"));
+document.getElementById("btn-board").addEventListener("click", ()=>setView("board"));
+document.getElementById("btn-cal").addEventListener("click", ()=>setView("cal"));
+function setView(v){
+  [["table","btn-table","view-table"],["board","btn-board","view-board"],["cal","btn-cal","view-cal"]]
+    .forEach(([key,btn,view])=>{
+      const on = key===v;
+      document.getElementById(btn).setAttribute("aria-pressed", on);
+      document.getElementById(view).classList.toggle("hidden", !on);
+    });
+}
+
+/* ============================================================
+   AUTH + DATA
+   ============================================================ */
+function showError(msg){
+  document.getElementById("gate").classList.add("hidden");
+  document.getElementById("app").classList.add("hidden");
+  document.getElementById("error-msg").textContent = msg;
+  document.getElementById("error").classList.remove("hidden");
+}
+async function loadRows(key){
+  const res = await fetch(WEB_APP_URL, {
+    method:"POST",
+    body: JSON.stringify({ action:"clientRows", key }) // text/plain avoids a CORS preflight
+  });
+  const data = await res.json();
+  if(!data || data.ok===false){
+    if(data && data.error==="not_authorised"){
+      showError("This link isn't recognised. Please ask WWA for your calendar link.");
+      return;
+    }
+    showError("Couldn't load your calendar. Please try again in a moment.");
+    return;
+  }
+  render(data);
+}
+window.addEventListener("load", ()=>{
+  if(DEMO){ startDemo(); return; }
+  const key = new URLSearchParams(location.search).get("k");
+  if(!key){ showError("This link is missing its access code. Please open the link WWA sent you."); return; }
+  loadRows(key);
+});
+
+/* ============================================================
+   DEMO DATA  (sample Ice rows, dated around today so the week + calendar fill)
+   ============================================================ */
+function startDemo(){
+  document.getElementById("who").innerHTML = '<span class="demo-tag">Demo data \u2014 not live</span>';
+  const mon = today0(); mon.setDate(mon.getDate() - ((mon.getDay()+6)%7));
+  const wk = i => { const d=new Date(mon); d.setDate(mon.getDate()+i); return isoOf(d); };
+  const off = n => { const d=today0(); d.setDate(d.getDate()+n); return isoOf(d); };
+
+  // generated back-catalogue of published pieces so the Published section paginates
+  const pubTitles = [
+    "\u0e14\u0e2d\u0e01\u0e40\u0e1a\u0e35\u0e49\u0e22\u0e17\u0e1a\u0e15\u0e49\u0e19\u0e04\u0e37\u0e2d\u0e2d\u0e30\u0e44\u0e23 / What compound interest really is",
+    "\u0e01\u0e2d\u0e07\u0e17\u0e38\u0e19\u0e14\u0e31\u0e0a\u0e19\u0e35\u0e15\u0e31\u0e27\u0e41\u0e23\u0e01 / Your first index fund",
+    "\u0e2b\u0e19\u0e35\u0e49\u0e14\u0e35\u0e2b\u0e19\u0e35\u0e49\u0e40\u0e2a\u0e35\u0e22 / Good debt vs bad debt",
+    "\u0e40\u0e07\u0e34\u0e19\u0e2a\u0e33\u0e23\u0e2d\u0e07\u0e09\u0e38\u0e01\u0e40\u0e09\u0e34\u0e19 6 \u0e40\u0e14\u0e37\u0e2d\u0e19 / A 6-month emergency fund",
+    "\u0e20\u0e32\u0e29\u0e35\u0e17\u0e35\u0e48\u0e21\u0e19\u0e38\u0e29\u0e22\u0e4c\u0e40\u0e07\u0e34\u0e19\u0e40\u0e14\u0e37\u0e2d\u0e19\u0e04\u0e27\u0e23\u0e23\u0e39\u0e49 / Salaryman tax basics",
+    "DCA \u0e04\u0e37\u0e2d\u0e2d\u0e30\u0e44\u0e23 / What DCA actually does",
+    "\u0e1b\u0e23\u0e30\u0e01\u0e31\u0e19\u0e2a\u0e38\u0e02\u0e20\u0e32\u0e1e\u0e17\u0e35\u0e48\u0e04\u0e38\u0e49\u0e21 / Health cover that pays off",
+    "\u0e40\u0e01\u0e29\u0e35\u0e22\u0e13\u0e41\u0e1a\u0e1a\u0e44\u0e21\u0e48\u0e15\u0e49\u0e2d\u0e07\u0e25\u0e38\u0e49\u0e19 / Retiring without panic",
+    "\u0e1e\u0e2d\u0e23\u0e4c\u0e15\u0e42\u0e1f\u0e25\u0e34\u0e42\u0e2d 3 \u0e01\u0e49\u0e2d\u0e19 / A 3-bucket portfolio",
+    "\u0e04\u0e48\u0e32\u0e18\u0e23\u0e23\u0e21\u0e40\u0e19\u0e35\u0e22\u0e21\u0e17\u0e35\u0e48\u0e0b\u0e48\u0e2d\u0e19\u0e2d\u0e22\u0e39\u0e48 / The fees you don't see",
+    "\u0e40\u0e07\u0e34\u0e19\u0e40\u0e1f\u0e49\u0e2d\u0e01\u0e31\u0e1a\u0e40\u0e07\u0e34\u0e19\u0e25\u0e07\u0e17\u0e38\u0e19 / Saving vs investing",
+    "REIT \u0e40\u0e2b\u0e21\u0e32\u0e30\u0e01\u0e31\u0e1a\u0e43\u0e04\u0e23 / Who REITs suit",
+    "\u0e2d\u0e48\u0e32\u0e19\u0e07\u0e1a\u0e01\u0e33\u0e44\u0e23\u0e43\u0e19 5 \u0e19\u0e32\u0e17\u0e35 / Reading a P&L in 5 minutes",
+    "\u0e27\u0e32\u0e07\u0e41\u0e1c\u0e19\u0e21\u0e23\u0e14\u0e01\u0e40\u0e1a\u0e37\u0e49\u0e2d\u0e07\u0e15\u0e49\u0e19 / An early estate plan",
+    "\u0e17\u0e2d\u0e07\u0e04\u0e33\u0e43\u0e19\u0e1e\u0e2d\u0e23\u0e4c\u0e15 / Gold in your portfolio",
+    "\u0e1b\u0e23\u0e30\u0e01\u0e31\u0e19\u0e0a\u0e35\u0e27\u0e34\u0e15\u0e04\u0e27\u0e1a\u0e04\u0e38\u0e21\u0e42\u0e23\u0e04 / Cover for critical illness",
+    "\u0e40\u0e07\u0e34\u0e19\u0e40\u0e1f\u0e49\u0e2d\u0e25\u0e39\u0e01\u0e40\u0e23\u0e35\u0e22\u0e19\u0e21\u0e2b\u0e32\u0e25\u0e31\u0e22 / Saving for the kids' uni",
+    "\u0e04\u0e27\u0e32\u0e21\u0e40\u0e2a\u0e35\u0e48\u0e22\u0e07\u0e02\u0e2d\u0e07\u0e04\u0e23\u0e34\u0e1b\u0e42\u0e15 / The real risk in crypto",
+    "\u0e07\u0e1a\u0e01\u0e23\u0e30\u0e41\u0e2a\u0e40\u0e07\u0e34\u0e19\u0e2a\u0e14\u0e2a\u0e48\u0e27\u0e19\u0e15\u0e31\u0e27 / Personal cash flow",
+    "\u0e2b\u0e38\u0e49\u0e19\u0e1b\u0e31\u0e19\u0e1c\u0e25\u0e04\u0e37\u0e2d\u0e2d\u0e30\u0e44\u0e23 / What a dividend stock is",
+    "\u0e40\u0e07\u0e34\u0e19\u0e40\u0e1f\u0e49\u0e2d\u0e41\u0e15\u0e48\u0e07\u0e07\u0e32\u0e19 / Saving for a wedding",
+    "\u0e01\u0e2d\u0e07\u0e17\u0e38\u0e19\u0e25\u0e14\u0e2b\u0e22\u0e48\u0e2d\u0e19\u0e20\u0e32\u0e29\u0e35 SSF/RMF / SSF & RMF, simply",
+    "\u0e27\u0e34\u0e18\u0e35\u0e04\u0e34\u0e14\u0e40\u0e23\u0e37\u0e48\u0e2d\u0e07\u0e2b\u0e19\u0e35\u0e49\u0e1a\u0e31\u0e15\u0e23 / Thinking clearly about card debt",
+    "\u0e1e\u0e2d\u0e23\u0e4c\u0e15\u0e17\u0e19\u0e17\u0e32\u0e19\u0e40\u0e07\u0e34\u0e19\u0e40\u0e1f\u0e49\u0e2d / An inflation-proof plan",
+    "\u0e40\u0e23\u0e34\u0e48\u0e21\u0e18\u0e38\u0e23\u0e01\u0e34\u0e08\u0e01\u0e31\u0e1a\u0e40\u0e07\u0e34\u0e19\u0e01\u0e49\u0e2d\u0e19\u0e41\u0e23\u0e01 / Starting a business with your first savings",
+    "\u0e1b\u0e23\u0e30\u0e01\u0e31\u0e19\u0e04\u0e27\u0e1a\u0e04\u0e39\u0e48\u0e01\u0e31\u0e1a\u0e01\u0e32\u0e23\u0e25\u0e07\u0e17\u0e38\u0e19 / Insurance alongside investing",
+    "\u0e40\u0e1b\u0e49\u0e32\u0e2b\u0e21\u0e32\u0e22\u0e40\u0e01\u0e29\u0e35\u0e22\u0e13 50 \u0e25\u0e49\u0e32\u0e19 / The 50-million retirement target",
+    "\u0e2a\u0e23\u0e38\u0e1b\u0e1b\u0e35\u0e17\u0e35\u0e48\u0e1c\u0e48\u0e32\u0e19\u0e21\u0e32 / A year in review",
+  ];
+  const pubRows = pubTitles.map((t,i)=>({
+    pieceId: (i%2? "VO":"C")+"11."+(pubTitles.length - i),
+    title: t, format: (i%2?"VO reel":"Carousel"), platform:(i%2?"IG Reels":"IG"),
+    publishDate: off(-6 - i*3), stage:"10 Published", copyLink:"https://notion.so/pub"+i
+  }));
+
+  render({ client:"Ice", rows:[
+    { pieceId:"C12.1",  title:"\u0e17\u0e33\u0e44\u0e21\u0e19\u0e31\u0e01\u0e25\u0e07\u0e17\u0e38\u0e19\u0e44\u0e17\u0e22\u0e21\u0e2d\u0e07\u0e02\u0e49\u0e32\u0e21 Singapore REITs / Why Thai investors overlook Singapore REITs", format:"Carousel", platform:"IG", publishDate:wk(0), stage:"10 Published",                    copyLink:"https://notion.so/demo1" },
+    { pieceId:"VO12.2", title:"\u0e04\u0e27\u0e32\u0e21\u0e40\u0e02\u0e49\u0e32\u0e43\u0e08\u0e1c\u0e34\u0e14\u0e40\u0e23\u0e37\u0e48\u0e2d\u0e07 CPF \u0e17\u0e35\u0e48\u0e01\u0e34\u0e19\u0e1c\u0e25\u0e15\u0e2d\u0e1a\u0e41\u0e17\u0e19\u0e04\u0e38\u0e13 / The CPF misunderstanding costing you returns", format:"VO reel", platform:"IG Reels", publishDate:wk(1), stage:"7 Content Ready for Review", copyLink:"https://notion.so/demo2" },
+    { pieceId:"C12.3",  title:"3 \u0e04\u0e48\u0e32\u0e18\u0e23\u0e23\u0e21\u0e40\u0e19\u0e35\u0e22\u0e21\u0e17\u0e35\u0e48\u0e0b\u0e48\u0e2d\u0e19\u0e2d\u0e22\u0e39\u0e48\u0e43\u0e19\u0e01\u0e23\u0e21\u0e18\u0e23\u0e23\u0e21\u0e4c / Three fees hiding in your policy", format:"Carousel", platform:"IG", publishDate:wk(2), stage:"2 Copywriting Ready for Review",           copyLink:"https://notion.so/demo3" },
+    { pieceId:"VO12.4", title:"\u0e04\u0e27\u0e32\u0e21\u0e1c\u0e34\u0e14\u0e1e\u0e25\u0e32\u0e14\u0e40\u0e23\u0e37\u0e48\u0e2d\u0e07\u0e40\u0e01\u0e29\u0e35\u0e22\u0e13\u0e17\u0e35\u0e48\u0e04\u0e19\u0e44\u0e17\u0e22\u0e2a\u0e48\u0e27\u0e19\u0e43\u0e2b\u0e0d\u0e48\u0e17\u0e33 / The retirement mistake most Thais make", format:"VO reel", platform:"TikTok", publishDate:wk(3), stage:"5 Voiceover / Video Received", copyLink:"https://notion.so/demo4" },
+    { pieceId:"C12.5",  title:"\u0e2d\u0e48\u0e32\u0e19\u0e04\u0e48\u0e32 expense ratio \u0e43\u0e2b\u0e49\u0e40\u0e1b\u0e47\u0e19\u0e43\u0e19 60 \u0e27\u0e34\u0e19\u0e32\u0e17\u0e35 / Reading an expense ratio in 60 seconds", format:"Carousel", platform:"IG", publishDate:wk(4), stage:"6 In Production",                copyLink:"https://notion.so/demo5" },
+    { pieceId:"C12.6",  title:"\u0e1b\u0e23\u0e30\u0e01\u0e31\u0e19\u0e0a\u0e35\u0e27\u0e34\u0e15\u0e41\u0e1a\u0e1a\u0e44\u0e2b\u0e19\u0e40\u0e2b\u0e21\u0e32\u0e30\u0e01\u0e31\u0e1a\u0e04\u0e38\u0e13 / Which life policy actually fits you", format:"Carousel", platform:"IG", publishDate:wk(5), stage:"4 Waiting for Voiceover / Video",             copyLink:"https://notion.so/demo6" },
+    { pieceId:"VO12.7", title:"\u0e40\u0e23\u0e34\u0e48\u0e21\u0e25\u0e07\u0e17\u0e38\u0e19\u0e14\u0e49\u0e27\u0e22\u0e40\u0e07\u0e34\u0e19 1,000 \u0e1a\u0e32\u0e17 / Starting to invest with 1,000 baht", format:"VO reel", platform:"IG Reels", publishDate:off(6), stage:"9 Ready to Publish",                     copyLink:"https://notion.so/demo7" },
+    { pieceId:"C12.8",  title:"\u0e20\u0e32\u0e29\u0e35\u0e01\u0e31\u0e1a\u0e01\u0e2d\u0e07\u0e17\u0e38\u0e19 SSF/RMF \u0e2a\u0e23\u0e38\u0e1b\u0e2a\u0e31\u0e49\u0e19 \u0e46 / SSF vs RMF tax, in brief", format:"Carousel", platform:"IG", publishDate:off(8), stage:"1 Copywriting",                                     copyLink:"" },
+    { pieceId:"C12.9",  title:"\u0e2a\u0e34\u0e07\u0e04\u0e42\u0e1b\u0e23\u0e4c\u0e43\u0e2b\u0e49\u0e25\u0e32\u0e04\u0e25\u0e2d\u0e14 30 \u0e2a\u0e31\u0e1b\u0e14\u0e32\u0e2b\u0e4c / Singapore's 30-week parental leave", format:"Carousel", platform:"IG", publishDate:off(-3), stage:"\u25fc\ufe0f Unselected",                             copyLink:"https://notion.so/demo9" },
+    { pieceId:"VO12.10",title:"\u0e1a\u0e17\u0e40\u0e23\u0e35\u0e22\u0e19\u0e08\u0e32\u0e01\u0e15\u0e25\u0e32\u0e14\u0e2b\u0e21\u0e35 / What a bear market teaches you", format:"VO reel", platform:"IG Reels", publishDate:off(11), stage:"\ud83d\udd01 Rolled Over",                                        copyLink:"https://notion.so/demo10" },
+  ].concat(pubRows)});
+}
+</script>
+</body>
+</html>
