@@ -140,6 +140,12 @@
       .sidefoot .who{ display:none; }
       .main{ padding:18px; }
     }
+    @media print {
+      body * { visibility:hidden; }
+      #invDoc, #invDoc * { visibility:visible; }
+      #invDoc { position:absolute; left:0; top:0; width:100%; border:none; box-shadow:none; }
+      .navbtn,.controls,.head,.sidebar{ display:none !important; }
+    }
   </style>
 </head>
 <body>
@@ -160,6 +166,7 @@
       <button class="navbtn" data-tab="pipeline"><span class="ic">▤</span> Pipeline</button>
       <button class="navbtn" data-tab="import"><span class="ic">＋</span> Import</button>
       <button class="navbtn" data-tab="handoff"><span class="ic">✎</span> Prompts &amp; Handoffs</button>
+      <button class="navbtn" data-tab="invoices"><span class="ic">฿</span> Invoices</button>
       <button class="navbtn" data-tab="log"><span class="ic">≡</span> Activity Log</button>
       <div class="sidefoot"><div class="who" id="whoamiMin"></div><button id="signout">Sign out</button></div>
     </nav>
@@ -223,6 +230,43 @@
           </div>
           <textarea id="hoOut" style="min-height:340px" readonly placeholder="Generated text appears here…"></textarea>
         </div>
+      </section>
+
+      <section class="hidden" id="tab-invoices">
+        <div class="head"><div><h2>Invoices</h2><p class="sub">Generate a client invoice from the stored fees. Mark it paid to turn it into a receipt.</p></div></div>
+        <div class="controls">
+          <label class="inline">Client
+            <select id="invClient"><option>Ice</option><option>Lynn</option><option>Melissa</option><option>SRU</option><option>Dianna</option></select>
+          </label>
+          <label class="inline">Currency
+            <select id="invCurrency"><option value="THB">THB (฿)</option><option value="SGD">SGD (S$)</option></select>
+          </label>
+          <label class="inline">Payment
+            <select id="invPay"><option value="1">Version 1</option><option value="2">Version 2</option></select>
+          </label>
+          <button id="invRefresh" class="small">Refresh list</button>
+        </div>
+        <div class="surface" style="padding:18px;margin-bottom:16px">
+          <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px;align-items:end">
+            <label style="font-size:12px;color:var(--ink-soft)">Base description<br><input type="text" id="invBaseDesc" style="width:100%;margin-top:5px;font:inherit;padding:8px;border:1px solid var(--line);border-radius:8px"></label>
+            <label style="font-size:12px;color:var(--ink-soft)">Base ฿<br><input type="text" id="invBaseTHB" style="width:100%;margin-top:5px;font:inherit;padding:8px;border:1px solid var(--line);border-radius:8px"></label>
+            <label style="font-size:12px;color:var(--ink-soft)">Base S$<br><input type="text" id="invBaseSGD" style="width:100%;margin-top:5px;font:inherit;padding:8px;border:1px solid var(--line);border-radius:8px"></label>
+          </div>
+          <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px;align-items:end;margin-top:10px">
+            <label style="font-size:12px;color:var(--ink-soft)">Add-on description (leave blank if none)<br><input type="text" id="invAddDesc" style="width:100%;margin-top:5px;font:inherit;padding:8px;border:1px solid var(--line);border-radius:8px"></label>
+            <label style="font-size:12px;color:var(--ink-soft)">Add-on ฿<br><input type="text" id="invAddTHB" style="width:100%;margin-top:5px;font:inherit;padding:8px;border:1px solid var(--line);border-radius:8px"></label>
+            <label style="font-size:12px;color:var(--ink-soft)">Add-on S$<br><input type="text" id="invAddSGD" style="width:100%;margin-top:5px;font:inherit;padding:8px;border:1px solid var(--line);border-radius:8px"></label>
+          </div>
+          <div class="controls" style="margin:14px 0 0">
+            <button class="primary" id="invPreview">Preview</button>
+            <button id="invGenerate" class="small">Save &amp; record invoice</button>
+            <span class="pstatus muted" id="invStatus"></span>
+          </div>
+        </div>
+        <div id="invDocWrap"></div>
+        <div class="surface" style="margin-top:16px"><div class="tablewrap">
+          <table><thead><tr><th>Invoice No</th><th>Client</th><th>Total</th><th>Status</th><th>Issued</th><th>Paid</th><th></th></tr></thead><tbody id="invListBody"></tbody></table>
+        </div></div>
       </section>
 
       <section class="hidden" id="tab-log">
@@ -334,8 +378,9 @@
     function showTab(name){
       PREFS.tab=name; savePrefs();
       document.querySelectorAll('.navbtn[data-tab]').forEach(function(b){ b.classList.toggle('active', b.dataset.tab===name); });
-      ['today','pipeline','import','handoff','log'].forEach(function(t){ $('tab-'+t).classList.toggle('hidden', t!==name); });
+      ['today','pipeline','import','handoff','invoices','log'].forEach(function(t){ $('tab-'+t).classList.toggle('hidden', t!==name); });
       if(name==='log') loadLog();
+      if(name==='invoices'){ loadMeta().then(function(){ fillFromBilling(); loadInvoices(); }); }
     }
 
     $('refresh').onclick = loadRows;
@@ -558,10 +603,10 @@ sched,
 'Last scheduled posting date so far: ' + lastDate,
 '',
 'ORBIT OUTPUT RULES:',
-'1. Assign posting dates on a 4-week cycle counted from this batch\u2019s first piece. Mon\u2013Sat only \u2014 never a Sunday. Continue on from the last scheduled date above so posting stays consistent with no gaps or clashes. Stagger different pillars/series so they don\u2019t clump. Set Ready By about 14 days before each posting date.',
-'2. Assign Piece IDs using ' + client + '\u2019s prefix scheme and batch number ' + batch + ' typed into the ID (e.g. C' + (batch==='[BATCH NUMBER]'?'12':batch) + '.1). Do not invent a scheme. If an ID would collide or you\u2019re unsure, stop and flag it \u2014 never guess an ID.',
+'1. Assign posting dates on a 4-week cycle counted from this batch’s first piece. Mon–Sat only — never a Sunday. Continue on from the last scheduled date above so posting stays consistent with no gaps or clashes. Stagger different pillars/series so they don’t clump. Set Ready By about 14 days before each posting date.',
+'2. Assign Piece IDs using ' + client + '’s prefix scheme and batch number ' + batch + ' typed into the ID (e.g. C' + (batch==='[BATCH NUMBER]'?'12':batch) + '.1). Do not invent a scheme. If an ID would collide or you’re unsure, stop and flag it — never guess an ID.',
 '3. Titles: ' + (bilingual ? 'bilingual "Thai / English".' : 'English.'),
-'4. CREATE a Notion copy page for each piece in ' + client + '\u2019s Notion space, and put its URL in the Copy Link column. Ask me for the parent page/folder to create them under if you don\u2019t already know it. Do NOT leave Copy Link blank \u2014 the whole point is that you return the links so the team doesn\u2019t fill them by hand.',
+'4. CREATE a Notion copy page for each piece in ' + client + '’s Notion space, and put its URL in the Copy Link column. Ask me for the parent page/folder to create them under if you don’t already know it. Do NOT leave Copy Link blank — the whole point is that you return the links so the team doesn’t fill them by hand.',
 '5. Output the batch as Block A EXACTLY: a TSV table with the header row',
 '   Piece ID\tClient\tFormat\tPlatform\tTitle\tPublish Date\tReady By\tStage\tFounder\tCopy Link',
 '   one row per piece, nothing else wrapped around the table. New pieces are Stage "1 Copywriting".',
@@ -577,7 +622,7 @@ sched,
       }).sort(function(a,b){ return (a['Publish Date']||'').localeCompare(b['Publish Date']||''); });
       if (!pending.length) return 'Nothing needs anything from ' + client + ' right now. All good.';
 
-      const lines = ['Hi! Here\u2019s what we need from you to keep things on schedule:', ''];
+      const lines = ["Hi! Here's what we need from you to keep things on schedule:", ""];
       pending.forEach(function(r){
         const d = daysTo(r['Publish Date']);
         const when = d===null ? '' : (d<0 ? ' (this date has passed)' : d===0 ? ' (posting today)' : d===1 ? ' (posting tomorrow)' : ' (in ' + d + ' days)');
@@ -588,15 +633,15 @@ sched,
         if (/Required Client Input/.test(st)) ask = 'We need some information from you before we can start this one.';
         else if (/Waiting for Voiceover/.test(st)) ask = isVideo ? 'We need your video for this. Please record and send it.' : 'We need your voiceover for this. Please record and send it.';
         else if (/Content Ready for Review/.test(st)) ask = 'The finished post is ready. Please review it and approve.';
-        else if (/Copywriting Ready for Review/.test(st)) ask = 'The copy is ready. Please read it and let us know if it\\u2019s good to go.';
+        else if (/Copywriting Ready for Review/.test(st)) ask = "The copy is ready. Please read it and let us know if it's good to go.";
         else ask = 'Please take a look at this one.';
-        lines.push('\u2022 ' + (r['Title']||r['Piece ID']));
+        lines.push('• ' + (r['Title']||r['Piece ID']));
         lines.push('  ' + ask);
         if (r['Publish Date']) lines.push('  Posting ' + r['Publish Date'] + when);
         if (r['Copy Link']) lines.push('  ' + r['Copy Link']);
         lines.push('');
       });
-      lines.push('\u2014');
+      lines.push('—');
       lines.push('Sent ' + stamp());
       return lines.join('\n');
     }
@@ -607,9 +652,9 @@ sched,
         .sort(function(a,b){ return (a['Publish Date']||'').localeCompare(b['Publish Date']||''); });
       if (!miss.length) return 'Every ' + client + ' piece has a copy link. Nothing missing.';
       const lines = ['Pieces still missing a Notion copy link (' + client + '):', ''];
-      miss.forEach(function(r){ lines.push('\u2022 ' + r['Piece ID'] + '  \u00b7  ' + (r['Title']||'') + (r['Publish Date']?'  \u00b7  posting '+r['Publish Date']:'')); });
-      lines.push(''); lines.push('Fill these in the piece\u2019s detail panel once the pages exist.');
-      lines.push('\u2014'); lines.push('As of ' + stamp());
+      miss.forEach(function(r){ lines.push('• ' + r['Piece ID'] + '  ·  ' + (r['Title']||'') + (r['Publish Date']?'  ·  posting '+r['Publish Date']:'')); });
+      lines.push(''); lines.push('Fill these in the piece’s detail panel once the pages exist.');
+      lines.push('—'); lines.push('As of ' + stamp());
       return lines.join('\n');
     }
 
@@ -621,9 +666,9 @@ sched,
       allRows.forEach(function(r){ clientPieces[r['Piece ID']] = r['Client']; });
       const mine = all.filter(function(q){ return clientPieces[q.piece]===client; });
       if (!mine.length) return '';
-      const lines = ['', '\u2014 ASSET REQUESTS STILL OPEN \u2014'];
+      const lines = ['', '— FOOTAGE & PHOTOS STILL NEEDED —'];
       mine.forEach(function(q){
-        lines.push('\u2022 ' + q.piece + ': ' + q.kind + ' \u00b7 ' + q.type + (q.qty?(' \u2014 '+q.qty):'') + (q.note?(' \u2014 '+q.note):''));
+        lines.push('• ' + q.piece + ': ' + q.kind + ' · ' + q.type + (q.qty?(' — '+q.qty+' needed'):' — qty not specified') + (q.note?(' — '+q.note):''));
       });
       return lines.join('\n');
     }
@@ -675,6 +720,157 @@ sched,
       await loadReqsFor(current['Piece ID']);
       await loadRows();
     };
+
+    // ── Invoicing ──
+    let META = { settings:{}, billing:{}, clients:[] };
+    async function loadMeta(){
+      const data = await call('getMeta');
+      if (data.ok) META = data.result;
+      return META;
+    }
+    function money(cur, n){
+      const v = Number(n||0);
+      const s = v.toLocaleString('en-US');
+      return cur==='THB' ? ('฿'+s) : ('S$'+s);
+    }
+    function bothMoney(thb, sgd){
+      return '฿'+Number(thb||0).toLocaleString('en-US')+' (S$'+Number(sgd||0).toLocaleString('en-US')+')';
+    }
+    // Fill the amount fields from Billing for the chosen client.
+    function fillFromBilling(){
+      const client = $('invClient').value;
+      const b = META.billing[client] || {};
+      $('invBaseDesc').value = b.baseDesc || '';
+      $('invBaseTHB').value  = b.baseTHB || '';
+      $('invBaseSGD').value  = b.baseSGD || '';
+      $('invAddDesc').value  = b.addDesc || '';
+      $('invAddTHB').value   = b.addTHB || '';
+      $('invAddSGD').value   = b.addSGD || '';
+      if (b.currency) $('invCurrency').value = b.currency;
+    }
+    $('invClient').onchange = fillFromBilling;
+    $('invRefresh').onclick = loadInvoices;
+    $('invPreview').onclick = function(){ renderInvoiceDoc(false); };
+
+    function currentInvoiceData(){
+      return {
+        client: $('invClient').value,
+        currency: $('invCurrency').value,
+        payVer: $('invPay').value,
+        baseDesc: $('invBaseDesc').value.trim(),
+        baseTHB: num($('invBaseTHB').value), baseSGD: num($('invBaseSGD').value),
+        addDesc: $('invAddDesc').value.trim(),
+        addTHB: num($('invAddTHB').value), addSGD: num($('invAddSGD').value)
+      };
+    }
+    function num(v){ const n=Number(String(v||'').replace(/[, ]/g,'')); return isNaN(n)?0:n; }
+
+    function renderInvoiceDoc(isReceipt, savedNo){
+      const d = currentInvoiceData();
+      const S = META.settings || {};
+      const title = isReceipt ? 'Receipt' : 'Invoice';
+      const no = savedNo || ('WWA-'+d.client.toUpperCase()+'-'+ymNow());
+      const today = new Date().toLocaleDateString('en-GB', {day:'numeric',month:'long',year:'numeric'});
+      const payBody = (d.payVer==='2' ? (S.payment_2_body||'') : (S.payment_1_body||'')).replace(/\\n/g,'<br>');
+      const payLabel = (d.payVer==='2' ? (S.payment_2_label||'Payment') : (S.payment_1_label||'Payment'));
+      const totTHB = d.baseTHB + d.addTHB, totSGD = d.baseSGD + d.addSGD;
+      const rows = [];
+      rows.push(invRow(1, d.baseDesc || 'Service', bothMoney(d.baseTHB, d.baseSGD)));
+      if (d.addDesc || d.addTHB || d.addSGD) rows.push(invRow(2, d.addDesc || 'Add-on', bothMoney(d.addTHB, d.addSGD)));
+      const html =
+      '<div class="surface invdoc" id="invDoc" style="padding:0;overflow:hidden">'+
+        '<div style="padding:34px 38px">'+
+          '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:20px">'+
+            '<div><div style="font-size:34px;font-weight:800;letter-spacing:-.02em">'+title+'</div></div>'+
+            '<div style="text-align:right;font-size:12px;line-height:1.5">'+
+              '<div style="font-weight:700;font-size:14px">'+esc(S.company_name||'WEALTHWISE ATELIER')+'</div>'+
+              '<div style="font-style:italic;color:#555">'+esc(S.company_operated_by||'')+'</div>'+
+              '<div style="color:#555">'+esc(S.company_address||'')+'</div>'+
+            '</div>'+
+            '<img src="logo.jpg" alt="" style="width:74px;height:74px;object-fit:contain" onerror="this.style.display=\'none\'">'+
+          '</div>'+
+          '<div style="border-top:1px dotted #bbb;margin:14px 0 20px"></div>'+
+          '<div style="font-size:13px;line-height:1.8;margin-bottom:22px">'+
+            '<div><b>Prepared for:</b> '+esc(d.client)+'</div>'+
+            '<div><b>Date:</b> '+today+'</div>'+
+            '<div><b>Invoice No:</b> '+esc(no)+'</div>'+
+            '<div><b>Billing Cycle:</b> '+esc((META.billing[d.client]&&META.billing[d.client].cycle)||'Monthly')+'</div>'+
+            '<div><b>Currency:</b> Thai Baht (THB), Singapore Dollars (SGD) shown</div>'+
+          '</div>'+
+          '<table style="width:100%;border-collapse:collapse;font-size:13px">'+
+            '<thead><tr style="background:#f2f2f2">'+
+              '<th style="text-align:center;padding:9px;border:1px solid #ddd;width:50px">Item</th>'+
+              '<th style="text-align:left;padding:9px;border:1px solid #ddd">Service</th>'+
+              '<th style="text-align:right;padding:9px;border:1px solid #ddd;width:200px">Amount</th>'+
+            '</tr></thead><tbody>'+rows.join('')+
+            '<tr><td colspan="2" style="text-align:right;padding:11px 9px;border:1px solid #ddd;background:#f7f7f7;font-weight:700">Total Amount Due</td>'+
+              '<td style="text-align:right;padding:11px 9px;border:1px solid #ddd;background:#f7f7f7;font-weight:800">'+bothMoney(totTHB, totSGD)+'</td></tr>'+
+            '</tbody></table>'+
+          '<div style="display:flex;justify-content:space-between;gap:30px;margin-top:26px">'+
+            '<div style="font-size:12px;line-height:1.7">'+
+              '<div style="font-weight:700;margin-bottom:3px">Payment — '+esc(payLabel)+'</div>'+
+              '<div>'+payBody+'</div>'+
+            '</div>'+
+            '<div style="text-align:center;font-size:12px">'+
+              '<img src="signature.jpg" alt="" style="height:56px;object-fit:contain" onerror="this.style.display=\'none\'"><br>'+
+              '<div style="border-top:1px solid #333;padding-top:4px;margin-top:2px;min-width:170px">'+esc(S.signer_name||'Satakun Gerdphol')+'</div>'+
+              '<div style="color:#555">'+esc(S.signer_title||'Founder & CEO')+'</div>'+
+              '<div style="color:#555">'+esc(S.company_name||'Wealthwise Atelier')+'</div>'+
+            '</div>'+
+          '</div>'+
+        '</div>'+
+      '</div>'+
+      '<div class="controls" style="margin-top:12px"><button class="small" onclick="window.print()">Print / Save as PDF</button></div>';
+      $('invDocWrap').innerHTML = html;
+    }
+    function invRow(n, service, amount){
+      return '<tr><td style="text-align:center;padding:9px;border:1px solid #ddd">'+n+'</td>'+
+        '<td style="padding:9px;border:1px solid #ddd">'+esc(service)+'</td>'+
+        '<td style="text-align:right;padding:9px;border:1px solid #ddd">'+amount+'</td></tr>';
+    }
+    function ymNow(){ const d=new Date(); return ''+d.getFullYear()+(d.getMonth()+1<10?'0':'')+(d.getMonth()+1); }
+
+    $('invGenerate').onclick = async function(){
+      const d = currentInvoiceData();
+      $('invGenerate').disabled = true; setInv('Saving…','muted');
+      const data = await call('generateInvoice', {
+        client:d.client, currency:d.currency,
+        baseDesc:d.baseDesc, baseAmt:(d.currency==='THB'?d.baseTHB:d.baseSGD),
+        addDesc:d.addDesc, addAmt:(d.currency==='THB'?d.addTHB:d.addSGD)
+      });
+      $('invGenerate').disabled = false;
+      if (!data.ok){ setInv(data.error,'err'); return; }
+      setInv('Recorded '+data.result.no+'.','ok');
+      renderInvoiceDoc(false, data.result.no);
+      loadInvoices();
+    };
+
+    async function loadInvoices(){
+      const data = await call('listInvoices', { client: $('invClient').value });
+      const tb = $('invListBody'); tb.innerHTML='';
+      if (!data.ok){ tb.innerHTML='<tr><td colspan="7"><div class="empty">'+esc(data.error)+'</div></td></tr>'; return; }
+      const rows = data.result.rows||[];
+      if (!rows.length){ tb.innerHTML='<tr><td colspan="7"><div class="empty">No invoices for this client yet.</div></td></tr>'; return; }
+      rows.reverse().forEach(function(r){
+        const isReceipt = r.status==='receipt';
+        const badge = '<span class="pill '+(isReceipt?'st-9':'st-2')+'">'+(isReceipt?'Receipt':'Invoice')+'</span>';
+        const tr = document.createElement('tr');
+        tr.innerHTML = '<td>'+esc(r.no)+'</td><td>'+esc(r.client)+'</td><td>'+money(r.currency,r.total)+'</td>'+
+          '<td>'+badge+'</td><td class="muted">'+esc(r.issued)+'</td><td class="muted">'+esc(r.paid||'—')+'</td>'+
+          '<td>'+(isReceipt?'':'<button class="small" data-paid="'+esc(r.no)+'">Mark paid</button>')+'</td>';
+        tb.appendChild(tr);
+      });
+      tb.querySelectorAll('button[data-paid]').forEach(function(b){
+        b.onclick = async function(){
+          b.disabled=true; b.textContent='…';
+          const data = await call('markPaid', { no:b.dataset.paid });
+          if(!data.ok){ b.disabled=false; b.textContent='Mark paid'; setInv(data.error,'err'); return; }
+          setInv(data.result.no+' marked paid — now a receipt.','ok');
+          loadInvoices();
+        };
+      });
+    }
+    function setInv(m,c){ $('invStatus').className='pstatus '+(c||'muted'); $('invStatus').textContent=m; }
 
     function daysTo(ymd){ if(!ymd) return null; const d=new Date(ymd+'T00:00:00'); const n=new Date(); n.setHours(0,0,0,0); return Math.round((d-n)/86400000); }
     function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
