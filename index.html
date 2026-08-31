@@ -3,92 +3,190 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Orbit — Sign in</title>
+  <title>Orbit</title>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <style>
     :root { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
-    body {
-      margin: 0; min-height: 100vh; display: grid; place-items: center;
-      background: #f6f7f9; color: #1a1a1a;
-    }
-    .card {
-      width: min(92vw, 420px); background: #fff; border: 1px solid #e5e7eb;
-      border-radius: 14px; padding: 32px 28px; box-shadow: 0 1px 3px rgba(0,0,0,.06);
-    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; background: #f6f7f9; color: #1a1a1a; padding: 24px; }
+    .wrap { max-width: 860px; margin: 0 auto; display: grid; gap: 20px; }
+    .card { background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
     h1 { font-size: 20px; margin: 0 0 4px; }
-    p.sub { margin: 0 0 24px; color: #6b7280; font-size: 14px; }
-    #signin { display: flex; justify-content: center; margin-bottom: 8px; }
-    #result { margin-top: 20px; font-size: 14px; line-height: 1.5; }
+    h2 { font-size: 16px; margin: 0 0 12px; }
+    p.sub { margin: 0 0 20px; color: #6b7280; font-size: 14px; }
+    #signin { display: flex; justify-content: flex-start; }
+    #whoami { margin-top: 16px; font-size: 14px; line-height: 1.5; }
     .ok  { color: #065f46; background: #ecfdf5; border: 1px solid #a7f3d0; padding: 12px 14px; border-radius: 10px; }
     .err { color: #991b1b; background: #fef2f2; border: 1px solid #fecaca; padding: 12px 14px; border-radius: 10px; }
+    .warn{ color: #92400e; background: #fffbeb; border: 1px solid #fde68a; padding: 12px 14px; border-radius: 10px; }
     .muted { color: #6b7280; }
-    button.signout {
-      margin-top: 16px; font-size: 13px; color: #374151; background: #f3f4f6;
-      border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px 12px; cursor: pointer;
-    }
+    button { font: inherit; border-radius: 8px; padding: 9px 16px; cursor: pointer; border: 1px solid #d1d5db; background: #f3f4f6; color: #111827; }
+    button.primary { background: #2563eb; border-color: #2563eb; color: #fff; }
+    button.primary:disabled { background: #cbd5e1; border-color: #cbd5e1; cursor: not-allowed; }
+    button.signout { font-size: 13px; padding: 7px 12px; }
+    .hidden { display: none; }
+    textarea { width: 100%; min-height: 160px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; padding: 12px; border: 1px solid #d1d5db; border-radius: 10px; resize: vertical; }
+    .row-actions { display: flex; gap: 10px; align-items: center; margin-top: 12px; flex-wrap: wrap; }
+    .report { margin-top: 16px; display: grid; gap: 8px; }
+    .rrow { border: 1px solid #e5e7eb; border-radius: 10px; padding: 10px 12px; font-size: 13px; }
+    .rrow .idline { font-weight: 600; margin-bottom: 2px; }
+    .rrow.ok   { border-color: #a7f3d0; background: #f0fdf4; }
+    .rrow.warn { border-color: #fde68a; background: #fffbeb; }
+    .rrow.err  { border-color: #fecaca; background: #fef2f2; }
+    .rrow ul { margin: 6px 0 0; padding-left: 18px; }
+    .summary { font-size: 14px; margin-top: 4px; }
+    .status { font-size: 13px; }
   </style>
 </head>
 <body>
-  <div class="card">
-    <h1>Orbit</h1>
-    <p class="sub">Sign in with your WWA team account.</p>
-    <div id="signin"></div>
-    <div id="result" class="muted">Waiting for sign-in…</div>
-    <button class="signout" id="signout" style="display:none">Sign out</button>
+  <div class="wrap">
+
+    <!-- Sign-in -->
+    <div class="card">
+      <h1>Orbit</h1>
+      <p class="sub">Sign in with your WWA team account.</p>
+      <div id="signin"></div>
+      <div id="whoami" class="muted">Waiting for sign-in…</div>
+      <div class="row-actions">
+        <button class="signout hidden" id="signout">Sign out</button>
+      </div>
+    </div>
+
+    <!-- Importer (hidden until signed in) -->
+    <div class="card hidden" id="importer">
+      <h2>Import a batch</h2>
+      <p class="sub">Paste Block A (the whole table, including the header row). Validate first — Save turns on only when there are no blocking errors.</p>
+      <textarea id="tsv" placeholder="Piece ID&#9;Client&#9;Format&#9;Platform&#9;Title&#9;Publish Date&#9;Ready By&#9;Stage&#9;Founder&#9;Copy Link&#10;C1.1&#9;Ice&#9;Carousel&#9;IG&#9;…"></textarea>
+      <div class="row-actions">
+        <button class="primary" id="validate">Validate</button>
+        <button class="primary" id="save" disabled>Save to Sheet</button>
+        <span class="status muted" id="status"></span>
+      </div>
+      <div class="summary" id="summary"></div>
+      <div class="report" id="report"></div>
+    </div>
+
   </div>
 
   <script>
     const CLIENT_ID = '543895724243-cbielh8h6qnqau5nh5p8jp7j4cplfge1.apps.googleusercontent.com';
     const EXEC_URL  = 'https://script.google.com/macros/s/AKfycbz4IrRMhmoOSZSVIB5CacHmMW6T7TFjEDDT-31Ke0C0sZAYy2uBdzMiBCXwG__IV33mwQ/exec';
 
-    const resultEl  = document.getElementById('result');
+    let idToken = null;
+    let lastValidatedTsv = null;   // Save only allowed for the exact text that passed validation
+
+    const whoamiEl  = document.getElementById('whoami');
     const signoutEl = document.getElementById('signout');
+    const importerEl= document.getElementById('importer');
+    const tsvEl     = document.getElementById('tsv');
+    const validateB = document.getElementById('validate');
+    const saveB     = document.getElementById('save');
+    const statusEl  = document.getElementById('status');
+    const summaryEl = document.getElementById('summary');
+    const reportEl  = document.getElementById('report');
 
     window.onload = function () {
-      google.accounts.id.initialize({
-        client_id: CLIENT_ID,
-        callback: onCredential
-      });
-      google.accounts.id.renderButton(
-        document.getElementById('signin'),
-        { theme: 'outline', size: 'large', text: 'signin_with' }
-      );
+      google.accounts.id.initialize({ client_id: CLIENT_ID, callback: onCredential });
+      google.accounts.id.renderButton(document.getElementById('signin'),
+        { theme: 'outline', size: 'large', text: 'signin_with' });
     };
 
+    async function call(action, payload) {
+      const res = await fetch(EXEC_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ idToken: idToken, action: action, payload: payload || {} })
+      });
+      return res.json();
+    }
+
     async function onCredential(response) {
-      const idToken = response.credential;
-      resultEl.className = 'muted';
-      resultEl.textContent = 'Checking with Orbit…';
-      try {
-        const res = await fetch(EXEC_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({ idToken: idToken, action: 'whoami', payload: {} })
-        });
-        const data = await res.json();
-        if (data.ok) {
-          resultEl.className = 'ok';
-          resultEl.innerHTML = 'Signed in as <b>' + escapeHtml(data.result.name) +
-            '</b><br><span class="muted">' + escapeHtml(data.result.email) + '</span>';
-          signoutEl.style.display = 'inline-block';
-        } else {
-          resultEl.className = 'err';
-          resultEl.textContent = data.error || 'Sign-in rejected.';
-        }
-      } catch (e) {
-        resultEl.className = 'err';
-        resultEl.textContent = 'Could not reach Orbit: ' + String(e);
+      idToken = response.credential;
+      whoamiEl.className = 'muted';
+      whoamiEl.textContent = 'Checking with Orbit…';
+      const data = await call('whoami');
+      if (data.ok) {
+        whoamiEl.className = 'ok';
+        whoamiEl.innerHTML = 'Signed in as <b>' + esc(data.result.name) + '</b><br><span class="muted">' + esc(data.result.email) + '</span>';
+        signoutEl.classList.remove('hidden');
+        importerEl.classList.remove('hidden');
+      } else {
+        whoamiEl.className = 'err';
+        whoamiEl.textContent = data.error || 'Sign-in rejected.';
+        importerEl.classList.add('hidden');
       }
     }
 
     signoutEl.onclick = function () {
       google.accounts.id.disableAutoSelect();
-      resultEl.className = 'muted';
-      resultEl.textContent = 'Signed out. Sign in again above.';
-      signoutEl.style.display = 'none';
+      idToken = null;
+      whoamiEl.className = 'muted';
+      whoamiEl.textContent = 'Signed out. Sign in again above.';
+      signoutEl.classList.add('hidden');
+      importerEl.classList.add('hidden');
     };
 
-    function escapeHtml(s) {
+    // Any edit invalidates a prior validation → Save locks again.
+    tsvEl.addEventListener('input', function () {
+      saveB.disabled = true;
+      lastValidatedTsv = null;
+    });
+
+    validateB.onclick = async function () {
+      const tsv = tsvEl.value;
+      if (!tsv.trim()) { setStatus('Nothing pasted yet.', 'muted'); return; }
+      lock(true); setStatus('Validating…', 'muted');
+      clearReport();
+      const data = await call('validateBatch', { tsv: tsv });
+      lock(false);
+      if (!data.ok) { setStatus(data.error, 'err'); return; }
+      renderReport(data.result);
+      if (data.result.canSave) {
+        lastValidatedTsv = tsv;
+        saveB.disabled = false;
+        setStatus('Ready to save.', 'muted');
+      } else {
+        saveB.disabled = true;
+        setStatus('Fix the blocking errors, then validate again.', 'muted');
+      }
+    };
+
+    saveB.onclick = async function () {
+      const tsv = tsvEl.value;
+      if (tsv !== lastValidatedTsv) { setStatus('Text changed — validate again first.', 'warn'); saveB.disabled = true; return; }
+      lock(true); saveB.disabled = true; setStatus('Saving…', 'muted');
+      const data = await call('importBatch', { tsv: tsv });
+      lock(false);
+      if (!data.ok) { setStatus(data.error, 'err'); return; }
+      setStatus('Saved ' + data.result.total + ' row(s) to the Sheet.', 'ok');
+      renderReport(data.result);
+      tsvEl.value = '';
+      lastValidatedTsv = null;
+    };
+
+    function lock(on) { validateB.disabled = on; if (on) saveB.disabled = true; }
+    function setStatus(msg, cls) { statusEl.className = 'status ' + (cls || 'muted'); statusEl.textContent = msg; }
+    function clearReport() { summaryEl.textContent = ''; reportEl.innerHTML = ''; }
+
+    function renderReport(r) {
+      summaryEl.innerHTML = r.total + ' row(s) — ' +
+        '<b>' + r.hardBlocks + '</b> blocking error(s), <b>' + r.warnings + '</b> warning(s).';
+      reportEl.innerHTML = '';
+      r.rows.forEach(function (row) {
+        const cls = row.errors.length ? 'err' : (row.warnings.length ? 'warn' : 'ok');
+        const div = document.createElement('div');
+        div.className = 'rrow ' + cls;
+        let html = '<div class="idline">Row ' + row.line + (row.id ? ' · ' + esc(row.id) : '') + '</div>';
+        if (!row.errors.length && !row.warnings.length) html += '<div class="muted">OK</div>';
+        const items = row.errors.map(function (e) { return '❌ ' + esc(e); })
+          .concat(row.warnings.map(function (w) { return '⚠️ ' + esc(w); }));
+        if (items.length) html += '<ul><li>' + items.join('</li><li>') + '</li></ul>';
+        div.innerHTML = html;
+        reportEl.appendChild(div);
+      });
+    }
+
+    function esc(s) {
       return String(s).replace(/[&<>"']/g, function (c) {
         return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c];
       });
