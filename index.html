@@ -750,7 +750,7 @@ sched,
     }
     $('invClient').onchange = fillFromBilling;
     $('invRefresh').onclick = loadInvoices;
-    $('invPreview').onclick = function(){ renderInvoiceDoc(false); };
+    $('invPreview').onclick = function(){ renderInvoiceDoc(false); setInv('Preview ready below.','muted'); $('invDocWrap').scrollIntoView({behavior:'smooth', block:'start'}); };
 
     function currentInvoiceData(){
       return {
@@ -812,7 +812,7 @@ sched,
               '<div>'+payBody+'</div>'+
             '</div>'+
             '<div style="text-align:center;font-size:12px">'+
-              '<img src="signature.jpg" alt="" style="height:96px;object-fit:contain" onerror="this.style.display=\'none\'"><br>'+
+              '<img src="signature.jpg" alt="" style="height:120px;object-fit:contain;margin-top:14px" onerror="this.style.display=\'none\'"><br>'+
               '<div style="border-top:1px solid #333;padding-top:4px;margin-top:2px;min-width:170px">'+esc(S.signer_name||'Satakun Gerdphol')+'</div>'+
               '<div style="color:#555">'+esc(S.signer_title||'Founder & CEO')+'</div>'+
               '<div style="color:#555">'+esc(S.company_name||'Wealthwise Atelier')+'</div>'+
@@ -830,18 +830,21 @@ sched,
     }
     function ymNow(){ const d=new Date(); return ''+d.getFullYear()+(d.getMonth()+1<10?'0':'')+(d.getMonth()+1); }
 
+    let invBusy = false;
     $('invGenerate').onclick = async function(){
+      if (invBusy) return; invBusy = true;
       const d = currentInvoiceData();
-      $('invGenerate').disabled = true; setInv('Saving…','muted');
+      $('invGenerate').disabled = true; $('invGenerate').textContent = 'Saving…'; setInv('Saving…','muted');
       const data = await call('generateInvoice', {
         client:d.client, currency:d.currency,
         baseDesc:d.baseDesc, baseAmt:(d.currency==='THB'?d.baseTHB:d.baseSGD),
         addDesc:d.addDesc, addAmt:(d.currency==='THB'?d.addTHB:d.addSGD)
       });
-      $('invGenerate').disabled = false;
+      $('invGenerate').disabled = false; $('invGenerate').textContent = 'Save & record invoice'; invBusy = false;
       if (!data.ok){ setInv(data.error,'err'); return; }
       setInv('Recorded '+data.result.no+'.','ok');
       renderInvoiceDoc(false, data.result.no);
+      $('invDocWrap').scrollIntoView({behavior:'smooth', block:'start'});
       loadInvoices();
     };
 
