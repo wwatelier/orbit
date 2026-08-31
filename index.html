@@ -164,6 +164,7 @@
       <div class="brand">Orbit<small>WealthWise Atelier</small></div>
       <button class="navbtn" data-tab="today"><span class="ic">◎</span> Today's Work</button>
       <button class="navbtn" data-tab="pipeline"><span class="ic">▤</span> Pipeline</button>
+      <button class="navbtn" data-tab="assign"><span class="ic">◷</span> Assign Dates</button>
       <button class="navbtn" data-tab="import"><span class="ic">＋</span> Import</button>
       <button class="navbtn" data-tab="handoff"><span class="ic">✎</span> Prompts &amp; Handoffs</button>
       <button class="navbtn" data-tab="invoices"><span class="ic">฿</span> Invoices</button>
@@ -175,6 +176,11 @@
     <main class="main">
       <section class="hidden" id="tab-today">
         <div class="head"><div><h2>Today's Work</h2><p class="sub">Pieces that need a hand — behind schedule, waiting on the client, or posting soon.</p></div><span class="count" id="todayCount"></span></div>
+        <div class="controls">
+          <label class="inline">View as
+            <select id="todayRole"><option value="all">All</option><option value="designer">Graphic Designer</option><option value="editor">Video Editor</option></select>
+          </label>
+        </div>
         <div class="surface" style="margin-top:16px"><div class="tablewrap">
           <table><thead><tr><th>Piece ID</th><th>Client</th><th>Format</th><th>Stage</th><th>Next Step</th><th>Chase Who</th><th>On Track</th><th>Publish</th></tr></thead><tbody id="todayBody"></tbody></table>
         </div></div>
@@ -190,13 +196,31 @@
           <button id="refresh" class="small">Refresh</button>
           <span class="count" id="pipeCount"></span>
           <label class="inline viewas">View as
-            <select id="roleView"><option value="strategist">Strategist (all)</option><option value="designer">Designer / Editor</option></select>
+            <select id="roleView"><option value="all">All</option><option value="designer">Graphic Designer</option><option value="editor">Video Editor</option></select>
           </label>
         </div>
         <div class="surface" id="tableView"><div class="tablewrap">
           <table><thead><tr><th>Piece ID</th><th>Client</th><th>Format</th><th>Platform</th><th>Stage</th><th>Next Step</th><th>Chase Who</th><th>On Track</th><th>Publish</th><th>Copy</th></tr></thead><tbody id="pipeBody"></tbody></table>
         </div></div>
         <div id="boardView" class="board hidden"></div>
+      </section>
+
+      <section class="hidden" id="tab-assign">
+        <div class="head"><div><h2>Assign Publish Dates</h2><p class="sub">Pieces waiting for a posting date. Suggested dates follow each client's posting days and skip any day already taken — tick same-day to double up on purpose.</p></div><span class="count" id="assignCount"></span></div>
+        <div class="controls">
+          <label class="inline">Client
+            <select id="assignClient"><option value="">All</option><option>Ice</option><option>Lynn</option><option>Melissa</option><option>SRU</option><option>Dianna</option></select>
+          </label>
+          <label class="inline">Posting style
+            <select id="assignStyle"><option value="alternate">Alternate formats (reel → carousel → reel)</option><option value="any">Any format (same allowed)</option></select>
+          </label>
+          <button id="assignRefresh" class="small">Refresh</button>
+          <button class="primary" id="assignSaveAll">Save all suggested</button>
+          <span class="pstatus muted" id="assignStatus"></span>
+        </div>
+        <div class="surface"><div class="tablewrap">
+          <table><thead><tr><th>Piece ID</th><th>Client</th><th>Format</th><th>Title</th><th>Suggested / chosen date</th><th>Same-day</th><th></th></tr></thead><tbody id="assignBody"></tbody></table>
+        </div></div>
       </section>
 
       <section class="hidden" id="tab-import">
@@ -391,8 +415,9 @@
     function showTab(name){
       PREFS.tab=name; savePrefs();
       document.querySelectorAll('.navbtn[data-tab]').forEach(function(b){ b.classList.toggle('active', b.dataset.tab===name); });
-      ['today','pipeline','import','handoff','invoices','reports','log'].forEach(function(t){ $('tab-'+t).classList.toggle('hidden', t!==name); });
+      ['today','pipeline','assign','import','handoff','invoices','reports','log'].forEach(function(t){ $('tab-'+t).classList.toggle('hidden', t!==name); });
       if(name==='log') loadLog();
+      if(name==='assign'){ loadMeta().then(function(){ renderAssign(); }); }
       if(name==='invoices'){ loadMeta().then(function(){ fillFromBilling(); loadInvoices(); }); }
       if(name==='reports'){ loadMeta(); }
     }
@@ -402,8 +427,25 @@
     $('clientFilter').onchange = function(){ PREFS.client=$('clientFilter').value; savePrefs(); renderPipe(); renderToday(); };
     $('viewTable').onclick=function(){ setView('table'); };
     $('viewBoard').onclick=function(){ setView('board'); };
-    function applyPipePrefs(){ $('clientFilter').value=PREFS.client||''; setView(PREFS.view||'table'); $('roleView').value=PREFS.role||'strategist'; }
-    $('roleView').onchange=function(){ PREFS.role=$('roleView').value; savePrefs(); renderPipe(); };
+    function applyPipePrefs(){ $('clientFilter').value=PREFS.client||''; setView(PREFS.view||'table'); syncRoleSelects(); }
+    function normRole(r){ return (r==='designer'||r==='editor')?r:'all'; }
+    function syncRoleSelects(){ const v=normRole(PREFS.role); if($('roleView')) $('roleView').value=v; if($('todayRole')) $('todayRole').value=v; }
+    function setRole(v){ PREFS.role=normRole(v); savePrefs(); syncRoleSelects(); renderPipe(); renderToday(); }
+    $('roleView').onchange=function(){ setRole($('roleView').value); };
+    $('todayRole').onchange=function(){ setRole($('todayRole').value); };
+    $('assignClient').onchange=function(){ renderAssign(); };
+    $('assignStyle').onchange=function(){ PREFS.assignStyle=$('assignStyle').value; savePrefs(); renderAssign(); };
+    $('assignStyle').value = PREFS.assignStyle||'alternate';
+    $('assignRefresh').onclick=function(){ loadRows().then(function(){ renderAssign(); }); };
+    $('assignSaveAll').onclick=async function(){
+      const trs=Array.from($('assignBody').querySelectorAll('tr')); let done=0, fail=0; setAssign('Saving…','muted');
+      for(const tr of trs){ const btn=tr.querySelector('button[data-save]'); if(!btn) continue;
+        const dateEl=tr.querySelector('input[type=date]'); const catchEl=tr.querySelector('input[type=checkbox]');
+        const res=await assignOne(btn.dataset.save, Number(btn.dataset.row), dateEl.value, catchEl.checked);
+        if(res.ok) done++; else fail++; }
+      renderAssign(); renderPipe(); renderToday();
+      setAssign('Saved '+done+(fail?(' · '+fail+' skipped (fix and retry)'):'')+'.', fail?'err':'ok');
+    };
     function setView(v){ PREFS.view=v; savePrefs();
       $('viewTable').classList.toggle('on',v==='table'); $('viewBoard').classList.toggle('on',v==='board');
       $('tableView').classList.toggle('hidden',v!=='table'); $('boardView').classList.toggle('hidden',v!=='board'); }
@@ -414,9 +456,11 @@
       if(!data.ok){ $('pipeCount').textContent=data.error; return; }
       allRows = data.result.rows||[]; renderPipe(); renderToday();
     }
+    function isVideoFormat(fmt){ return /reel|video|voiceover|on-?camera|sit-?down|pov/i.test(fmt||''); }
+    function roleMatches(fmt, role){ if(role==='designer') return !isVideoFormat(fmt); if(role==='editor') return isVideoFormat(fmt); return true; }
     function filtered(){
-      const want=PREFS.client||'';
-      return allRows.filter(function(r){ return !want||r['Client']===want; })
+      const want=PREFS.client||''; const role=normRole(PREFS.role);
+      return allRows.filter(function(r){ return (!want||r['Client']===want) && roleMatches(r['Format'],role); })
         .sort(function(a,b){ return (a['Publish Date']||'').localeCompare(b['Publish Date']||''); });
     }
 
@@ -518,8 +562,8 @@
 
     function reqMark(r){
       const n = r['openReqs']||0; if(!n) return '';
-      const role = (PREFS.role||'strategist');
-      return role==='designer' ? '<span class="reqbadge">'+n+' asset'+(n>1?'s':'')+'</span>' : '<span class="reqdot" title="'+n+' open asset request'+(n>1?'s':'')+'"></span>';
+      const role = normRole(PREFS.role);
+      return role!=='all' ? '<span class="reqbadge">'+n+' asset'+(n>1?'s':'')+'</span>' : '<span class="reqdot" title="'+n+' open asset request'+(n>1?'s':'')+'"></span>';
     }
     function stagePill(s){ if(!s) return ''; return '<span class="pill '+(STAGE_COLOUR[s]||'st-off')+'">'+esc(s)+'</span>'; }
     function chips(list){ return (list||[]).map(function(p){ return '<span class="chip">'+esc(p)+'</span>'; }).join('')||'<span class="muted">—</span>'; }
@@ -1016,6 +1060,92 @@ sched,
       }).join('');
       return '<h3 style="font-size:15px;margin:22px 0 8px">Footage &amp; photos we still need</h3><ul style="font-size:13px;margin:0;padding-left:20px">'+body+'</ul>';
     }
+
+    // ── Assign Publish Dates ──
+    function isoOf(d){ const m=d.getMonth()+1, day=d.getDate(); return d.getFullYear()+'-'+(m<10?'0':'')+m+'-'+(day<10?'0':'')+day; }
+    function minus14(ymd){ const d=new Date(ymd+'T00:00:00'); d.setDate(d.getDate()-14); return isoOf(d); }
+    function dayNum(name){ return ({sun:0,mon:1,tue:2,wed:3,thu:4,fri:5,sat:6})[String(name||'').slice(0,3).toLowerCase()]; }
+    function fmtClass(fmt){ return isVideoFormat(fmt) ? 'video' : 'static'; }
+    function suggestDatesForClient(client, pieces, style){
+      const daysArr=(META.postingDays && META.postingDays[client]) || ['Mon','Tue','Wed','Thu','Fri','Sat'];
+      const allowed=new Set(); daysArr.forEach(function(x){ const n=dayNum(x); if(n!=null) allowed.add(n); });
+      if(!allowed.size){ [1,2,3,4,5,6].forEach(function(n){ allowed.add(n); }); }
+      const datedRows=allRows.filter(function(r){ return r['Client']===client && r['Publish Date']; });
+      const dated=datedRows.map(function(r){ return r['Publish Date']; }).sort();
+      const taken=new Set(dated);
+      let cursor=new Date(); cursor.setHours(0,0,0,0);
+      let prevClass='';
+      if(dated.length){
+        const maxD=dated[dated.length-1];
+        const ld=new Date(maxD+'T00:00:00'); if(ld>=cursor) cursor=new Date(ld.getTime()+86400000);
+        const lastRow=datedRows.filter(function(r){ return r['Publish Date']===maxD; })[0];
+        if(lastRow) prevClass=fmtClass(lastRow['Format']);
+      }
+      const remaining=pieces.slice(); const out={};
+      const nextSlot=function(){ let g=0; while(g++<4000){ if(allowed.has(cursor.getDay()) && !taken.has(isoOf(cursor))) return isoOf(cursor); cursor=new Date(cursor.getTime()+86400000); } return isoOf(cursor); };
+      while(remaining.length){
+        const iso=nextSlot();
+        let idx=0;
+        if(style==='alternate' && prevClass){ const alt=remaining.findIndex(function(p){ return fmtClass(p['Format'])!==prevClass; }); if(alt>=0) idx=alt; }
+        const pick=remaining.splice(idx,1)[0];
+        out[pick['Piece ID']]=iso; taken.add(iso); prevClass=fmtClass(pick['Format']);
+        cursor=new Date(cursor.getTime()+86400000);
+      }
+      return out;
+    }
+    function renderAssign(){
+      const client=$('assignClient')?$('assignClient').value:'';
+      let undated=allRows.filter(function(r){ return !r['Publish Date']; });
+      if(client) undated=undated.filter(function(r){ return r['Client']===client; });
+      undated.sort(function(a,b){ return String(a['Piece ID']).localeCompare(String(b['Piece ID'])); });
+      if($('assignCount')) $('assignCount').textContent=undated.length+' undated';
+      const style=PREFS.assignStyle||'alternate';
+      const byClient={}; undated.forEach(function(r){ (byClient[r['Client']]=byClient[r['Client']]||[]).push(r); });
+      const suggestions={}; Object.keys(byClient).forEach(function(cl){ const s=suggestDatesForClient(cl, byClient[cl], style); Object.keys(s).forEach(function(k){ suggestions[k]=s[k]; }); });
+      undated.sort(function(a,b){ const da=suggestions[a['Piece ID']]||'9999-99-99', db=suggestions[b['Piece ID']]||'9999-99-99'; return da.localeCompare(db)||String(a['Piece ID']).localeCompare(String(b['Piece ID'])); });
+      const tb=$('assignBody'); tb.innerHTML='';
+      if(!undated.length){ tb.innerHTML='<tr><td colspan="7"><div class="empty">Every piece has a date. Nothing to assign.</div></td></tr>'; return; }
+      undated.forEach(function(r){
+        const sug=suggestions[r['Piece ID']]||'';
+        const tr=document.createElement('tr');
+        tr.innerHTML='<td>'+esc(r['Piece ID'])+'</td><td>'+esc(r['Client'])+'</td><td>'+esc(r['Format'])+'</td>'+
+          '<td>'+esc(r['Title']||'')+'</td>'+
+          '<td><input type="date" value="'+esc(sug)+'" style="font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:8px"></td>'+
+          '<td style="text-align:center"><input type="checkbox" title="Allow a day that already has a piece"></td>'+
+          '<td><button class="small" data-save="'+esc(r['Piece ID'])+'" data-row="'+r.row+'">Save</button></td>';
+        tb.appendChild(tr);
+      });
+      tb.querySelectorAll('button[data-save]').forEach(function(b){
+        b.onclick=async function(){
+          const tr=b.closest('tr'); const dateEl=tr.querySelector('input[type=date]'); const catchEl=tr.querySelector('input[type=checkbox]');
+          if(!dateEl.value){ setAssign('Pick a date first.','err'); return; }
+          b.disabled=true; b.textContent='Saving…';
+          const res=await assignOne(b.dataset.save, Number(b.dataset.row), dateEl.value, catchEl.checked);
+          if(!res.ok){ b.disabled=false; b.textContent='Save'; setAssign(b.dataset.save+': '+humanAssignErr(res.error, dateEl.value),'err'); return; }
+          setAssign(b.dataset.save+' set to '+dateEl.value+'.','ok');
+          renderAssign(); renderPipe(); renderToday();
+        };
+      });
+    }
+    async function assignOne(pieceId, row, ymd, allowSame){
+      if(!ymd) return {ok:false,error:'no date'};
+      const d=new Date(ymd+'T00:00:00'); if(isNaN(d)) return {ok:false,error:'bad date'};
+      if(d.getDay()===0) return {ok:false,error:'Sunday'};
+      const me=allRows.filter(function(x){ return x.row===row; })[0]; const cl=me?me['Client']:'';
+      const taken=allRows.some(function(x){ return x.row!==row && x['Client']===cl && x['Publish Date']===ymd; });
+      if(taken && !allowSame) return {ok:false,error:'day taken'};
+      const data=await call('updatePiece',{ row:row, pieceId:pieceId, changes:{ 'Publish Date':ymd, 'Ready By':minus14(ymd) } });
+      if(!data.ok) return {ok:false,error:data.error};
+      const fresh=data.result.row; const idx=allRows.findIndex(function(x){ return x.row===fresh.row; }); if(idx>=0) allRows[idx]=fresh;
+      return {ok:true};
+    }
+    function humanAssignErr(e, ymd){
+      if(e==='Sunday') return ymd+' is a Sunday — pick another day.';
+      if(e==='day taken') return ymd+' already has a piece for this client. Tick same-day to double up.';
+      if(e==='no date') return 'pick a date.';
+      return e;
+    }
+    function setAssign(m,c){ if($('assignStatus')){ $('assignStatus').className='pstatus '+(c||'muted'); $('assignStatus').textContent=m; } }
 
     function daysTo(ymd){ if(!ymd) return null; const d=new Date(ymd+'T00:00:00'); const n=new Date(); n.setHours(0,0,0,0); return Math.round((d-n)/86400000); }
     function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
