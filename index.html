@@ -8,304 +8,467 @@
   <style>
     :root { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
     * { box-sizing: border-box; }
-    body { margin: 0; min-height: 100vh; background: #f6f7f9; color: #1a1a1a; padding: 24px; }
-    .wrap { max-width: 1100px; margin: 0 auto; display: grid; gap: 20px; }
-    .card { background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
-    h1 { font-size: 20px; margin: 0 0 4px; }
+    body { margin: 0; min-height: 100vh; background: #f6f7f9; color: #1a1a1a; padding: 20px; }
+    .wrap { max-width: 1140px; margin: 0 auto; display: grid; gap: 16px; }
+    .card { background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+    h1 { font-size: 19px; margin: 0 0 4px; }
     h2 { font-size: 16px; margin: 0 0 12px; }
-    p.sub { margin: 0 0 20px; color: #6b7280; font-size: 14px; }
-    #signin { display: flex; justify-content: flex-start; }
-    #whoami { margin-top: 16px; font-size: 14px; line-height: 1.5; }
-    .ok  { color: #065f46; background: #ecfdf5; border: 1px solid #a7f3d0; padding: 12px 14px; border-radius: 10px; }
-    .err { color: #991b1b; background: #fef2f2; border: 1px solid #fecaca; padding: 12px 14px; border-radius: 10px; }
+    p.sub { margin: 0 0 16px; color: #6b7280; font-size: 14px; }
     .muted { color: #6b7280; }
-    button { font: inherit; border-radius: 8px; padding: 9px 16px; cursor: pointer; border: 1px solid #d1d5db; background: #f3f4f6; color: #111827; }
-    button.primary { background: #2563eb; border-color: #2563eb; color: #fff; }
-    button.primary:disabled { background: #cbd5e1; border-color: #cbd5e1; cursor: not-allowed; }
-    button.signout { font-size: 13px; padding: 7px 12px; }
     .hidden { display: none; }
-    textarea { width: 100%; min-height: 140px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; padding: 12px; border: 1px solid #d1d5db; border-radius: 10px; resize: vertical; }
-    .row-actions { display: flex; gap: 10px; align-items: center; margin-top: 12px; flex-wrap: wrap; }
-    .report { margin-top: 16px; display: grid; gap: 8px; }
-    .rrow { border: 1px solid #e5e7eb; border-radius: 10px; padding: 10px 12px; font-size: 13px; }
-    .rrow .idline { font-weight: 600; margin-bottom: 2px; }
-    .rrow.ok   { border-color: #a7f3d0; background: #f0fdf4; }
-    .rrow.warn { border-color: #fde68a; background: #fffbeb; }
-    .rrow.err  { border-color: #fecaca; background: #fef2f2; }
-    .rrow ul { margin: 6px 0 0; padding-left: 18px; }
-    .summary { font-size: 14px; margin-top: 4px; }
-    .status { font-size: 13px; }
+    .ok  { color:#065f46; background:#ecfdf5; border:1px solid #a7f3d0; padding:12px 14px; border-radius:10px; }
+    .err { color:#991b1b; background:#fef2f2; border:1px solid #fecaca; padding:12px 14px; border-radius:10px; }
+    button { font: inherit; border-radius: 8px; padding: 9px 15px; cursor: pointer; border: 1px solid #d1d5db; background: #f3f4f6; color:#111827; }
+    button.primary { background:#2563eb; border-color:#2563eb; color:#fff; }
+    button.primary:disabled { background:#cbd5e1; border-color:#cbd5e1; cursor:not-allowed; }
+    button.small { font-size:13px; padding:7px 12px; }
+    select, input[type=text] { font: inherit; padding: 8px 10px; border:1px solid #d1d5db; border-radius:8px; background:#fff; }
+    input[type=text] { width:100%; }
 
-    /* Calendar table */
-    .cal-controls { display: flex; gap: 12px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
-    select { font: inherit; padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 8px; background: #fff; }
-    .tablewrap { overflow-x: auto; border: 1px solid #eee; border-radius: 10px; }
-    table { border-collapse: collapse; width: 100%; font-size: 13px; }
-    th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid #f0f0f0; white-space: nowrap; }
-    th { background: #fafafa; font-weight: 600; color: #374151; position: sticky; top: 0; }
-    tr:last-child td { border-bottom: none; }
-    td.title { white-space: normal; min-width: 220px; }
-    .pill { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 500; line-height: 1.5; }
-    .lnk { text-decoration: none; font-size: 15px; }
-    .lnk.disabled { opacity: .3; cursor: default; }
-    .count { color: #6b7280; font-size: 13px; }
+    /* top bar */
+    .topbar { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+    .tabs { display:flex; gap:6px; }
+    .tab { padding:9px 16px; border-radius:9px; border:1px solid transparent; background:transparent; color:#374151; cursor:pointer; font-size:14px; }
+    .tab.active { background:#eef2ff; border-color:#c7d2fe; color:#1e3a8a; font-weight:600; }
+    .whoami-min { font-size:13px; color:#6b7280; }
 
-    /* Notion-matched stage colours (bg / text) */
-    .s-red    { background:#fde8e6; color:#a3372b; }
-    .s-gray   { background:#ececeb; color:#4b4b4b; }
-    .s-yellow { background:#fbf1d6; color:#8a6d1a; }
-    .s-purple { background:#efe4f6; color:#6b3fa0; }
-    .s-pink   { background:#fbe4ef; color:#a83f76; }
-    .s-blue   { background:#dfeafc; color:#2f5fa0; }
-    .s-brown  { background:#eee0da; color:#7a4b32; }
-    .s-orange { background:#fbe8d3; color:#9a5b1e; }
-    .s-green  { background:#dcefe0; color:#2c6b3f; }
-    .s-default{ background:#ececeb; color:#4b4b4b; }
-    .t-green  { color:#2c6b3f; }
-    .t-amber  { color:#9a5b1e; }
-    .t-red    { color:#a3372b; }
-    .t-muted  { color:#9ca3af; }
+    /* controls */
+    .controls { display:flex; gap:12px; align-items:center; margin-bottom:14px; flex-wrap:wrap; }
+    .seg { display:inline-flex; border:1px solid #d1d5db; border-radius:8px; overflow:hidden; }
+    .seg button { border:none; border-radius:0; background:#fff; padding:8px 14px; }
+    .seg button.on { background:#2563eb; color:#fff; }
+    .count { color:#6b7280; font-size:13px; }
+
+    /* table */
+    .tablewrap { overflow-x:auto; border:1px solid #eee; border-radius:10px; }
+    table { border-collapse:collapse; width:100%; font-size:13px; }
+    th, td { text-align:left; padding:9px 12px; border-bottom:1px solid #f0f0f0; white-space:nowrap; }
+    th { background:#fafafa; font-weight:600; color:#374151; }
+    tr.clickable { cursor:pointer; }
+    tr.clickable:hover { background:#f9fafb; }
+    tr:last-child td { border-bottom:none; }
+    td.title { white-space:normal; min-width:210px; }
+    .pill { display:inline-block; padding:2px 9px; border-radius:999px; font-size:12px; font-weight:500; }
+    .chip { display:inline-block; padding:1px 7px; margin:1px 2px 1px 0; border-radius:6px; font-size:11px; background:#eef2f6; color:#374151; }
+    .lnk { text-decoration:none; font-size:15px; }
+    .lnk.disabled { opacity:.3; }
+
+    /* board */
+    .board { display:flex; gap:12px; overflow-x:auto; padding-bottom:6px; }
+    .bcol { min-width:230px; background:#f7f8fa; border:1px solid #eee; border-radius:10px; padding:8px; }
+    .bcol h4 { margin:4px 6px 8px; font-size:12px; font-weight:600; }
+    .bcard { background:#fff; border:1px solid #e5e7eb; border-radius:8px; padding:8px 10px; margin-bottom:8px; cursor:pointer; font-size:12px; }
+    .bcard:hover { border-color:#c7d2fe; }
+    .bcard .bt { font-weight:600; margin-bottom:2px; white-space:normal; }
+
+    /* stage colours */
+    .s-red{background:#fde8e6;color:#a3372b}.s-gray{background:#ececeb;color:#4b4b4b}
+    .s-yellow{background:#fbf1d6;color:#8a6d1a}.s-purple{background:#efe4f6;color:#6b3fa0}
+    .s-pink{background:#fbe4ef;color:#a83f76}.s-blue{background:#dfeafc;color:#2f5fa0}
+    .s-brown{background:#eee0da;color:#7a4b32}.s-orange{background:#fbe8d3;color:#9a5b1e}
+    .s-green{background:#dcefe0;color:#2c6b3f}.s-default{background:#ececeb;color:#4b4b4b}
+    .t-green{color:#2c6b3f}.t-amber{color:#9a5b1e}.t-red{color:#a3372b}.t-muted{color:#9ca3af}
+
+    /* detail panel */
+    .overlay { position:fixed; inset:0; background:rgba(17,24,39,.35); display:none; align-items:flex-start; justify-content:center; padding:40px 16px; z-index:50; overflow-y:auto; }
+    .overlay.show { display:flex; }
+    .panel { background:#fff; border-radius:14px; width:min(560px,100%); padding:22px; box-shadow:0 10px 40px rgba(0,0,0,.2); }
+    .panel h3 { margin:0 0 2px; font-size:17px; }
+    .panel .pid { color:#6b7280; font-size:13px; margin-bottom:14px; }
+    .field { margin-bottom:14px; }
+    .field label { display:block; font-size:12px; color:#6b7280; margin-bottom:5px; }
+    .gates { display:grid; grid-template-columns:1fr 1fr; gap:6px 14px; }
+    .gate { display:flex; align-items:center; gap:8px; font-size:13px; }
+    .panel-actions { display:flex; gap:10px; align-items:center; margin-top:18px; }
+    .pstatus { font-size:13px; }
+
+    /* importer */
+    textarea { width:100%; min-height:140px; font-family:ui-monospace,Menlo,monospace; font-size:13px; padding:12px; border:1px solid #d1d5db; border-radius:10px; resize:vertical; }
+    .report { margin-top:16px; display:grid; gap:8px; }
+    .rrow { border:1px solid #e5e7eb; border-radius:10px; padding:10px 12px; font-size:13px; }
+    .rrow .idline { font-weight:600; margin-bottom:2px; }
+    .rrow.ok{border-color:#a7f3d0;background:#f0fdf4}.rrow.warn{border-color:#fde68a;background:#fffbeb}.rrow.err{border-color:#fecaca;background:#fef2f2}
+    .rrow ul{margin:6px 0 0;padding-left:18px}
   </style>
 </head>
 <body>
   <div class="wrap">
 
     <!-- Sign-in -->
-    <div class="card">
+    <div class="card" id="signCard">
       <h1>Orbit</h1>
       <p class="sub">Sign in with your WWA team account.</p>
       <div id="signin"></div>
-      <div id="whoami" class="muted">Waiting for sign-in…</div>
-      <div class="row-actions">
-        <button class="signout hidden" id="signout">Sign out</button>
-      </div>
+      <div id="whoami" class="muted" style="margin-top:14px">Waiting for sign-in…</div>
     </div>
 
-    <!-- Content Calendar (hidden until signed in) -->
-    <div class="card hidden" id="calendar">
-      <h2>Content Calendar</h2>
-      <div class="cal-controls">
-        <label>Client:
-          <select id="clientFilter">
-            <option value="">All</option>
-            <option>Ice</option><option>Lynn</option><option>Melissa</option>
-            <option>SRU</option><option>Dianna</option>
-          </select>
-        </label>
-        <button id="refresh">Refresh</button>
-        <span class="count" id="calCount"></span>
+    <!-- App (hidden until signed in) -->
+    <div class="hidden" id="app">
+      <div class="card topbar">
+        <div class="tabs">
+          <button class="tab" data-tab="today">Today's Work</button>
+          <button class="tab" data-tab="pipeline">Pipeline</button>
+          <button class="tab" data-tab="import">Import</button>
+        </div>
+        <div class="topbar" style="gap:10px">
+          <span class="whoami-min" id="whoamiMin"></span>
+          <button class="small" id="signout">Sign out</button>
+        </div>
       </div>
-      <div class="tablewrap">
-        <table id="calTable">
-          <thead>
-            <tr>
-              <th>Piece ID</th><th>Client</th><th>Format</th><th>Stage</th>
-              <th>Next Step</th><th>Chase Who</th><th>On Track</th><th>Publish</th><th>Copy</th>
-            </tr>
-          </thead>
-          <tbody id="calBody"></tbody>
-        </table>
+
+      <!-- TODAY -->
+      <div class="card hidden" id="tab-today">
+        <h2>Today's Work</h2>
+        <p class="sub">The pieces that need a hand — behind schedule, blocked on the client, or posting soon.</p>
+        <div class="count" id="todayCount"></div>
+        <div class="tablewrap" style="margin-top:10px">
+          <table><thead><tr>
+            <th>Piece ID</th><th>Client</th><th>Format</th><th>Stage</th><th>Next Step</th><th>Chase Who</th><th>On Track</th><th>Publish</th>
+          </tr></thead><tbody id="todayBody"></tbody></table>
+        </div>
+      </div>
+
+      <!-- PIPELINE -->
+      <div class="card hidden" id="tab-pipeline">
+        <div class="controls">
+          <label>Client:
+            <select id="clientFilter">
+              <option value="">All</option>
+              <option>Ice</option><option>Lynn</option><option>Melissa</option><option>SRU</option><option>Dianna</option>
+            </select>
+          </label>
+          <span>View as:</span>
+          <span class="seg">
+            <button id="viewTable" class="on">Table</button>
+            <button id="viewBoard">Board</button>
+          </span>
+          <button id="refresh" class="small">Refresh</button>
+          <span class="count" id="pipeCount"></span>
+        </div>
+
+        <div id="tableView" class="tablewrap">
+          <table><thead><tr>
+            <th>Piece ID</th><th>Client</th><th>Format</th><th>Platform</th><th>Stage</th>
+            <th>Next Step</th><th>Chase Who</th><th>On Track</th><th>Publish</th><th>Copy</th>
+          </tr></thead><tbody id="pipeBody"></tbody></table>
+        </div>
+
+        <div id="boardView" class="board hidden"></div>
+      </div>
+
+      <!-- IMPORT -->
+      <div class="card hidden" id="tab-import">
+        <h2>Import a batch</h2>
+        <p class="sub">Paste Block A (with the header row). Validate first — Save turns on only when there are no blocking errors.</p>
+        <textarea id="tsv" placeholder="Piece ID&#9;Client&#9;Format&#9;Platform&#9;Title&#9;Publish Date&#9;Ready By&#9;Stage&#9;Founder&#9;Copy Link"></textarea>
+        <div class="controls" style="margin-top:12px;margin-bottom:0">
+          <button class="primary" id="validate">Validate</button>
+          <button class="primary" id="save" disabled>Save to Sheet</button>
+          <span class="pstatus muted" id="impStatus"></span>
+        </div>
+        <div class="report" id="report"></div>
       </div>
     </div>
+  </div>
 
-    <!-- Importer (hidden until signed in) -->
-    <div class="card hidden" id="importer">
-      <h2>Import a batch</h2>
-      <p class="sub">Paste Block A (the whole table, including the header row). Validate first — Save turns on only when there are no blocking errors.</p>
-      <textarea id="tsv" placeholder="Piece ID&#9;Client&#9;Format&#9;Platform&#9;Title&#9;Publish Date&#9;Ready By&#9;Stage&#9;Founder&#9;Copy Link&#10;C1.1&#9;Ice&#9;Carousel&#9;IG&#9;…"></textarea>
-      <div class="row-actions">
-        <button class="primary" id="validate">Validate</button>
-        <button class="primary" id="save" disabled>Save to Sheet</button>
-        <span class="status muted" id="status"></span>
+  <!-- DETAIL PANEL -->
+  <div class="overlay" id="overlay">
+    <div class="panel">
+      <h3 id="pTitle"></h3>
+      <div class="pid" id="pMeta"></div>
+
+      <div class="field">
+        <label>Stage</label>
+        <select id="pStage"></select>
       </div>
-      <div class="summary" id="summary"></div>
-      <div class="report" id="report"></div>
-    </div>
 
+      <div class="field">
+        <label>Gates</label>
+        <div class="gates" id="pGates"></div>
+      </div>
+
+      <div class="field">
+        <label><input type="checkbox" id="pBlocked"> Blocked</label>
+      </div>
+
+      <div class="field">
+        <label>Copy Link (Notion)</label>
+        <input type="text" id="pCopyLink" placeholder="https://notion.so/…">
+      </div>
+
+      <div class="panel-actions">
+        <button class="primary" id="pSave">Save</button>
+        <button id="pCancel">Close</button>
+        <span class="pstatus muted" id="pStatus"></span>
+      </div>
+    </div>
   </div>
 
   <script>
     const CLIENT_ID = '543895724243-cbielh8h6qnqau5nh5p8jp7j4cplfge1.apps.googleusercontent.com';
     const EXEC_URL  = 'https://script.google.com/macros/s/AKfycbz4IrRMhmoOSZSVIB5CacHmMW6T7TFjEDDT-31Ke0C0sZAYy2uBdzMiBCXwG__IV33mwQ/exec';
 
-    let idToken = null;
-    let lastValidatedTsv = null;
-
-    const whoamiEl  = document.getElementById('whoami');
-    const signoutEl = document.getElementById('signout');
-    const calendarEl= document.getElementById('calendar');
-    const importerEl= document.getElementById('importer');
-    const tsvEl     = document.getElementById('tsv');
-    const validateB = document.getElementById('validate');
-    const saveB     = document.getElementById('save');
-    const statusEl  = document.getElementById('status');
-    const summaryEl = document.getElementById('summary');
-    const reportEl  = document.getElementById('report');
-    const clientFilter = document.getElementById('clientFilter');
-    const refreshB  = document.getElementById('refresh');
-    const calBody   = document.getElementById('calBody');
-    const calCount  = document.getElementById('calCount');
-
-    // Stage label → colour class (from the Notion schema)
+    const STAGES = ['🚩 Required Client Input','1 Copywriting','2 Copywriting Ready for Review','3 Copywriting Approved',
+      '4 Waiting for Voiceover','5 Voiceover Received','6 In Production','7 Content Ready for Review','8 Content Approved',
+      '9 Ready to Publish','10 Published','⬜ Unselected','🔁 Rolled Over'];
     const STAGE_COLOUR = {
       '🚩 Required Client Input':'s-red','1 Copywriting':'s-gray','2 Copywriting Ready for Review':'s-yellow',
       '3 Copywriting Approved':'s-purple','4 Waiting for Voiceover':'s-pink','5 Voiceover Received':'s-blue',
       '6 In Production':'s-yellow','7 Content Ready for Review':'s-purple','8 Content Approved':'s-brown',
-      '9 Ready to Publish':'s-orange','10 Published':'s-green','⬜ Unselected':'s-default','🔁 Rolled Over':'s-purple'
-    };
+      '9 Ready to Publish':'s-orange','10 Published':'s-green','⬜ Unselected':'s-default','🔁 Rolled Over':'s-purple'};
+    const GATES = ['1 Direction','2 Copy or Pack','3 Copywriting Approved','4 Filmed','5 Selects','6 Built','7 Content Approved','8 Caption','9 Scheduled'];
+    const BOARD_HIDE = ['10 Published','⬜ Unselected'];   // like 🟩 Pipeline
+
+    // persisted UI state
+    const PREFS = loadPrefs();
+    let idToken = null, allRows = [], current = null;
+
+    const $ = function (id) { return document.getElementById(id); };
 
     window.onload = function () {
       google.accounts.id.initialize({ client_id: CLIENT_ID, callback: onCredential });
-      google.accounts.id.renderButton(document.getElementById('signin'),
-        { theme: 'outline', size: 'large', text: 'signin_with' });
+      google.accounts.id.renderButton($('signin'), { theme:'outline', size:'large', text:'signin_with' });
     };
 
     async function call(action, payload) {
-      const res = await fetch(EXEC_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ idToken: idToken, action: action, payload: payload || {} })
-      });
+      const res = await fetch(EXEC_URL, { method:'POST',
+        headers:{ 'Content-Type':'text/plain;charset=utf-8' },
+        body: JSON.stringify({ idToken: idToken, action: action, payload: payload || {} }) });
       return res.json();
     }
 
-    async function onCredential(response) {
-      idToken = response.credential;
-      whoamiEl.className = 'muted';
-      whoamiEl.textContent = 'Checking with Orbit…';
+    async function onCredential(resp) {
+      idToken = resp.credential;
+      $('whoami').className = 'muted'; $('whoami').textContent = 'Checking with Orbit…';
       const data = await call('whoami');
-      if (data.ok) {
-        whoamiEl.className = 'ok';
-        whoamiEl.innerHTML = 'Signed in as <b>' + esc(data.result.name) + '</b><br><span class="muted">' + esc(data.result.email) + '</span>';
-        signoutEl.classList.remove('hidden');
-        calendarEl.classList.remove('hidden');
-        importerEl.classList.remove('hidden');
-        loadRows();
-      } else {
-        whoamiEl.className = 'err';
-        whoamiEl.textContent = data.error || 'Sign-in rejected.';
-        calendarEl.classList.add('hidden');
-        importerEl.classList.add('hidden');
-      }
+      if (!data.ok) { $('whoami').className='err'; $('whoami').textContent = data.error || 'Sign-in rejected.'; return; }
+      $('signCard').classList.add('hidden');
+      $('app').classList.remove('hidden');
+      $('whoamiMin').textContent = data.result.name + ' · ' + data.result.email;
+      buildStageSelect(); buildGateChecks();
+      showTab(PREFS.tab || 'today');
+      applyPipePrefs();
+      await loadRows();
     }
 
-    signoutEl.onclick = function () {
-      google.accounts.id.disableAutoSelect();
-      idToken = null;
-      whoamiEl.className = 'muted';
-      whoamiEl.textContent = 'Signed out. Sign in again above.';
-      signoutEl.classList.add('hidden');
-      calendarEl.classList.add('hidden');
-      importerEl.classList.add('hidden');
+    $('signout').onclick = function () {
+      google.accounts.id.disableAutoSelect(); idToken = null;
+      $('app').classList.add('hidden'); $('signCard').classList.remove('hidden');
+      $('whoami').className='muted'; $('whoami').textContent = 'Signed out. Sign in again above.';
     };
 
-    // ── Calendar ──
-    refreshB.onclick = loadRows;
-    clientFilter.onchange = renderRows;
-
-    let allRows = [];
-    async function loadRows() {
-      calCount.textContent = 'Loading…';
-      const data = await call('listRows');
-      if (!data.ok) { calCount.textContent = data.error; return; }
-      allRows = data.result.rows || [];
-      renderRows();
+    // ── tabs ──
+    document.querySelectorAll('.tab').forEach(function (b) {
+      b.onclick = function () { showTab(b.dataset.tab); };
+    });
+    function showTab(name) {
+      PREFS.tab = name; savePrefs();
+      document.querySelectorAll('.tab').forEach(function (b) { b.classList.toggle('active', b.dataset.tab === name); });
+      ['today','pipeline','import'].forEach(function (t) { $('tab-' + t).classList.toggle('hidden', t !== name); });
     }
 
-    function renderRows() {
-      const want = clientFilter.value;
-      const rows = allRows.filter(function (r) { return !want || r['Client'] === want; });
-      rows.sort(function (a, b) { return (a['Publish Date'] || '').localeCompare(b['Publish Date'] || ''); });
-      calBody.innerHTML = '';
+    // ── data ──
+    $('refresh').onclick = loadRows;
+    $('clientFilter').onchange = function () { PREFS.client = $('clientFilter').value; savePrefs(); renderPipe(); renderToday(); };
+    $('viewTable').onclick = function () { setView('table'); };
+    $('viewBoard').onclick = function () { setView('board'); };
+
+    function applyPipePrefs() {
+      $('clientFilter').value = PREFS.client || '';
+      setView(PREFS.view || 'table');
+    }
+    function setView(v) {
+      PREFS.view = v; savePrefs();
+      $('viewTable').classList.toggle('on', v === 'table');
+      $('viewBoard').classList.toggle('on', v === 'board');
+      $('tableView').classList.toggle('hidden', v !== 'table');
+      $('boardView').classList.toggle('hidden', v !== 'board');
+    }
+
+    async function loadRows() {
+      $('pipeCount').textContent = 'Loading…';
+      const data = await call('listRows');
+      if (!data.ok) { $('pipeCount').textContent = data.error; return; }
+      allRows = data.result.rows || [];
+      renderPipe(); renderToday();
+    }
+
+    function filtered() {
+      const want = PREFS.client || '';
+      return allRows.filter(function (r) { return !want || r['Client'] === want; })
+        .sort(function (a, b) { return (a['Publish Date']||'').localeCompare(b['Publish Date']||''); });
+    }
+
+    // ── pipeline: table + board ──
+    function renderPipe() {
+      const rows = filtered();
+      const tb = $('pipeBody'); tb.innerHTML = '';
       rows.forEach(function (r) {
         const tr = document.createElement('tr');
+        tr.className = 'clickable';
+        tr.onclick = function () { openPanel(r); };
         tr.innerHTML =
-          '<td>' + esc(r['Piece ID']) + '</td>' +
-          '<td>' + esc(r['Client']) + '</td>' +
-          '<td>' + esc(r['Format']) + '</td>' +
-          '<td>' + stagePill(r['Stage']) + '</td>' +
-          '<td>' + esc(r['Next Step']) + '</td>' +
-          '<td>' + esc(r['Chase Who']) + '</td>' +
-          '<td>' + onTrack(r['On Track']) + '</td>' +
-          '<td>' + esc(r['Publish Date']) + '</td>' +
-          '<td>' + copyLink(r['Copy Link']) + '</td>';
-        calBody.appendChild(tr);
+          '<td>'+esc(r['Piece ID'])+'</td><td>'+esc(r['Client'])+'</td><td>'+esc(r['Format'])+'</td>'+
+          '<td>'+chips(r['PlatformList'])+'</td><td>'+stagePill(r['Stage'])+'</td>'+
+          '<td>'+esc(r['Next Step'])+'</td><td>'+esc(r['Chase Who'])+'</td>'+
+          '<td>'+onTrack(r['On Track'])+'</td><td>'+esc(r['Publish Date'])+'</td>'+
+          '<td>'+copyLink(r['Copy Link'])+'</td>';
+        // don't let the link click open the panel
+        const a = tr.querySelector('a.lnk'); if (a) a.onclick = function (e){ e.stopPropagation(); };
+        tb.appendChild(tr);
       });
-      calCount.textContent = rows.length + ' piece(s)';
+      $('pipeCount').textContent = rows.length + ' piece(s)';
+
+      // board
+      const bv = $('boardView'); bv.innerHTML = '';
+      const shown = STAGES.filter(function (s) { return BOARD_HIDE.indexOf(s) === -1; });
+      shown.forEach(function (stage) {
+        const inStage = rows.filter(function (r) { return r['Stage'] === stage; });
+        if (!inStage.length) return;   // hide empty groups, like Notion
+        const col = document.createElement('div'); col.className = 'bcol';
+        col.innerHTML = '<h4>'+stagePill(stage)+' <span class="muted">'+inStage.length+'</span></h4>';
+        inStage.forEach(function (r) {
+          const c = document.createElement('div'); c.className = 'bcard';
+          c.onclick = function () { openPanel(r); };
+          c.innerHTML = '<div class="bt">'+esc(r['Title']||r['Piece ID'])+'</div>'+
+            '<div class="muted">'+esc(r['Piece ID'])+' · '+esc(r['Format'])+'</div>'+
+            '<div>'+onTrack(r['On Track'])+' · '+esc(r['Publish Date'])+'</div>';
+          col.appendChild(c);
+        });
+        bv.appendChild(col);
+      });
     }
 
-    function stagePill(s) {
-      if (!s) return '';
-      const cls = STAGE_COLOUR[s] || 's-default';
-      return '<span class="pill ' + cls + '">' + esc(s) + '</span>';
-    }
-    function onTrack(v) {
-      if (!v) return '<span class="t-muted">—</span>';
-      let cls = 't-muted';
-      if (v.indexOf('🟢') === 0 || v.indexOf('On track') >= 0 || v.indexOf('Scheduled') >= 0) cls = 't-green';
-      else if (v.indexOf('🟠') === 0 || v.indexOf('risk') >= 0) cls = 't-amber';
-      else if (v.indexOf('🔴') === 0 || v.indexOf('Behind') >= 0 || v.indexOf('Blocked') >= 0) cls = 't-red';
-      return '<span class="' + cls + '">' + esc(v) + '</span>';
-    }
-    function copyLink(url) {
-      if (!url) return '<span class="lnk disabled" title="No copy page yet">🔗</span>';
-      return '<a class="lnk" href="' + esc(url) + '" target="_blank" rel="noopener" title="Open copy page">🔗</a>';
+    // ── today's work ──
+    // Actionable = client-court stage, OR behind/at-risk, OR posting within 3 days and not published.
+    function renderToday() {
+      const rows = filtered().filter(function (r) {
+        const ot = r['On Track']||''; const st = r['Stage']||'';
+        const clientCourt = /Required Client Input|Ready for Review|Waiting for Voiceover/.test(st);
+        const behind = ot.indexOf('🔴')===0 || ot.indexOf('🟠')===0 || ot.indexOf('⛔')===0;
+        const soon = daysTo(r['Publish Date']) !== null && daysTo(r['Publish Date']) <= 3 && st.indexOf('10 Published') !== 0;
+        return clientCourt || behind || soon;
+      });
+      const tb = $('todayBody'); tb.innerHTML = '';
+      rows.forEach(function (r) {
+        const tr = document.createElement('tr'); tr.className='clickable'; tr.onclick=function(){ openPanel(r); };
+        tr.innerHTML =
+          '<td>'+esc(r['Piece ID'])+'</td><td>'+esc(r['Client'])+'</td><td>'+esc(r['Format'])+'</td>'+
+          '<td>'+stagePill(r['Stage'])+'</td><td>'+esc(r['Next Step'])+'</td><td>'+esc(r['Chase Who'])+'</td>'+
+          '<td>'+onTrack(r['On Track'])+'</td><td>'+esc(r['Publish Date'])+'</td>';
+        tb.appendChild(tr);
+      });
+      $('todayCount').textContent = rows.length + ' piece(s) need attention';
     }
 
-    // ── Importer ──
-    tsvEl.addEventListener('input', function () { saveB.disabled = true; lastValidatedTsv = null; });
+    // ── detail panel ──
+    function buildStageSelect() {
+      $('pStage').innerHTML = STAGES.map(function (s){ return '<option>'+esc(s)+'</option>'; }).join('');
+    }
+    function buildGateChecks() {
+      $('pGates').innerHTML = GATES.map(function (g){
+        return '<label class="gate"><input type="checkbox" data-gate="'+esc(g)+'"> '+esc(g)+'</label>';
+      }).join('');
+    }
+    function openPanel(r) {
+      current = r;
+      $('pTitle').textContent = r['Title'] || r['Piece ID'];
+      $('pMeta').textContent = r['Piece ID'] + ' · ' + r['Client'] + ' · ' + r['Format'] +
+        (r['PlatformList'].length ? ' · ' + r['PlatformList'].join(', ') : '');
+      $('pStage').value = r['Stage'] || '1 Copywriting';
+      document.querySelectorAll('#pGates input').forEach(function (cb) {
+        cb.checked = r[cb.dataset.gate] === 'TRUE';
+      });
+      $('pBlocked').checked = r['Blocked'] === 'TRUE';
+      $('pCopyLink').value = r['Copy Link'] || '';
+      setPStatus('', 'muted');
+      $('overlay').classList.add('show');
+    }
+    $('pCancel').onclick = function () { $('overlay').classList.remove('show'); };
+    $('overlay').onclick = function (e) { if (e.target === $('overlay')) $('overlay').classList.remove('show'); };
 
-    validateB.onclick = async function () {
-      const tsv = tsvEl.value;
-      if (!tsv.trim()) { setStatus('Nothing pasted yet.', 'muted'); return; }
-      lock(true); setStatus('Validating…', 'muted'); clearReport();
-      const data = await call('validateBatch', { tsv: tsv });
-      lock(false);
-      if (!data.ok) { setStatus(data.error, 'err'); return; }
-      renderReport(data.result);
-      if (data.result.canSave) { lastValidatedTsv = tsv; saveB.disabled = false; setStatus('Ready to save.', 'muted'); }
-      else { saveB.disabled = true; setStatus('Fix the blocking errors, then validate again.', 'muted'); }
+    $('pSave').onclick = async function () {
+      if (!current) return;
+      const changes = {};
+      if ($('pStage').value !== (current['Stage']||'')) changes['Stage'] = $('pStage').value;
+      if (($('pCopyLink').value||'') !== (current['Copy Link']||'')) changes['Copy Link'] = $('pCopyLink').value;
+      if ($('pBlocked').checked !== (current['Blocked']==='TRUE')) changes['Blocked'] = $('pBlocked').checked;
+      const gates = {};
+      document.querySelectorAll('#pGates input').forEach(function (cb) {
+        const was = current[cb.dataset.gate] === 'TRUE';
+        if (cb.checked !== was) gates[cb.dataset.gate] = cb.checked;
+      });
+      if (Object.keys(gates).length) changes['gates'] = gates;
+
+      if (!Object.keys(changes).length) { setPStatus('No changes.', 'muted'); return; }
+
+      $('pSave').disabled = true; setPStatus('Saving…', 'muted');
+      const data = await call('updatePiece', { row: current.row, pieceId: current['Piece ID'], changes: changes });
+      $('pSave').disabled = false;
+      if (!data.ok) { setPStatus(data.error, 'err'); return; }
+      // update in place
+      const fresh = data.result.row;
+      const idx = allRows.findIndex(function (x){ return x.row === fresh.row; });
+      if (idx >= 0) allRows[idx] = fresh;
+      current = fresh;
+      renderPipe(); renderToday();
+      setPStatus('Saved.', 'ok');
     };
 
-    saveB.onclick = async function () {
-      const tsv = tsvEl.value;
-      if (tsv !== lastValidatedTsv) { setStatus('Text changed — validate again first.', 'warn'); saveB.disabled = true; return; }
-      lock(true); saveB.disabled = true; setStatus('Saving…', 'muted');
-      const data = await call('importBatch', { tsv: tsv });
-      lock(false);
-      if (!data.ok) { setStatus(data.error, 'err'); return; }
-      setStatus('Saved ' + data.result.total + ' row(s) to the Sheet.', 'ok');
+    // ── renderers ──
+    function stagePill(s){ if(!s) return ''; return '<span class="pill '+(STAGE_COLOUR[s]||'s-default')+'">'+esc(s)+'</span>'; }
+    function chips(list){ return (list||[]).map(function(p){ return '<span class="chip">'+esc(p)+'</span>'; }).join('') || '<span class="muted">—</span>'; }
+    function onTrack(v){
+      if(!v) return '<span class="t-muted">—</span>';
+      let c='t-muted';
+      if(v.indexOf('🟢')===0||/On track|Scheduled/.test(v)) c='t-green';
+      else if(v.indexOf('🟠')===0||/risk/.test(v)) c='t-amber';
+      else if(v.indexOf('🔴')===0||/Behind|Blocked/.test(v)) c='t-red';
+      return '<span class="'+c+'">'+esc(v)+'</span>';
+    }
+    function copyLink(u){ return u ? '<a class="lnk" href="'+esc(u)+'" target="_blank" rel="noopener" title="Open copy page">🔗</a>' : '<span class="lnk disabled" title="No page yet">🔗</span>'; }
+
+    // ── importer ──
+    let lastValidatedTsv = null;
+    $('tsv').addEventListener('input', function(){ $('save').disabled = true; lastValidatedTsv = null; });
+    $('validate').onclick = async function () {
+      const tsv = $('tsv').value; if(!tsv.trim()){ setImp('Nothing pasted yet.','muted'); return; }
+      $('validate').disabled = true; $('save').disabled = true; setImp('Validating…','muted'); $('report').innerHTML='';
+      const data = await call('validateBatch', { tsv: tsv }); $('validate').disabled = false;
+      if(!data.ok){ setImp(data.error,'err'); return; }
       renderReport(data.result);
-      tsvEl.value = ''; lastValidatedTsv = null;
-      loadRows();                              // refresh the calendar after an import
+      if(data.result.canSave){ lastValidatedTsv=tsv; $('save').disabled=false; setImp('Ready to save.','muted'); }
+      else { setImp('Fix the blocking errors, then validate again.','muted'); }
     };
-
-    function lock(on) { validateB.disabled = on; if (on) saveB.disabled = true; }
-    function setStatus(msg, cls) { statusEl.className = 'status ' + (cls || 'muted'); statusEl.textContent = msg; }
-    function clearReport() { summaryEl.textContent = ''; reportEl.innerHTML = ''; }
-
-    function renderReport(r) {
-      summaryEl.innerHTML = r.total + ' row(s) — <b>' + r.hardBlocks + '</b> blocking error(s), <b>' + r.warnings + '</b> warning(s).';
-      reportEl.innerHTML = '';
-      r.rows.forEach(function (row) {
-        const cls = row.errors.length ? 'err' : (row.warnings.length ? 'warn' : 'ok');
-        const div = document.createElement('div');
-        div.className = 'rrow ' + cls;
-        let html = '<div class="idline">Row ' + row.line + (row.id ? ' · ' + esc(row.id) : '') + '</div>';
-        const items = row.errors.map(function (e) { return '❌ ' + esc(e); })
-          .concat(row.warnings.map(function (w) { return '⚠️ ' + esc(w); }));
-        if (items.length) html += '<ul><li>' + items.join('</li><li>') + '</li></ul>';
-        else html += '<div class="muted">OK</div>';
-        div.innerHTML = html;
-        reportEl.appendChild(div);
+    $('save').onclick = async function () {
+      const tsv = $('tsv').value;
+      if(tsv!==lastValidatedTsv){ setImp('Text changed — validate again.','muted'); $('save').disabled=true; return; }
+      $('save').disabled=true; $('validate').disabled=true; setImp('Saving…','muted');
+      const data = await call('importBatch', { tsv: tsv }); $('validate').disabled=false;
+      if(!data.ok){ setImp(data.error,'err'); return; }
+      setImp('Saved '+data.result.total+' row(s).','ok'); renderReport(data.result);
+      $('tsv').value=''; lastValidatedTsv=null; loadRows();
+    };
+    function renderReport(r){
+      const el = $('report'); el.innerHTML =
+        '<div class="rrow"><b>'+r.total+'</b> row(s) — <b>'+r.hardBlocks+'</b> blocking, <b>'+r.warnings+'</b> warning(s).</div>';
+      r.rows.forEach(function(row){
+        const cls = row.errors.length?'err':(row.warnings.length?'warn':'ok');
+        const items = row.errors.map(function(e){return '❌ '+esc(e);}).concat(row.warnings.map(function(w){return '⚠️ '+esc(w);}));
+        const div = document.createElement('div'); div.className='rrow '+cls;
+        div.innerHTML = '<div class="idline">Row '+row.line+(row.id?' · '+esc(row.id):'')+'</div>'+
+          (items.length ? '<ul><li>'+items.join('</li><li>')+'</li></ul>' : '<div class="muted">OK</div>');
+        el.appendChild(div);
       });
     }
+    function setImp(m,c){ $('impStatus').className='pstatus '+(c||'muted'); $('impStatus').textContent=m; }
+    function setPStatus(m,c){ $('pStatus').className='pstatus '+(c||'muted'); $('pStatus').textContent=m; }
 
-    function esc(s) {
-      return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
-        return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c];
-      });
-    }
+    // ── utils ──
+    function daysTo(ymd){ if(!ymd) return null; const d=new Date(ymd+'T00:00:00'); const now=new Date(); now.setHours(0,0,0,0); return Math.round((d-now)/86400000); }
+    function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+    function loadPrefs(){ try { return JSON.parse(localStorage.getItem('orbitPrefs')||'{}'); } catch(e){ return {}; } }
+    function savePrefs(){ try { localStorage.setItem('orbitPrefs', JSON.stringify(PREFS)); } catch(e){} }
   </script>
 </body>
 </html>
