@@ -9,7 +9,7 @@
     :root { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
     * { box-sizing: border-box; }
     body { margin: 0; min-height: 100vh; background: #f6f7f9; color: #1a1a1a; padding: 24px; }
-    .wrap { max-width: 860px; margin: 0 auto; display: grid; gap: 20px; }
+    .wrap { max-width: 1100px; margin: 0 auto; display: grid; gap: 20px; }
     .card { background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
     h1 { font-size: 20px; margin: 0 0 4px; }
     h2 { font-size: 16px; margin: 0 0 12px; }
@@ -18,14 +18,13 @@
     #whoami { margin-top: 16px; font-size: 14px; line-height: 1.5; }
     .ok  { color: #065f46; background: #ecfdf5; border: 1px solid #a7f3d0; padding: 12px 14px; border-radius: 10px; }
     .err { color: #991b1b; background: #fef2f2; border: 1px solid #fecaca; padding: 12px 14px; border-radius: 10px; }
-    .warn{ color: #92400e; background: #fffbeb; border: 1px solid #fde68a; padding: 12px 14px; border-radius: 10px; }
     .muted { color: #6b7280; }
     button { font: inherit; border-radius: 8px; padding: 9px 16px; cursor: pointer; border: 1px solid #d1d5db; background: #f3f4f6; color: #111827; }
     button.primary { background: #2563eb; border-color: #2563eb; color: #fff; }
     button.primary:disabled { background: #cbd5e1; border-color: #cbd5e1; cursor: not-allowed; }
     button.signout { font-size: 13px; padding: 7px 12px; }
     .hidden { display: none; }
-    textarea { width: 100%; min-height: 160px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; padding: 12px; border: 1px solid #d1d5db; border-radius: 10px; resize: vertical; }
+    textarea { width: 100%; min-height: 140px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; padding: 12px; border: 1px solid #d1d5db; border-radius: 10px; resize: vertical; }
     .row-actions { display: flex; gap: 10px; align-items: center; margin-top: 12px; flex-wrap: wrap; }
     .report { margin-top: 16px; display: grid; gap: 8px; }
     .rrow { border: 1px solid #e5e7eb; border-radius: 10px; padding: 10px 12px; font-size: 13px; }
@@ -36,6 +35,36 @@
     .rrow ul { margin: 6px 0 0; padding-left: 18px; }
     .summary { font-size: 14px; margin-top: 4px; }
     .status { font-size: 13px; }
+
+    /* Calendar table */
+    .cal-controls { display: flex; gap: 12px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
+    select { font: inherit; padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 8px; background: #fff; }
+    .tablewrap { overflow-x: auto; border: 1px solid #eee; border-radius: 10px; }
+    table { border-collapse: collapse; width: 100%; font-size: 13px; }
+    th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid #f0f0f0; white-space: nowrap; }
+    th { background: #fafafa; font-weight: 600; color: #374151; position: sticky; top: 0; }
+    tr:last-child td { border-bottom: none; }
+    td.title { white-space: normal; min-width: 220px; }
+    .pill { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 500; line-height: 1.5; }
+    .lnk { text-decoration: none; font-size: 15px; }
+    .lnk.disabled { opacity: .3; cursor: default; }
+    .count { color: #6b7280; font-size: 13px; }
+
+    /* Notion-matched stage colours (bg / text) */
+    .s-red    { background:#fde8e6; color:#a3372b; }
+    .s-gray   { background:#ececeb; color:#4b4b4b; }
+    .s-yellow { background:#fbf1d6; color:#8a6d1a; }
+    .s-purple { background:#efe4f6; color:#6b3fa0; }
+    .s-pink   { background:#fbe4ef; color:#a83f76; }
+    .s-blue   { background:#dfeafc; color:#2f5fa0; }
+    .s-brown  { background:#eee0da; color:#7a4b32; }
+    .s-orange { background:#fbe8d3; color:#9a5b1e; }
+    .s-green  { background:#dcefe0; color:#2c6b3f; }
+    .s-default{ background:#ececeb; color:#4b4b4b; }
+    .t-green  { color:#2c6b3f; }
+    .t-amber  { color:#9a5b1e; }
+    .t-red    { color:#a3372b; }
+    .t-muted  { color:#9ca3af; }
   </style>
 </head>
 <body>
@@ -49,6 +78,33 @@
       <div id="whoami" class="muted">Waiting for sign-in…</div>
       <div class="row-actions">
         <button class="signout hidden" id="signout">Sign out</button>
+      </div>
+    </div>
+
+    <!-- Content Calendar (hidden until signed in) -->
+    <div class="card hidden" id="calendar">
+      <h2>Content Calendar</h2>
+      <div class="cal-controls">
+        <label>Client:
+          <select id="clientFilter">
+            <option value="">All</option>
+            <option>Ice</option><option>Lynn</option><option>Melissa</option>
+            <option>SRU</option><option>Dianna</option>
+          </select>
+        </label>
+        <button id="refresh">Refresh</button>
+        <span class="count" id="calCount"></span>
+      </div>
+      <div class="tablewrap">
+        <table id="calTable">
+          <thead>
+            <tr>
+              <th>Piece ID</th><th>Client</th><th>Format</th><th>Stage</th>
+              <th>Next Step</th><th>Chase Who</th><th>On Track</th><th>Publish</th><th>Copy</th>
+            </tr>
+          </thead>
+          <tbody id="calBody"></tbody>
+        </table>
       </div>
     </div>
 
@@ -73,10 +129,11 @@
     const EXEC_URL  = 'https://script.google.com/macros/s/AKfycbz4IrRMhmoOSZSVIB5CacHmMW6T7TFjEDDT-31Ke0C0sZAYy2uBdzMiBCXwG__IV33mwQ/exec';
 
     let idToken = null;
-    let lastValidatedTsv = null;   // Save only allowed for the exact text that passed validation
+    let lastValidatedTsv = null;
 
     const whoamiEl  = document.getElementById('whoami');
     const signoutEl = document.getElementById('signout');
+    const calendarEl= document.getElementById('calendar');
     const importerEl= document.getElementById('importer');
     const tsvEl     = document.getElementById('tsv');
     const validateB = document.getElementById('validate');
@@ -84,6 +141,18 @@
     const statusEl  = document.getElementById('status');
     const summaryEl = document.getElementById('summary');
     const reportEl  = document.getElementById('report');
+    const clientFilter = document.getElementById('clientFilter');
+    const refreshB  = document.getElementById('refresh');
+    const calBody   = document.getElementById('calBody');
+    const calCount  = document.getElementById('calCount');
+
+    // Stage label → colour class (from the Notion schema)
+    const STAGE_COLOUR = {
+      '🚩 Required Client Input':'s-red','1 Copywriting':'s-gray','2 Copywriting Ready for Review':'s-yellow',
+      '3 Copywriting Approved':'s-purple','4 Waiting for Voiceover':'s-pink','5 Voiceover Received':'s-blue',
+      '6 In Production':'s-yellow','7 Content Ready for Review':'s-purple','8 Content Approved':'s-brown',
+      '9 Ready to Publish':'s-orange','10 Published':'s-green','⬜ Unselected':'s-default','🔁 Rolled Over':'s-purple'
+    };
 
     window.onload = function () {
       google.accounts.id.initialize({ client_id: CLIENT_ID, callback: onCredential });
@@ -109,10 +178,13 @@
         whoamiEl.className = 'ok';
         whoamiEl.innerHTML = 'Signed in as <b>' + esc(data.result.name) + '</b><br><span class="muted">' + esc(data.result.email) + '</span>';
         signoutEl.classList.remove('hidden');
+        calendarEl.classList.remove('hidden');
         importerEl.classList.remove('hidden');
+        loadRows();
       } else {
         whoamiEl.className = 'err';
         whoamiEl.textContent = data.error || 'Sign-in rejected.';
+        calendarEl.classList.add('hidden');
         importerEl.classList.add('hidden');
       }
     }
@@ -123,32 +195,76 @@
       whoamiEl.className = 'muted';
       whoamiEl.textContent = 'Signed out. Sign in again above.';
       signoutEl.classList.add('hidden');
+      calendarEl.classList.add('hidden');
       importerEl.classList.add('hidden');
     };
 
-    // Any edit invalidates a prior validation → Save locks again.
-    tsvEl.addEventListener('input', function () {
-      saveB.disabled = true;
-      lastValidatedTsv = null;
-    });
+    // ── Calendar ──
+    refreshB.onclick = loadRows;
+    clientFilter.onchange = renderRows;
+
+    let allRows = [];
+    async function loadRows() {
+      calCount.textContent = 'Loading…';
+      const data = await call('listRows');
+      if (!data.ok) { calCount.textContent = data.error; return; }
+      allRows = data.result.rows || [];
+      renderRows();
+    }
+
+    function renderRows() {
+      const want = clientFilter.value;
+      const rows = allRows.filter(function (r) { return !want || r['Client'] === want; });
+      rows.sort(function (a, b) { return (a['Publish Date'] || '').localeCompare(b['Publish Date'] || ''); });
+      calBody.innerHTML = '';
+      rows.forEach(function (r) {
+        const tr = document.createElement('tr');
+        tr.innerHTML =
+          '<td>' + esc(r['Piece ID']) + '</td>' +
+          '<td>' + esc(r['Client']) + '</td>' +
+          '<td>' + esc(r['Format']) + '</td>' +
+          '<td>' + stagePill(r['Stage']) + '</td>' +
+          '<td>' + esc(r['Next Step']) + '</td>' +
+          '<td>' + esc(r['Chase Who']) + '</td>' +
+          '<td>' + onTrack(r['On Track']) + '</td>' +
+          '<td>' + esc(r['Publish Date']) + '</td>' +
+          '<td>' + copyLink(r['Copy Link']) + '</td>';
+        calBody.appendChild(tr);
+      });
+      calCount.textContent = rows.length + ' piece(s)';
+    }
+
+    function stagePill(s) {
+      if (!s) return '';
+      const cls = STAGE_COLOUR[s] || 's-default';
+      return '<span class="pill ' + cls + '">' + esc(s) + '</span>';
+    }
+    function onTrack(v) {
+      if (!v) return '<span class="t-muted">—</span>';
+      let cls = 't-muted';
+      if (v.indexOf('🟢') === 0 || v.indexOf('On track') >= 0 || v.indexOf('Scheduled') >= 0) cls = 't-green';
+      else if (v.indexOf('🟠') === 0 || v.indexOf('risk') >= 0) cls = 't-amber';
+      else if (v.indexOf('🔴') === 0 || v.indexOf('Behind') >= 0 || v.indexOf('Blocked') >= 0) cls = 't-red';
+      return '<span class="' + cls + '">' + esc(v) + '</span>';
+    }
+    function copyLink(url) {
+      if (!url) return '<span class="lnk disabled" title="No copy page yet">🔗</span>';
+      return '<a class="lnk" href="' + esc(url) + '" target="_blank" rel="noopener" title="Open copy page">🔗</a>';
+    }
+
+    // ── Importer ──
+    tsvEl.addEventListener('input', function () { saveB.disabled = true; lastValidatedTsv = null; });
 
     validateB.onclick = async function () {
       const tsv = tsvEl.value;
       if (!tsv.trim()) { setStatus('Nothing pasted yet.', 'muted'); return; }
-      lock(true); setStatus('Validating…', 'muted');
-      clearReport();
+      lock(true); setStatus('Validating…', 'muted'); clearReport();
       const data = await call('validateBatch', { tsv: tsv });
       lock(false);
       if (!data.ok) { setStatus(data.error, 'err'); return; }
       renderReport(data.result);
-      if (data.result.canSave) {
-        lastValidatedTsv = tsv;
-        saveB.disabled = false;
-        setStatus('Ready to save.', 'muted');
-      } else {
-        saveB.disabled = true;
-        setStatus('Fix the blocking errors, then validate again.', 'muted');
-      }
+      if (data.result.canSave) { lastValidatedTsv = tsv; saveB.disabled = false; setStatus('Ready to save.', 'muted'); }
+      else { saveB.disabled = true; setStatus('Fix the blocking errors, then validate again.', 'muted'); }
     };
 
     saveB.onclick = async function () {
@@ -160,8 +276,8 @@
       if (!data.ok) { setStatus(data.error, 'err'); return; }
       setStatus('Saved ' + data.result.total + ' row(s) to the Sheet.', 'ok');
       renderReport(data.result);
-      tsvEl.value = '';
-      lastValidatedTsv = null;
+      tsvEl.value = ''; lastValidatedTsv = null;
+      loadRows();                              // refresh the calendar after an import
     };
 
     function lock(on) { validateB.disabled = on; if (on) saveB.disabled = true; }
@@ -169,25 +285,24 @@
     function clearReport() { summaryEl.textContent = ''; reportEl.innerHTML = ''; }
 
     function renderReport(r) {
-      summaryEl.innerHTML = r.total + ' row(s) — ' +
-        '<b>' + r.hardBlocks + '</b> blocking error(s), <b>' + r.warnings + '</b> warning(s).';
+      summaryEl.innerHTML = r.total + ' row(s) — <b>' + r.hardBlocks + '</b> blocking error(s), <b>' + r.warnings + '</b> warning(s).';
       reportEl.innerHTML = '';
       r.rows.forEach(function (row) {
         const cls = row.errors.length ? 'err' : (row.warnings.length ? 'warn' : 'ok');
         const div = document.createElement('div');
         div.className = 'rrow ' + cls;
         let html = '<div class="idline">Row ' + row.line + (row.id ? ' · ' + esc(row.id) : '') + '</div>';
-        if (!row.errors.length && !row.warnings.length) html += '<div class="muted">OK</div>';
         const items = row.errors.map(function (e) { return '❌ ' + esc(e); })
           .concat(row.warnings.map(function (w) { return '⚠️ ' + esc(w); }));
         if (items.length) html += '<ul><li>' + items.join('</li><li>') + '</li></ul>';
+        else html += '<div class="muted">OK</div>';
         div.innerHTML = html;
         reportEl.appendChild(div);
       });
     }
 
     function esc(s) {
-      return String(s).replace(/[&<>"']/g, function (c) {
+      return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
         return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c];
       });
     }
