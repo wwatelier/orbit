@@ -75,7 +75,7 @@
     .lnk { text-decoration:none; font-size:16px; }
     .lnk.disabled { opacity:.28; }
 
-    .board { display:flex; gap:14px; overflow-x:auto; padding-bottom:10px; align-items:flex-start; }
+    .board { display:flex; gap:14px; overflow-x:auto; -webkit-overflow-scrolling:touch; padding-bottom:10px; align-items:flex-start; }
     .bcol { min-width:252px; max-width:252px; background:var(--panel); border:1px solid var(--line); border-radius:13px; padding:11px; }
     .bcol .bh { display:flex; align-items:center; gap:8px; margin:2px 3px 11px; }
     .bcol .bh .n { color:var(--ink-soft); font-size:12px; margin-left:auto; }
@@ -396,7 +396,7 @@
       const data = await call('whoami');
       if(!data.ok){ $('whoami').className='err'; $('whoami').textContent=data.error||'Sign-in rejected.'; return; }
       $('signScreen').classList.add('hidden'); $('app').classList.remove('hidden');
-      $('whoamiMin').textContent = data.result.name+' · '+data.result.email;
+      $('whoamiMin').textContent = data.result.email;
       buildStageSelect(); buildReqTypes();
       showTab(PREFS.tab||'today'); applyPipePrefs();
       await loadRows();
@@ -964,11 +964,9 @@ sched,
         }
         const url=clientLinkFor(key);
         tr.innerHTML='<td>'+esc(cl)+'</td>'+
-          '<td class="muted" style="max-width:440px;overflow:hidden;text-overflow:ellipsis">'+esc(url)+'</td>'+
+          '<td style="max-width:520px;overflow:hidden;text-overflow:ellipsis"><a href="'+esc(url)+'" target="_blank" rel="noopener" style="color:var(--brand);text-decoration:none">'+esc(url)+'</a></td>'+
           '<td style="white-space:nowrap">'+
-            '<button class="small" data-copy="'+esc(url)+'">Copy</button> '+
-            '<a class="small" href="'+esc(url)+'" target="_blank" rel="noopener" style="display:inline-block;text-decoration:none;border:1px solid var(--line);border-radius:9px;padding:7px 12px;background:#fff;color:var(--ink)">Open</a> '+
-            '<button class="small" data-share="'+esc(url)+'" data-client="'+esc(cl)+'">Share</button>'+
+            '<button class="small" data-copy="'+esc(url)+'">Copy link</button>'+
           '</td>';
         tb.appendChild(tr);
       });
@@ -977,19 +975,6 @@ sched,
         b.onclick=function(){ navigator.clipboard.writeText(b.dataset.copy).then(
           function(){ setClientLinks('Link copied.','ok'); },
           function(){ setClientLinks('Copy failed — select the link and copy manually.','err'); }); };
-      });
-      tb.querySelectorAll('button[data-share]').forEach(function(b){
-        b.onclick=async function(){
-          const url=b.dataset.share, cl=b.dataset.client;
-          if(navigator.share){
-            try{ await navigator.share({ title:'Orbit — '+cl+' content calendar', text:cl+' content calendar', url:url }); setClientLinks('Shared.','ok'); }
-            catch(e){ /* user cancelled */ }
-          } else {
-            navigator.clipboard.writeText(url).then(
-              function(){ setClientLinks('Sharing not supported in this browser — link copied instead.','ok'); },
-              function(){ setClientLinks('Copy the link manually to share.','err'); });
-          }
-        };
       });
     }
     function setClientLinks(m,c){ if($('clientLinksStatus')){ $('clientLinksStatus').className='pstatus '+(c||'muted'); $('clientLinksStatus').textContent=m; } }
