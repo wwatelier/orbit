@@ -148,6 +148,7 @@
       <button class="navbtn" data-tab="today"><span class="ic">◎</span> Today's Work</button>
       <button class="navbtn" data-tab="pipeline"><span class="ic">▤</span> Pipeline</button>
       <button class="navbtn" data-tab="import"><span class="ic">＋</span> Import</button>
+      <button class="navbtn" data-tab="handoff"><span class="ic">✎</span> Prompts &amp; Handoffs</button>
       <button class="navbtn" data-tab="log"><span class="ic">≡</span> Activity Log</button>
       <div class="sidefoot"><div class="who" id="whoamiMin"></div><button id="signout">Sign out</button></div>
     </nav>
@@ -185,6 +186,31 @@
         </div>
       </section>
 
+      <section class="hidden" id="tab-handoff">
+        <div class="head"><div><h2>Prompts &amp; Handoffs</h2><p class="sub">Ready-to-copy text built from the live schedule. Pick a client, pick what you need.</p></div></div>
+        <div class="controls">
+          <label class="inline">Client
+            <select id="hoClient"><option>Ice</option><option>Lynn</option><option>Melissa</option><option>SRU</option><option>Dianna</option></select>
+          </label>
+          <label class="inline">Batch no.
+            <input type="text" id="hoBatch" placeholder="e.g. 3" style="width:70px">
+          </label>
+        </div>
+        <div class="seg" style="margin-bottom:16px">
+          <button id="hoKindSchedule" class="on">Scheduling prompt</button>
+          <button id="hoKindReminder">Client reminder</button>
+          <button id="hoKindLinks">Missing links</button>
+        </div>
+        <div class="surface" style="padding:18px">
+          <div class="controls" style="margin:0 0 12px">
+            <button class="primary" id="hoGenerate">Generate</button>
+            <button id="hoCopy" class="small">Copy to clipboard</button>
+            <span class="pstatus muted" id="hoStatus"></span>
+          </div>
+          <textarea id="hoOut" style="min-height:340px" readonly placeholder="Generated text appears here…"></textarea>
+        </div>
+      </section>
+
       <section class="hidden" id="tab-log">
         <div class="head"><div><h2>Activity Log</h2><p class="sub">Every change made through the dashboard, newest first.</p></div><button class="small" id="logRefresh">Refresh</button></div>
         <div class="surface" style="margin-top:16px"><div class="tablewrap">
@@ -211,16 +237,16 @@
 
     const STAGES = ['🚩 Required Client Input','1 Copywriting','2 Copywriting Ready for Review','3 Copywriting Approved',
       '4 Waiting for Voiceover / Video','5 Voiceover / Video Received','6 In Production','7 Content Ready for Review','8 Content Approved',
-      '9 Ready to Publish','10 Published','⬜ Unselected','🔁 Rolled Over'];
+      '9 Ready to Publish','10 Published','◼️ Unselected','🔁 Rolled Over'];
     const STAGE_COLOUR = {
       '🚩 Required Client Input':'st-flag','1 Copywriting':'st-1','2 Copywriting Ready for Review':'st-2',
       '3 Copywriting Approved':'st-3','4 Waiting for Voiceover / Video':'st-4','5 Voiceover / Video Received':'st-5',
       '6 In Production':'st-6','7 Content Ready for Review':'st-7','8 Content Approved':'st-8',
-      '9 Ready to Publish':'st-9','10 Published':'st-10','⬜ Unselected':'st-off','🔁 Rolled Over':'st-roll'};
-    const BOARD_HIDE = ['10 Published','⬜ Unselected'];
+      '9 Ready to Publish':'st-9','10 Published':'st-10','◼️ Unselected':'st-off','🔁 Rolled Over':'st-roll'};
+    const BOARD_HIDE = ['10 Published','◼️ Unselected'];
 
     const PREFS = loadPrefs();
-    let idToken = null, allRows = [], current = null;
+    let idToken = null, allRows = [], current = null, pendingRefresh = null, keepaliveStarted = false;
     const $ = function (id){ return document.getElementById(id); };
 
     window.onload = function () {
@@ -230,13 +256,37 @@
     };
 
     async function call(action, payload){
+      let data = await rawCall(action, payload);
+      // If the token expired mid-session, silently fetch a fresh one and retry once.
+      if (data && data.ok === false && /token|authoris|authoriz|expired|aud/i.test(data.error||'')) {
+        await refreshToken();
+        data = await rawCall(action, payload);
+      }
+      return data;
+    }
+    async function rawCall(action, payload){
       const res = await fetch(EXEC_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
         body: JSON.stringify({ idToken:idToken, action:action, payload:payload||{} }) });
       return res.json();
     }
+    // Ask Google (silently) for a fresh ID token. Resolves when the callback fires.
+    function refreshToken(){
+      return new Promise(function(resolve){
+        try {
+          pendingRefresh = resolve;
+          google.accounts.id.prompt();          // silent; callback onCredential updates idToken
+          setTimeout(function(){ if(pendingRefresh){ pendingRefresh=null; resolve(); } }, 4000);
+        } catch(e){ resolve(); }
+      });
+    }
 
     async function onCredential(resp){
       idToken = resp.credential;
+      if (pendingRefresh) { const r = pendingRefresh; pendingRefresh = null; r(); }   // resolve silent refresh
+      if (!keepaliveStarted) { keepaliveStarted = true;
+        // Renew the token every ~45 min (Google tokens last ~60). Keeps long-idle sessions alive.
+        setInterval(function(){ try { google.accounts.id.prompt(); } catch(e){} }, 45*60*1000);
+      }
       $('whoami').className='muted'; $('whoami').textContent='Checking with Orbit…';
       const data = await call('whoami');
       if(!data.ok){ $('whoami').className='err'; $('whoami').textContent=data.error||'Sign-in rejected.'; return; }
@@ -256,7 +306,7 @@
     function showTab(name){
       PREFS.tab=name; savePrefs();
       document.querySelectorAll('.navbtn[data-tab]').forEach(function(b){ b.classList.toggle('active', b.dataset.tab===name); });
-      ['today','pipeline','import','log'].forEach(function(t){ $('tab-'+t).classList.toggle('hidden', t!==name); });
+      ['today','pipeline','import','handoff','log'].forEach(function(t){ $('tab-'+t).classList.toggle('hidden', t!==name); });
       if(name==='log') loadLog();
     }
 
@@ -420,6 +470,110 @@
     }
     function setImp(m,c){ $('impStatus').className='pstatus '+(c||'muted'); $('impStatus').textContent=m; }
     function setPStatus(m,c){ $('pStatus').className='pstatus '+(c||'muted'); $('pStatus').textContent=m; }
+
+    // ── Prompts & Handoffs ──
+    let hoKind = 'schedule';
+    document.querySelectorAll('#tab-handoff .seg button').forEach(function(b){
+      b.onclick = function(){
+        document.querySelectorAll('#tab-handoff .seg button').forEach(function(x){ x.classList.remove('on'); });
+        b.classList.add('on');
+        hoKind = b.id === 'hoKindReminder' ? 'reminder' : (b.id === 'hoKindLinks' ? 'links' : 'schedule');
+      };
+    });
+    $('hoGenerate').onclick = function(){
+      const client = $('hoClient').value;
+      const rows = allRows.filter(function(r){ return r['Client']===client; });
+      let text = '';
+      if (hoKind === 'schedule')      text = genSchedulePrompt(client, rows);
+      else if (hoKind === 'reminder') text = genReminder(client, rows);
+      else                            text = genMissingLinks(client, rows);
+      $('hoOut').value = text;
+      setHo(text ? 'Generated. Review, then copy.' : 'Nothing to generate for this client.', 'muted');
+    };
+    $('hoCopy').onclick = function(){
+      const t = $('hoOut').value; if(!t){ setHo('Generate something first.','muted'); return; }
+      navigator.clipboard.writeText(t).then(function(){ setHo('Copied to clipboard.','ok'); },
+        function(){ $('hoOut').select(); setHo('Press Ctrl/Cmd-C to copy.','muted'); });
+    };
+    function setHo(m,c){ $('hoStatus').className='pstatus '+(c||'muted'); $('hoStatus').textContent=m; }
+
+    // (1) Scheduling prompt: master prompt (delta 4B) + current schedule for the AI to continue from.
+    function genSchedulePrompt(client, rows){
+      const batch = ($('hoBatch').value||'').trim() || '[BATCH NUMBER]';
+      const bilingual = (client === 'Ice');
+      // current schedule, sorted by publish date, only pieces that have a date
+      const sched = rows.filter(function(r){ return r['Publish Date']; })
+        .sort(function(a,b){ return a['Publish Date'].localeCompare(b['Publish Date']); })
+        .map(function(r){ return '  ' + r['Piece ID'] + '  ' + r['Publish Date'] + '  ' + (r['Format']||'') + '  ' + (r['Title']||''); })
+        .join('\n') || '  (no dated pieces yet)';
+      const lastDate = rows.filter(function(r){ return r['Publish Date']; })
+        .map(function(r){ return r['Publish Date']; }).sort().slice(-1)[0] || '(none)';
+
+      return [
+'You are the content brain for ' + client + '. Lay out batch ' + batch + ' following these rules exactly.',
+'',
+'CURRENT SCHEDULE (already planned — continue consistently from the last date, do not overlap):',
+sched,
+'',
+'Last scheduled posting date so far: ' + lastDate,
+'',
+'ORBIT OUTPUT RULES:',
+'1. Assign posting dates on a 4-week cycle counted from this batch\u2019s first piece. Mon\u2013Sat only \u2014 never a Sunday. Continue on from the last scheduled date above so posting stays consistent with no gaps or clashes. Stagger different pillars/series so they don\u2019t clump. Set Ready By about 14 days before each posting date.',
+'2. Assign Piece IDs using ' + client + '\u2019s prefix scheme and batch number ' + batch + ' typed into the ID (e.g. C' + (batch==='[BATCH NUMBER]'?'12':batch) + '.1). Do not invent a scheme. If an ID would collide or you\u2019re unsure, stop and flag it \u2014 never guess an ID.',
+'3. Titles: ' + (bilingual ? 'bilingual "Thai / English".' : 'English.'),
+'4. CREATE a Notion copy page for each piece in ' + client + '\u2019s Notion space, and put its URL in the Copy Link column. Ask me for the parent page/folder to create them under if you don\u2019t already know it. Do NOT leave Copy Link blank \u2014 the whole point is that you return the links so the team doesn\u2019t fill them by hand.',
+'5. Output the batch as Block A EXACTLY: a TSV table with the header row',
+'   Piece ID\tClient\tFormat\tPlatform\tTitle\tPublish Date\tReady By\tStage\tFounder\tCopy Link',
+'   one row per piece, nothing else wrapped around the table. New pieces are Stage "1 Copywriting".',
+'',
+'Never output IDs, dates, or a table shape other than Block A above. The dashboard reads it verbatim.'
+      ].join('\n');
+    }
+
+    // (2) Client reminder: their pending (client-court) pieces as a copy-paste LINE message.
+    function genReminder(client, rows){
+      const pending = rows.filter(function(r){
+        return /Required Client Input|Ready for Review|Waiting for Voiceover/.test(r['Stage']||'');
+      }).sort(function(a,b){ return (a['Publish Date']||'').localeCompare(b['Publish Date']||''); });
+      if (!pending.length) return 'Nothing pending from ' + client + ' right now \u2014 all caught up.';
+
+      const lines = ['Hi! A quick update on what\u2019s waiting on your side \u2014', ''];
+      pending.forEach(function(r){
+        const d = daysTo(r['Publish Date']);
+        const when = d===null ? '' : (d<0 ? ' (overdue)' : d===0 ? ' (posting TODAY)' : d===1 ? ' (posting tomorrow)' : ' (' + d + ' days away)');
+        let ask = 'Please review';
+        const st = r['Stage']||'';
+        if (/Required Client Input/.test(st)) ask = 'We need your input';
+        else if (/Waiting for Voiceover/.test(st)) ask = 'Please record & send';
+        else if (/Content Ready for Review/.test(st)) ask = 'Please review the finished content';
+        else if (/Copywriting Ready for Review/.test(st)) ask = 'Please review the copy';
+        lines.push('\u2022 ' + (r['Title']||r['Piece ID']));
+        lines.push('  ' + ask + (r['Publish Date'] ? ' \u00b7 posting ' + r['Publish Date'] + when : ''));
+        if (r['Copy Link']) lines.push('  ' + r['Copy Link']);
+        lines.push('');
+      });
+      lines.push('\u2014');
+      lines.push('Sent ' + stamp());
+      return lines.join('\n');
+    }
+
+    // (3) Missing links: every piece for this client with no Copy Link yet.
+    function genMissingLinks(client, rows){
+      const miss = rows.filter(function(r){ return !r['Copy Link']; })
+        .sort(function(a,b){ return (a['Publish Date']||'').localeCompare(b['Publish Date']||''); });
+      if (!miss.length) return 'Every ' + client + ' piece has a copy link. Nothing missing.';
+      const lines = ['Pieces still missing a Notion copy link (' + client + '):', ''];
+      miss.forEach(function(r){ lines.push('\u2022 ' + r['Piece ID'] + '  \u00b7  ' + (r['Title']||'') + (r['Publish Date']?'  \u00b7  posting '+r['Publish Date']:'')); });
+      lines.push(''); lines.push('Fill these in the piece\u2019s detail panel once the pages exist.');
+      lines.push('\u2014'); lines.push('As of ' + stamp());
+      return lines.join('\n');
+    }
+
+    function stamp(){
+      const d = new Date();
+      const p = function(n){ return (n<10?'0':'')+n; };
+      return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes());
+    }
 
     function daysTo(ymd){ if(!ymd) return null; const d=new Date(ymd+'T00:00:00'); const n=new Date(); n.setHours(0,0,0,0); return Math.round((d-n)/86400000); }
     function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
