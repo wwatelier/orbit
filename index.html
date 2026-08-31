@@ -105,7 +105,8 @@
     .reqitem:last-child{ border-bottom:none; }
     .reqitem .rx{ flex:1; }
     .reqitem .rt{ font-weight:600; }
-    .reqadd{ display:grid; grid-template-columns:1fr 70px auto; gap:8px; margin-top:10px; align-items:center; }
+    .reqadd,.reqadd3{ display:grid; gap:8px; margin-top:10px; align-items:center; }
+    .reqadd3{ grid-template-columns:1fr 1fr 90px auto; }
     .reqadd input, .reqadd select{ font:inherit; padding:7px 9px; border:1px solid var(--line); border-radius:8px; }
     .viewas{ margin-left:auto; }
     .t-green{color:#2f7a4c;font-weight:600}.t-amber{color:#9e5a2c;font-weight:600}
@@ -240,15 +241,16 @@
       <div class="field"><label>Stage</label><select id="pStage"></select></div>
       <div class="field"><label><input type="checkbox" id="pBlocked"> Blocked</label></div>
       <div class="field"><label>Copy link (Notion)</label><input type="text" id="pCopyLink" placeholder="https://notion.so/…"></div>
-      <div class="field"><label>Asset requests</label>
+      <div class="field"><label>Footage &amp; photos needed</label>
         <div class="reqbox">
-          <div id="pReqList" class="muted" style="font-size:13px">No open requests.</div>
-          <div class="reqadd">
+          <div id="pReqList" class="muted" style="font-size:13px">Nothing requested yet.</div>
+          <div class="reqadd3">
+            <select id="pReqKind"></select>
             <select id="pReqType"></select>
-            <input type="text" id="pReqQty" placeholder="Qty" >
-            <button id="pReqAdd" class="small">Add request</button>
+            <input type="text" id="pReqQty" placeholder="How many">
+            <button id="pReqAdd" class="small">Add</button>
           </div>
-          <input type="text" id="pReqNote" placeholder="Note (what exactly is needed)" style="width:100%;margin-top:8px;font:inherit;padding:7px 9px;border:1px solid var(--line);border-radius:8px">
+          <input type="text" id="pReqNote" placeholder="Note (exactly what's needed)" style="width:100%;margin-top:8px;font:inherit;padding:7px 9px;border:1px solid var(--line);border-radius:8px">
         </div>
       </div>
       <div class="panel-actions"><button class="primary" id="pSave">Save</button><button id="pCancel">Close</button><span class="pstatus muted" id="pStatus"></span></div>
@@ -271,7 +273,8 @@
 
     const PREFS = loadPrefs();
     let idToken = null, allRows = [], current = null, pendingRefresh = null, keepaliveStarted = false;
-    let reqTypes = ['working-in-action','daily activities','HD scenic','specific'], curReqs = [];
+    let reqTypes = ['working-in-action','daily activities','HD scenic','specific'];
+    let reqKinds = ['B-Rolls','Pictures'], curReqs = [];
     const $ = function (id){ return document.getElementById(id); };
 
     window.onload = function () {
@@ -572,20 +575,24 @@ sched,
       const pending = rows.filter(function(r){
         return /Required Client Input|Ready for Review|Waiting for Voiceover/.test(r['Stage']||'');
       }).sort(function(a,b){ return (a['Publish Date']||'').localeCompare(b['Publish Date']||''); });
-      if (!pending.length) return 'Nothing pending from ' + client + ' right now \u2014 all caught up.';
+      if (!pending.length) return 'Nothing needs anything from ' + client + ' right now. All good.';
 
-      const lines = ['Hi! A quick update on what\u2019s waiting on your side \u2014', ''];
+      const lines = ['Hi! Here\u2019s what we need from you to keep things on schedule:', ''];
       pending.forEach(function(r){
         const d = daysTo(r['Publish Date']);
-        const when = d===null ? '' : (d<0 ? ' (overdue)' : d===0 ? ' (posting TODAY)' : d===1 ? ' (posting tomorrow)' : ' (' + d + ' days away)');
-        let ask = 'Please review';
+        const when = d===null ? '' : (d<0 ? ' (this date has passed)' : d===0 ? ' (posting today)' : d===1 ? ' (posting tomorrow)' : ' (in ' + d + ' days)');
         const st = r['Stage']||'';
-        if (/Required Client Input/.test(st)) ask = 'We need your input';
-        else if (/Waiting for Voiceover/.test(st)) ask = 'Please record & send';
-        else if (/Content Ready for Review/.test(st)) ask = 'Please review the finished content';
-        else if (/Copywriting Ready for Review/.test(st)) ask = 'Please review the copy';
+        const fmt = r['Format']||'';
+        const isVideo = /video|On-camera|Sit-down|POV/i.test(fmt);
+        let ask;
+        if (/Required Client Input/.test(st)) ask = 'We need some information from you before we can start this one.';
+        else if (/Waiting for Voiceover/.test(st)) ask = isVideo ? 'We need your video for this. Please record and send it.' : 'We need your voiceover for this. Please record and send it.';
+        else if (/Content Ready for Review/.test(st)) ask = 'The finished post is ready. Please review it and approve.';
+        else if (/Copywriting Ready for Review/.test(st)) ask = 'The copy is ready. Please read it and let us know if it\\u2019s good to go.';
+        else ask = 'Please take a look at this one.';
         lines.push('\u2022 ' + (r['Title']||r['Piece ID']));
-        lines.push('  ' + ask + (r['Publish Date'] ? ' \u00b7 posting ' + r['Publish Date'] + when : ''));
+        lines.push('  ' + ask);
+        if (r['Publish Date']) lines.push('  Posting ' + r['Publish Date'] + when);
         if (r['Copy Link']) lines.push('  ' + r['Copy Link']);
         lines.push('');
       });
@@ -616,7 +623,7 @@ sched,
       if (!mine.length) return '';
       const lines = ['', '\u2014 ASSET REQUESTS STILL OPEN \u2014'];
       mine.forEach(function(q){
-        lines.push('\u2022 ' + q.piece + ': ' + q.type + (q.qty?(' x'+q.qty):'') + (q.note?(' \u2014 '+q.note):''));
+        lines.push('\u2022 ' + q.piece + ': ' + q.kind + ' \u00b7 ' + q.type + (q.qty?(' \u2014 '+q.qty):'') + (q.note?(' \u2014 '+q.note):''));
       });
       return lines.join('\n');
     }
@@ -629,6 +636,7 @@ sched,
 
     // ── Requests (asset asks) ──
     function buildReqTypes(){
+      $('pReqKind').innerHTML = reqKinds.map(function(k){ return '<option>'+esc(k)+'</option>'; }).join('');
       $('pReqType').innerHTML = reqTypes.map(function(t){ return '<option>'+esc(t)+'</option>'; }).join('');
     }
     async function loadReqsFor(pieceId){
@@ -641,8 +649,8 @@ sched,
       if (!curReqs.length){ el.className='muted'; el.innerHTML='No open requests.'; return; }
       el.className='';
       el.innerHTML = curReqs.map(function(q){
-        return '<div class="reqitem"><div class="rx"><span class="rt">'+esc(q.type)+'</span>'+
-          (q.qty?' · x'+esc(q.qty):'')+(q.note?'<br><span class="muted">'+esc(q.note)+'</span>':'')+
+        return '<div class="reqitem"><div class="rx"><span class="rt">'+esc(q.kind)+' · '+esc(q.type)+'</span>'+
+          (q.qty?' · '+esc(q.qty):'')+(q.note?'<br><span class="muted">'+esc(q.note)+'</span>':'')+
           '</div><button class="small" data-recv="'+esc(q.id)+'">Received</button></div>';
       }).join('');
       el.querySelectorAll('button[data-recv]').forEach(function(b){
@@ -657,9 +665,9 @@ sched,
     }
     $('pReqAdd').onclick = async function(){
       if (!current) return;
-      const type=$('pReqType').value, qty=($('pReqQty').value||'').trim(), note=($('pReqNote').value||'').trim();
+      const kind=$('pReqKind').value, type=$('pReqType').value, qty=($('pReqQty').value||'').trim(), note=($('pReqNote').value||'').trim();
       $('pReqAdd').disabled=true; setPStatus('Adding request…','muted');
-      const data = await call('addRequest', { pieceId: current['Piece ID'], type:type, qty:qty, note:note });
+      const data = await call('addRequest', { pieceId: current['Piece ID'], kind:kind, type:type, qty:qty, note:note });
       $('pReqAdd').disabled=false;
       if (!data.ok){ setPStatus(data.error,'err'); return; }
       $('pReqQty').value=''; $('pReqNote').value='';
