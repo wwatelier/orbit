@@ -98,6 +98,16 @@
     .st-10   { background:#cfe9d2; color:#2b6b3d; }
     .st-off  { background:#e4e7ec; color:#586074; }
     .st-roll { background:#e6e1f4; color:#6b57a3; }
+    .reqdot{ display:inline-block; width:8px; height:8px; border-radius:50%; background:#d98c3f; margin-left:6px; vertical-align:middle; }
+    .reqbadge{ display:inline-block; background:#fbe9d6; color:#9e5a2c; border-radius:999px; font-size:11px; font-weight:600; padding:1px 7px; margin-left:6px; }
+    .reqbox{ border:1px solid var(--line); border-radius:11px; padding:12px; margin-top:6px; background:#fafbf8; }
+    .reqitem{ display:flex; align-items:flex-start; gap:8px; padding:7px 0; border-bottom:1px solid var(--line-soft); font-size:13px; }
+    .reqitem:last-child{ border-bottom:none; }
+    .reqitem .rx{ flex:1; }
+    .reqitem .rt{ font-weight:600; }
+    .reqadd{ display:grid; grid-template-columns:1fr 70px auto; gap:8px; margin-top:10px; align-items:center; }
+    .reqadd input, .reqadd select{ font:inherit; padding:7px 9px; border:1px solid var(--line); border-radius:8px; }
+    .viewas{ margin-left:auto; }
     .t-green{color:#2f7a4c;font-weight:600}.t-amber{color:#9e5a2c;font-weight:600}
     .t-red{color:#a24a52;font-weight:600}.t-muted{color:#9aa19a}
 
@@ -170,6 +180,9 @@
           <label class="inline">View <span class="seg"><button id="viewTable" class="on">Table</button><button id="viewBoard">Board</button></span></label>
           <button id="refresh" class="small">Refresh</button>
           <span class="count" id="pipeCount"></span>
+          <label class="inline viewas">View as
+            <select id="roleView"><option value="strategist">Strategist (all)</option><option value="designer">Designer / Editor</option></select>
+          </label>
         </div>
         <div class="surface" id="tableView"><div class="tablewrap">
           <table><thead><tr><th>Piece ID</th><th>Client</th><th>Format</th><th>Platform</th><th>Stage</th><th>Next Step</th><th>Chase Who</th><th>On Track</th><th>Publish</th><th>Copy</th></tr></thead><tbody id="pipeBody"></tbody></table>
@@ -227,6 +240,17 @@
       <div class="field"><label>Stage</label><select id="pStage"></select></div>
       <div class="field"><label><input type="checkbox" id="pBlocked"> Blocked</label></div>
       <div class="field"><label>Copy link (Notion)</label><input type="text" id="pCopyLink" placeholder="https://notion.so/…"></div>
+      <div class="field"><label>Asset requests</label>
+        <div class="reqbox">
+          <div id="pReqList" class="muted" style="font-size:13px">No open requests.</div>
+          <div class="reqadd">
+            <select id="pReqType"></select>
+            <input type="text" id="pReqQty" placeholder="Qty" >
+            <button id="pReqAdd" class="small">Add request</button>
+          </div>
+          <input type="text" id="pReqNote" placeholder="Note (what exactly is needed)" style="width:100%;margin-top:8px;font:inherit;padding:7px 9px;border:1px solid var(--line);border-radius:8px">
+        </div>
+      </div>
       <div class="panel-actions"><button class="primary" id="pSave">Save</button><button id="pCancel">Close</button><span class="pstatus muted" id="pStatus"></span></div>
     </div>
   </div>
@@ -247,6 +271,7 @@
 
     const PREFS = loadPrefs();
     let idToken = null, allRows = [], current = null, pendingRefresh = null, keepaliveStarted = false;
+    let reqTypes = ['working-in-action','daily activities','HD scenic','specific'], curReqs = [];
     const $ = function (id){ return document.getElementById(id); };
 
     window.onload = function () {
@@ -292,7 +317,7 @@
       if(!data.ok){ $('whoami').className='err'; $('whoami').textContent=data.error||'Sign-in rejected.'; return; }
       $('signScreen').classList.add('hidden'); $('app').classList.remove('hidden');
       $('whoamiMin').textContent = data.result.name+' · '+data.result.email;
-      buildStageSelect();
+      buildStageSelect(); buildReqTypes();
       showTab(PREFS.tab||'today'); applyPipePrefs();
       await loadRows();
     }
@@ -315,7 +340,8 @@
     $('clientFilter').onchange = function(){ PREFS.client=$('clientFilter').value; savePrefs(); renderPipe(); renderToday(); };
     $('viewTable').onclick=function(){ setView('table'); };
     $('viewBoard').onclick=function(){ setView('board'); };
-    function applyPipePrefs(){ $('clientFilter').value=PREFS.client||''; setView(PREFS.view||'table'); }
+    function applyPipePrefs(){ $('clientFilter').value=PREFS.client||''; setView(PREFS.view||'table'); $('roleView').value=PREFS.role||'strategist'; }
+    $('roleView').onchange=function(){ PREFS.role=$('roleView').value; savePrefs(); renderPipe(); };
     function setView(v){ PREFS.view=v; savePrefs();
       $('viewTable').classList.toggle('on',v==='table'); $('viewBoard').classList.toggle('on',v==='board');
       $('tableView').classList.toggle('hidden',v!=='table'); $('boardView').classList.toggle('hidden',v!=='board'); }
@@ -337,7 +363,7 @@
       if(!rows.length) tb.innerHTML='<tr><td colspan="10"><div class="empty">No pieces yet. Import a batch to get started.</div></td></tr>';
       rows.forEach(function(r){
         const tr=document.createElement('tr'); tr.className='clickable'; tr.onclick=function(){ openPanel(r); };
-        tr.innerHTML='<td>'+esc(r['Piece ID'])+'</td><td>'+esc(r['Client'])+'</td><td>'+esc(r['Format'])+'</td>'+
+        tr.innerHTML='<td>'+esc(r['Piece ID'])+reqMark(r)+'</td><td>'+esc(r['Client'])+'</td><td>'+esc(r['Format'])+'</td>'+
           '<td>'+chips(r['PlatformList'])+'</td><td>'+stagePill(r['Stage'])+'</td>'+
           '<td>'+esc(r['Next Step'])+'</td><td>'+esc(r['Chase Who'])+'</td>'+
           '<td>'+onTrack(r['On Track'])+'</td><td>'+esc(r['Publish Date'])+'</td><td>'+copyLink(r['Copy Link'])+'</td>';
@@ -354,7 +380,7 @@
         col.innerHTML='<div class="bh">'+stagePill(stage)+'<span class="n">'+inStage.length+'</span></div>';
         inStage.forEach(function(r){
           const c=document.createElement('div'); c.className='bcard'; c.onclick=function(){ openPanel(r); };
-          c.innerHTML='<div class="bt">'+esc(r['Title']||r['Piece ID'])+'</div>'+
+          c.innerHTML='<div class="bt">'+esc(r['Title']||r['Piece ID'])+reqMark(r)+'</div>'+
             '<div class="bm">'+esc(r['Piece ID'])+' · '+esc(r['Format'])+'</div>'+
             '<div>'+onTrack(r['On Track'])+' · <span class="muted">'+esc(r['Publish Date'])+'</span></div>';
           col.appendChild(c);
@@ -407,6 +433,7 @@
       $('pBlocked').checked=r['Blocked']==='TRUE';
       $('pCopyLink').value=r['Copy Link']||'';
       setPStatus('','muted'); $('overlay').classList.add('show');
+      curReqs=[]; renderReqList(); loadReqsFor(r['Piece ID']);
     }
     $('pCancel').onclick=function(){ $('overlay').classList.remove('show'); };
     $('overlay').onclick=function(e){ if(e.target===$('overlay')) $('overlay').classList.remove('show'); };
@@ -427,6 +454,11 @@
       renderPipe(); renderToday(); setPStatus('Saved.','ok');
     };
 
+    function reqMark(r){
+      const n = r['openReqs']||0; if(!n) return '';
+      const role = (PREFS.role||'strategist');
+      return role==='designer' ? '<span class="reqbadge">'+n+' asset'+(n>1?'s':'')+'</span>' : '<span class="reqdot" title="'+n+' open asset request'+(n>1?'s':'')+'"></span>';
+    }
     function stagePill(s){ if(!s) return ''; return '<span class="pill '+(STAGE_COLOUR[s]||'st-off')+'">'+esc(s)+'</span>'; }
     function chips(list){ return (list||[]).map(function(p){ return '<span class="chip">'+esc(p)+'</span>'; }).join('')||'<span class="muted">—</span>'; }
     function onTrack(v){
@@ -480,13 +512,18 @@
         hoKind = b.id === 'hoKindReminder' ? 'reminder' : (b.id === 'hoKindLinks' ? 'links' : 'schedule');
       };
     });
-    $('hoGenerate').onclick = function(){
+    $('hoGenerate').onclick = async function(){
       const client = $('hoClient').value;
       const rows = allRows.filter(function(r){ return r['Client']===client; });
       let text = '';
       if (hoKind === 'schedule')      text = genSchedulePrompt(client, rows);
       else if (hoKind === 'reminder') text = genReminder(client, rows);
       else                            text = genMissingLinks(client, rows);
+      // append open asset requests to schedule + reminder (not to missing-links)
+      if (hoKind === 'schedule' || hoKind === 'reminder') {
+        const reqs = await openReqLines(client);
+        if (reqs) text += '\n' + reqs;
+      }
       $('hoOut').value = text;
       setHo(text ? 'Generated. Review, then copy.' : 'Nothing to generate for this client.', 'muted');
     };
@@ -569,11 +606,67 @@ sched,
       return lines.join('\n');
     }
 
+    async function openReqLines(client){
+      const data = await call('listRequests', { openOnly:true });
+      const all = (data.ok && data.result.rows) ? data.result.rows : [];
+      // map piece->client via allRows
+      const clientPieces = {};
+      allRows.forEach(function(r){ clientPieces[r['Piece ID']] = r['Client']; });
+      const mine = all.filter(function(q){ return clientPieces[q.piece]===client; });
+      if (!mine.length) return '';
+      const lines = ['', '\u2014 ASSET REQUESTS STILL OPEN \u2014'];
+      mine.forEach(function(q){
+        lines.push('\u2022 ' + q.piece + ': ' + q.type + (q.qty?(' x'+q.qty):'') + (q.note?(' \u2014 '+q.note):''));
+      });
+      return lines.join('\n');
+    }
+
     function stamp(){
       const d = new Date();
       const p = function(n){ return (n<10?'0':'')+n; };
       return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes());
     }
+
+    // ── Requests (asset asks) ──
+    function buildReqTypes(){
+      $('pReqType').innerHTML = reqTypes.map(function(t){ return '<option>'+esc(t)+'</option>'; }).join('');
+    }
+    async function loadReqsFor(pieceId){
+      const data = await call('listRequests', { pieceId: pieceId, openOnly: true });
+      curReqs = (data.ok && data.result.rows) ? data.result.rows : [];
+      renderReqList();
+    }
+    function renderReqList(){
+      const el = $('pReqList');
+      if (!curReqs.length){ el.className='muted'; el.innerHTML='No open requests.'; return; }
+      el.className='';
+      el.innerHTML = curReqs.map(function(q){
+        return '<div class="reqitem"><div class="rx"><span class="rt">'+esc(q.type)+'</span>'+
+          (q.qty?' · x'+esc(q.qty):'')+(q.note?'<br><span class="muted">'+esc(q.note)+'</span>':'')+
+          '</div><button class="small" data-recv="'+esc(q.id)+'">Received</button></div>';
+      }).join('');
+      el.querySelectorAll('button[data-recv]').forEach(function(b){
+        b.onclick = async function(){
+          b.disabled=true; b.textContent='…';
+          const data = await call('markReceived', { requestId: b.dataset.recv });
+          if (!data.ok){ b.disabled=false; b.textContent='Received'; setPStatus(data.error,'err'); return; }
+          await loadReqsFor(current['Piece ID']);
+          await loadRows();               // refresh markers
+        };
+      });
+    }
+    $('pReqAdd').onclick = async function(){
+      if (!current) return;
+      const type=$('pReqType').value, qty=($('pReqQty').value||'').trim(), note=($('pReqNote').value||'').trim();
+      $('pReqAdd').disabled=true; setPStatus('Adding request…','muted');
+      const data = await call('addRequest', { pieceId: current['Piece ID'], type:type, qty:qty, note:note });
+      $('pReqAdd').disabled=false;
+      if (!data.ok){ setPStatus(data.error,'err'); return; }
+      $('pReqQty').value=''; $('pReqNote').value='';
+      setPStatus('Request added.','ok');
+      await loadReqsFor(current['Piece ID']);
+      await loadRows();
+    };
 
     function daysTo(ymd){ if(!ymd) return null; const d=new Date(ymd+'T00:00:00'); const n=new Date(); n.setHours(0,0,0,0); return Math.round((d-n)/86400000); }
     function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
