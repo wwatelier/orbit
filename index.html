@@ -168,7 +168,7 @@
       <button class="navbtn" data-tab="import"><span class="ic">＋</span> Import</button>
       <button class="navbtn" data-tab="handoff"><span class="ic">✎</span> Prompts &amp; Handoffs</button>
       <button class="navbtn" data-tab="invoices"><span class="ic">฿</span> Invoices</button>
-      <button class="navbtn" data-tab="reports"><span class="ic">▦</span> Reports</button>
+      <button class="navbtn" data-tab="clientview"><span class="ic">↗</span> Client View</button>
       <button class="navbtn" data-tab="log"><span class="ic">≡</span> Activity Log</button>
       <div class="sidefoot"><div class="who" id="whoamiMin"></div><button id="signout">Sign out</button></div>
     </nav>
@@ -294,16 +294,12 @@
         </div></div>
       </section>
 
-      <section class="hidden" id="tab-reports">
-        <div class="head"><div><h2>Reports</h2><p class="sub">A timestamped status report for a client — what's live, what's in progress, and what's waiting on them.</p></div></div>
-        <div class="controls">
-          <label class="inline">Client
-            <select id="repClient"><option>Ice</option><option>Lynn</option><option>Melissa</option><option>SRU</option><option>Dianna</option></select>
-          </label>
-          <button class="primary" id="repGenerate">Generate report</button>
-          <span class="pstatus muted" id="repStatus"></span>
-        </div>
-        <div id="repDocWrap"></div>
+      <section class="hidden" id="tab-clientview">
+        <div class="head"><div><h2>Client View</h2><p class="sub">Each client's private read-only calendar. Copy the link, open it, or share it — the client sees only their own pieces, and there's nothing for them to edit.</p></div></div>
+        <div class="surface" style="margin-top:16px"><div class="tablewrap">
+          <table><thead><tr><th>Client</th><th>Calendar link</th><th></th></tr></thead><tbody id="clientLinksBody"></tbody></table>
+        </div></div>
+        <div style="margin-top:10px"><span class="pstatus muted" id="clientLinksStatus"></span></div>
       </section>
 
       <section class="hidden" id="tab-log">
@@ -415,11 +411,11 @@
     function showTab(name){
       PREFS.tab=name; savePrefs();
       document.querySelectorAll('.navbtn[data-tab]').forEach(function(b){ b.classList.toggle('active', b.dataset.tab===name); });
-      ['today','pipeline','assign','import','handoff','invoices','reports','log'].forEach(function(t){ $('tab-'+t).classList.toggle('hidden', t!==name); });
+      ['today','pipeline','assign','import','handoff','invoices','clientview','log'].forEach(function(t){ $('tab-'+t).classList.toggle('hidden', t!==name); });
       if(name==='log') loadLog();
       if(name==='assign'){ loadMeta().then(function(){ renderAssign(); }); }
       if(name==='invoices'){ loadMeta().then(function(){ fillFromBilling(); loadInvoices(); }); }
-      if(name==='reports'){ loadMeta(); }
+      if(name==='clientview'){ loadMeta().then(function(){ renderClientLinks(); }); }
     }
 
     $('refresh').onclick = loadRows;
@@ -953,113 +949,50 @@ sched,
     }
     function setInv(m,c){ $('invStatus').className='pstatus '+(c||'muted'); $('invStatus').textContent=m; }
 
-    // ── Client status report (print-to-PDF) ──
-    let repBusy = false;
-    $('repGenerate').onclick = async function(){
-      if (repBusy) return; repBusy = true;
-      $('repGenerate').disabled = true; $('repGenerate').textContent = 'Generating…'; setRep('Generating…','muted');
-      // ensure we have fresh rows
-      if (!allRows.length) { await loadRows(); }
-      const rq = await call('listRequests', { openOnly:true }); window._repReqs = (rq.ok && rq.result.rows) ? rq.result.rows : [];
-      renderReport($('repClient').value);
-      $('repGenerate').disabled = false; $('repGenerate').textContent = 'Generate report'; repBusy = false;
-      setRep('Report ready below.','ok');
-      $('repDocWrap').scrollIntoView({behavior:'smooth', block:'start'});
-    };
-    function setRep(m,c){ $('repStatus').className='pstatus '+(c||'muted'); $('repStatus').textContent=m; }
-
-    function renderReport(client){
-      const S = META.settings || {};
-      const rows = allRows.filter(function(r){ return r['Client']===client; })
-        .sort(function(a,b){ return (a['Publish Date']||'').localeCompare(b['Publish Date']||''); });
-      const now = new Date().toLocaleString('en-GB', {day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'});
-
-      const published = rows.filter(function(r){ return (r['Stage']||'').indexOf('10 Published')===0; });
-      const waitingOnClient = rows.filter(function(r){ return /Required Client Input|Ready for Review|Waiting for Voiceover/.test(r['Stage']||''); });
-      const inProgress = rows.filter(function(r){ return published.indexOf(r)<0 && waitingOnClient.indexOf(r)<0 && !/Unselected|Rolled Over/.test(r['Stage']||''); });
-      const behind = rows.filter(function(r){ const o=r['On Track']||''; return o.indexOf('🔴')===0 || o.indexOf('🟠')===0; });
-
-      function section(title, list, opts){
-        opts = opts||{};
-        if (!list.length) return '';
-        const body = list.map(function(r){
-          const link = r['Copy Link'] ? ' &nbsp;<a href="'+esc(r['Copy Link'])+'" style="color:#3a6b52;text-decoration:none">↗ open</a>' : '';
-          const ask = opts.showAsk ? '<div style="color:#9e5a2c;font-size:12px;margin-top:2px">'+esc(clientAsk(r))+'</div>' : '';
-          return '<tr>'+
-            '<td style="padding:8px 10px;border-bottom:1px solid #eee;white-space:nowrap">'+esc(r['Piece ID'])+'</td>'+
-            '<td style="padding:8px 10px;border-bottom:1px solid #eee">'+esc(r['Title']||'')+ask+'</td>'+
-            '<td style="padding:8px 10px;border-bottom:1px solid #eee;white-space:nowrap">'+stagePill(r['Stage'])+'</td>'+
-            '<td style="padding:8px 10px;border-bottom:1px solid #eee;white-space:nowrap">'+esc(r['Publish Date']||'')+link+'</td>'+
-          '</tr>';
-        }).join('');
-        return '<h3 style="font-size:15px;margin:22px 0 8px">'+esc(title)+' <span style="color:#9aa19a;font-weight:500">('+list.length+')</span></h3>'+
-          '<table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr style="text-align:left;color:#5b625b">'+
-          '<th style="padding:6px 10px;border-bottom:2px solid #e6e8e2">Piece</th>'+
-          '<th style="padding:6px 10px;border-bottom:2px solid #e6e8e2">Title</th>'+
-          '<th style="padding:6px 10px;border-bottom:2px solid #e6e8e2">Stage</th>'+
-          '<th style="padding:6px 10px;border-bottom:2px solid #e6e8e2">Posting</th>'+
-          '</tr></thead><tbody>'+body+'</tbody></table>';
-      }
-
-      const summary =
-        '<div style="display:flex;gap:26px;flex-wrap:wrap;margin:14px 0 4px;font-size:13px">'+
-          repStat('Total pieces', rows.length)+
-          repStat('Published', published.length)+
-          repStat('In progress', inProgress.length)+
-          repStat('Waiting on you', waitingOnClient.length)+
-          repStat('Behind / at risk', behind.length)+
-        '</div>';
-
-      const html =
-      '<div class="surface" id="repDoc" style="padding:0;overflow:hidden;margin-top:4px">'+
-        '<div style="padding:32px 36px">'+
-          '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:20px">'+
-            '<div><div style="font-size:26px;font-weight:800;letter-spacing:-.02em">Content Status Report</div>'+
-              '<div style="color:#5b625b;font-size:14px;margin-top:2px">'+esc(client)+'</div></div>'+
-            '<div style="text-align:right;font-size:12px;line-height:1.5;color:#555">'+
-              '<div style="font-weight:700;font-size:13px;color:#2a2f2c">'+esc(S.company_name||'WEALTHWISE ATELIER')+'</div>'+
-              '<div style="font-style:italic">'+esc(S.company_operated_by||'')+'</div>'+
-              '<div>Generated '+now+'</div>'+
-            '</div>'+
-            '<img src="logo.jpg" alt="" style="width:64px;height:64px;object-fit:contain" onerror="this.style.display=\'none\'">'+
-          '</div>'+
-          '<div style="border-top:1px dotted #bbb;margin:14px 0 6px"></div>'+
-          summary+
-          section('Waiting on you', waitingOnClient, {showAsk:true})+
-          section('In progress', inProgress, {})+
-          section('Scheduled / published', published, {})+
-          reportRequests(client)+
-          '<div style="margin-top:26px;color:#9aa19a;font-size:11px">This report reflects the live schedule at the time shown above.</div>'+
-        '</div>'+
-      '</div>'+
-      '<div class="controls" style="margin-top:12px"><button class="small" onclick="window.print()">Print / Save as PDF</button></div>';
-      $('repDocWrap').innerHTML = html;
+    // ── Client View (per-client read-only calendar links) ──
+    function clientBaseUrl(){ return location.origin + location.pathname.replace(/[^/]*$/, 'client.html'); }
+    function clientLinkFor(key){ return clientBaseUrl() + '?k=' + encodeURIComponent(key); }
+    function renderClientLinks(){
+      const tb=$('clientLinksBody'); if(!tb) return; tb.innerHTML='';
+      const keys=(META && META.links) || {};
+      const clients=(META && META.clients && META.clients.length) ? META.clients : ['Ice','Lynn','Melissa','SRU','Dianna'];
+      clients.forEach(function(cl){
+        const key=keys[cl]; const tr=document.createElement('tr');
+        if(!key){
+          tr.innerHTML='<td>'+esc(cl)+'</td><td class="muted">No link key set — add one in the Clients tab</td><td></td>';
+          tb.appendChild(tr); return;
+        }
+        const url=clientLinkFor(key);
+        tr.innerHTML='<td>'+esc(cl)+'</td>'+
+          '<td class="muted" style="max-width:440px;overflow:hidden;text-overflow:ellipsis">'+esc(url)+'</td>'+
+          '<td style="white-space:nowrap">'+
+            '<button class="small" data-copy="'+esc(url)+'">Copy</button> '+
+            '<a class="small" href="'+esc(url)+'" target="_blank" rel="noopener" style="display:inline-block;text-decoration:none;border:1px solid var(--line);border-radius:9px;padding:7px 12px;background:#fff;color:var(--ink)">Open</a> '+
+            '<button class="small" data-share="'+esc(url)+'" data-client="'+esc(cl)+'">Share</button>'+
+          '</td>';
+        tb.appendChild(tr);
+      });
+      if(!tb.children.length) tb.innerHTML='<tr><td colspan="3"><div class="empty">No clients.</div></td></tr>';
+      tb.querySelectorAll('button[data-copy]').forEach(function(b){
+        b.onclick=function(){ navigator.clipboard.writeText(b.dataset.copy).then(
+          function(){ setClientLinks('Link copied.','ok'); },
+          function(){ setClientLinks('Copy failed — select the link and copy manually.','err'); }); };
+      });
+      tb.querySelectorAll('button[data-share]').forEach(function(b){
+        b.onclick=async function(){
+          const url=b.dataset.share, cl=b.dataset.client;
+          if(navigator.share){
+            try{ await navigator.share({ title:'Orbit — '+cl+' content calendar', text:cl+' content calendar', url:url }); setClientLinks('Shared.','ok'); }
+            catch(e){ /* user cancelled */ }
+          } else {
+            navigator.clipboard.writeText(url).then(
+              function(){ setClientLinks('Sharing not supported in this browser — link copied instead.','ok'); },
+              function(){ setClientLinks('Copy the link manually to share.','err'); });
+          }
+        };
+      });
     }
-
-    function repStat(label, n){
-      return '<div><div style="font-size:22px;font-weight:800">'+n+'</div><div style="color:#5b625b;font-size:12px">'+esc(label)+'</div></div>';
-    }
-    function clientAsk(r){
-      const st = r['Stage']||'', fmt = r['Format']||'';
-      const isVideo = /video|On-camera|Sit-down|POV/i.test(fmt);
-      if (/Required Client Input/.test(st)) return 'We need some information from you to start this.';
-      if (/Waiting for Voiceover/.test(st)) return isVideo ? 'We need your video. Please record and send it.' : 'We need your voiceover. Please record and send it.';
-      if (/Content Ready for Review/.test(st)) return 'The finished post is ready — please review and approve.';
-      if (/Copywriting Ready for Review/.test(st)) return 'The copy is ready — please review.';
-      return 'Please take a look at this.';
-    }
-    function reportRequests(client){
-      // open footage/photo requests for this client's pieces (from the already-loaded rows we know pieces; fetch reqs)
-      // rendered only if any exist; uses a synchronous cache filled on report gen
-      if (!window._repReqs || !window._repReqs.length) return '';
-      const pieces = {}; allRows.forEach(function(r){ if(r['Client']===client) pieces[r['Piece ID']]=true; });
-      const mine = window._repReqs.filter(function(q){ return pieces[q.piece]; });
-      if (!mine.length) return '';
-      const body = mine.map(function(q){
-        return '<li style="margin-bottom:4px">'+esc(q.piece)+': '+esc(q.kind)+' · '+esc(q.type)+(q.qty?(' — '+esc(q.qty)+' needed'):' — qty not specified')+(q.note?(' — '+esc(q.note)):'')+'</li>';
-      }).join('');
-      return '<h3 style="font-size:15px;margin:22px 0 8px">Footage &amp; photos we still need</h3><ul style="font-size:13px;margin:0;padding-left:20px">'+body+'</ul>';
-    }
+    function setClientLinks(m,c){ if($('clientLinksStatus')){ $('clientLinksStatus').className='pstatus '+(c||'muted'); $('clientLinksStatus').textContent=m; } }
 
     // ── Assign Publish Dates ──
     function isoOf(d){ const m=d.getMonth()+1, day=d.getDate(); return d.getFullYear()+'-'+(m<10?'0':'')+m+'-'+(day<10?'0':'')+day; }
