@@ -812,7 +812,7 @@ sched,
               '<div>'+payBody+'</div>'+
             '</div>'+
             '<div style="text-align:center;font-size:12px">'+
-              '<img src="signature.jpg" alt="" style="height:56px;object-fit:contain" onerror="this.style.display=\'none\'"><br>'+
+              '<img src="signature.jpg" alt="" style="height:96px;object-fit:contain" onerror="this.style.display=\'none\'"><br>'+
               '<div style="border-top:1px solid #333;padding-top:4px;margin-top:2px;min-width:170px">'+esc(S.signer_name||'Satakun Gerdphol')+'</div>'+
               '<div style="color:#555">'+esc(S.signer_title||'Founder & CEO')+'</div>'+
               '<div style="color:#555">'+esc(S.company_name||'Wealthwise Atelier')+'</div>'+
@@ -820,7 +820,7 @@ sched,
           '</div>'+
         '</div>'+
       '</div>'+
-      '<div class="controls" style="margin-top:12px"><button class="small" onclick="window.print()">Print / Save as PDF</button></div>';
+      '<div class="controls" style="margin-top:12px"><button class="small" onclick="window.print()">Print / Save '+title+' as PDF</button></div>';
       $('invDocWrap').innerHTML = html;
     }
     function invRow(n, service, amount){
@@ -855,16 +855,36 @@ sched,
         const isReceipt = r.status==='receipt';
         const badge = '<span class="pill '+(isReceipt?'st-9':'st-2')+'">'+(isReceipt?'Receipt':'Invoice')+'</span>';
         const tr = document.createElement('tr');
+        const viewBtn = '<button class="small" data-view="'+esc(r.no)+'">View '+(isReceipt?'receipt':'invoice')+'</button>';
+        const paidBtn = isReceipt?'':'<button class="small" data-paid="'+esc(r.no)+'">Mark paid</button>';
         tr.innerHTML = '<td>'+esc(r.no)+'</td><td>'+esc(r.client)+'</td><td>'+money(r.currency,r.total)+'</td>'+
           '<td>'+badge+'</td><td class="muted">'+esc(r.issued)+'</td><td class="muted">'+esc(r.paid||'—')+'</td>'+
-          '<td>'+(isReceipt?'':'<button class="small" data-paid="'+esc(r.no)+'">Mark paid</button>')+'</td>';
+          '<td>'+viewBtn+' '+paidBtn+'</td>';
+        tr._rec = r;
         tb.appendChild(tr);
+      });
+      tb.querySelectorAll('button[data-view]').forEach(function(b){
+        b.onclick = function(){
+          const tr = b.closest('tr'); const r = tr && tr._rec; if(!r) return;
+          // load the stored invoice values into the form so the doc renders identically
+          $('invClient').value = r.client;
+          $('invCurrency').value = r.currency || 'THB';
+          $('invBaseDesc').value = r.baseDesc || '';
+          $('invAddDesc').value = r.addDesc || '';
+          // amounts: we only stored the primary-currency amount; refill both from Billing for display parity
+          const bill = META.billing[r.client] || {};
+          $('invBaseTHB').value = bill.baseTHB||''; $('invBaseSGD').value = bill.baseSGD||'';
+          $('invAddTHB').value = bill.addTHB||''; $('invAddSGD').value = bill.addSGD||'';
+          renderInvoiceDoc(r.status==='receipt', r.no);
+          $('invDocWrap').scrollIntoView({behavior:'smooth', block:'start'});
+        };
       });
       tb.querySelectorAll('button[data-paid]').forEach(function(b){
         b.onclick = async function(){
-          b.disabled=true; b.textContent='…';
+          if (b.dataset.busy) return; b.dataset.busy='1';
+          b.disabled=true; b.textContent='Saving…';
           const data = await call('markPaid', { no:b.dataset.paid });
-          if(!data.ok){ b.disabled=false; b.textContent='Mark paid'; setInv(data.error,'err'); return; }
+          if(!data.ok){ b.disabled=false; b.textContent='Mark paid'; b.dataset.busy=''; setInv(data.error,'err'); return; }
           setInv(data.result.no+' marked paid — now a receipt.','ok');
           loadInvoices();
         };
