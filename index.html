@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Orbit — Sign in</title>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <style>
+    :root { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+    body {
+      margin: 0; min-height: 100vh; display: grid; place-items: center;
+      background: #f6f7f9; color: #1a1a1a;
+    }
+    .card {
+      width: min(92vw, 420px); background: #fff; border: 1px solid #e5e7eb;
+      border-radius: 14px; padding: 32px 28px; box-shadow: 0 1px 3px rgba(0,0,0,.06);
+    }
+    h1 { font-size: 20px; margin: 0 0 4px; }
+    p.sub { margin: 0 0 24px; color: #6b7280; font-size: 14px; }
+    #signin { display: flex; justify-content: center; margin-bottom: 8px; }
+    #result { margin-top: 20px; font-size: 14px; line-height: 1.5; }
+    .ok  { color: #065f46; background: #ecfdf5; border: 1px solid #a7f3d0; padding: 12px 14px; border-radius: 10px; }
+    .err { color: #991b1b; background: #fef2f2; border: 1px solid #fecaca; padding: 12px 14px; border-radius: 10px; }
+    .muted { color: #6b7280; }
+    button.signout {
+      margin-top: 16px; font-size: 13px; color: #374151; background: #f3f4f6;
+      border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px 12px; cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Orbit</h1>
+    <p class="sub">Sign in with your WWA team account.</p>
+    <div id="signin"></div>
+    <div id="result" class="muted">Waiting for sign-in…</div>
+    <button class="signout" id="signout" style="display:none">Sign out</button>
+  </div>
+
+  <script>
+    const CLIENT_ID = '543895724243-cbielh8h6qnqau5nh5p8jp7j4cplfge1.apps.googleusercontent.com';
+    const EXEC_URL  = 'https://script.google.com/macros/s/AKfycbz4IrRMhmoOSZSVIB5CacHmMW6T7TFjEDDT-31Ke0C0sZAYy2uBdzMiBCXwG__IV33mwQ/exec';
+
+    const resultEl  = document.getElementById('result');
+    const signoutEl = document.getElementById('signout');
+
+    window.onload = function () {
+      google.accounts.id.initialize({
+        client_id: CLIENT_ID,
+        callback: onCredential
+      });
+      google.accounts.id.renderButton(
+        document.getElementById('signin'),
+        { theme: 'outline', size: 'large', text: 'signin_with' }
+      );
+    };
+
+    async function onCredential(response) {
+      const idToken = response.credential;
+      resultEl.className = 'muted';
+      resultEl.textContent = 'Checking with Orbit…';
+      try {
+        const res = await fetch(EXEC_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ idToken: idToken, action: 'whoami', payload: {} })
+        });
+        const data = await res.json();
+        if (data.ok) {
+          resultEl.className = 'ok';
+          resultEl.innerHTML = 'Signed in as <b>' + escapeHtml(data.result.name) +
+            '</b><br><span class="muted">' + escapeHtml(data.result.email) + '</span>';
+          signoutEl.style.display = 'inline-block';
+        } else {
+          resultEl.className = 'err';
+          resultEl.textContent = data.error || 'Sign-in rejected.';
+        }
+      } catch (e) {
+        resultEl.className = 'err';
+        resultEl.textContent = 'Could not reach Orbit: ' + String(e);
+      }
+    }
+
+    signoutEl.onclick = function () {
+      google.accounts.id.disableAutoSelect();
+      resultEl.className = 'muted';
+      resultEl.textContent = 'Signed out. Sign in again above.';
+      signoutEl.style.display = 'none';
+    };
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, function (c) {
+        return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c];
+      });
+    }
+  </script>
+</body>
+</html>
