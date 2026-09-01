@@ -261,6 +261,7 @@
 #loading { min-height:64vh; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:12px; color:#767d76; }
 #loading .ico { font-size:34px; }
 .cplat { margin:4px 0 2px; }
+.tchip{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:500}
 .cplat .chip, .wrow .chip { display:inline-block; padding:2px 8px; margin:1px 3px 1px 0; border-radius:7px; font-size:11px; background:#e7efe9; color:#3f5a49; }
 </style>
 </head>
@@ -429,6 +430,8 @@ function render(data){
 }
 
 function isViral(r){ return r.viral===true || String(r.viral).toUpperCase()==="TRUE"; }
+const FMT_TONE={ 'Carousel':'#dbeafe|#1e40af','VO reel':'#ede9fe|#5b21b6','On-camera reel':'#ffedd5|#9a3412','Sit-down video':'#dcfce7|#166534','POV b-roll':'#fce7f3|#9d174d' };
+function fmtChip(f){ const t=(FMT_TONE[f]||'#eef0ee|#5a635a').split('|'); return f? '<span class="tchip" style="background:'+t[0]+';color:'+t[1]+'">'+esc(f)+'</span>':''; }
 function clientPlat(platform){
   const list=String(platform||"").split(",").map(s=>s.trim()).filter(Boolean);
   const low=list.map(s=>s.toLowerCase());
@@ -564,7 +567,7 @@ function renderBoard(){
       const link = r.copyLink ? '<a href="'+esc(r.copyLink)+'" target="_blank" rel="noopener">Open</a>' : "";
       return '<div class="card"><div class="cid">'+esc(r.pieceId)+viralStar(r)+'</div>'
         + '<div class="ctitle">'+esc(r.title)+'</div>'
-        + '<div class="cplat">'+clientPlat(r.platform)+'</div>'
+        + '<div class="cplat">'+fmtChip(r.format)+' '+clientPlat(r.platform)+'</div>'
         + '<div class="cfoot"><span class="date">'+fmtShort(parseDate(r.publishDate))+'</span>'+link+'</div>'
         + viralLinks(r)
         + '<div style="margin-top:8px">'+pillFor(r)+'</div></div>';

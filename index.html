@@ -58,6 +58,7 @@
     .hidden { display:none !important; }
     .viral { color:#d9a400; font-weight:700; }
     .chip.plat { background:#e7efe9; color:#3f5a49; }
+    .tchip { display:inline-block; padding:2px 9px; border-radius:6px; font-size:12px; font-weight:500; letter-spacing:.01em; }
     .bplat { margin:4px 0 2px; }
     .linkbtn { background:none; border:none; color:var(--ink-soft); font:inherit; cursor:pointer; padding:6px 2px; }
     .linkbtn:hover { color:var(--ink); }
@@ -416,9 +417,21 @@
     const $ = function (id){ return document.getElementById(id); };
 
     window.onload = function () {
-      google.accounts.id.initialize({ client_id:CLIENT_ID, callback:onCredential, auto_select:true });
+      google.accounts.id.initialize({ client_id:CLIENT_ID, callback:onCredential, auto_select:true, itp_support:true, use_fedcm_for_prompt:true });
       google.accounts.id.renderButton($('signin'), { theme:'outline', size:'large', text:'signin_with' });
-      google.accounts.id.prompt();
+      // Returning users: mask with "signing you in" and let auto-select re-auth silently (survives refresh/idle).
+      $('signin').style.display='none';
+      $('whoami').className='muted'; $('whoami').textContent='Signing you in…';
+      let settled=false;
+      const revealButton=function(msg){ if(settled) return; settled=true;
+        $('signin').style.display=''; $('whoami').textContent=msg||'Please sign in to continue.'; };
+      try {
+        google.accounts.id.prompt(function(n){
+          try{ if(n && (n.isNotDisplayed && n.isNotDisplayed() || n.isSkippedMoment && n.isSkippedMoment())) revealButton(); }catch(e){ revealButton(); }
+        });
+      } catch(e){ revealButton(); }
+      // Safety net: if nothing came back in 6s, show the button so the user is never stuck on "Signing in…".
+      setTimeout(function(){ if(!idToken) revealButton(); }, 6000);
     };
 
     async function call(action, payload){
@@ -450,8 +463,8 @@
       idToken = resp.credential;
       if (pendingRefresh) { const r = pendingRefresh; pendingRefresh = null; r(); }   // resolve silent refresh
       if (!keepaliveStarted) { keepaliveStarted = true;
-        // Renew the token every ~45 min (Google tokens last ~60). Keeps long-idle sessions alive.
-        setInterval(function(){ try { google.accounts.id.prompt(); } catch(e){} }, 45*60*1000);
+        // Renew every ~30 min (Google ID tokens last ~60) so long-idle sessions never expire out from under you.
+        setInterval(function(){ try { google.accounts.id.prompt(); } catch(e){} }, 30*60*1000);
       }
       $('whoami').className='muted'; $('whoami').textContent='Checking with Orbit…';
       const data = await call('whoami');
@@ -477,7 +490,7 @@
       if(name==='todayposts'){ loadMeta().then(function(){ renderTodayPosts(); }); }
       if(name==='assign'){ loadMeta().then(function(){ renderAssign(); }); }
       if(name==='invoices'){ loadMeta().then(function(){ fillFromBilling(); loadInvoices(); }); }
-      if(name==='clientview'){ loadMeta().then(function(){ renderClientLinks(); }); }
+      if(name==='clientview'){ const tb=$('clientLinksBody'); if(tb) tb.innerHTML='<tr><td colspan="3"><div class="empty">Loading client links…</div></td></tr>'; loadMeta().then(function(){ renderClientLinks(); }); }
     }
 
     $('refresh').onclick = loadRows;
@@ -574,7 +587,7 @@
       if(!rows.length) tb.innerHTML='<tr><td colspan="10"><div class="empty">No pieces yet. Import a batch to get started.</div></td></tr>';
       function rowTr(r){
         const tr=document.createElement('tr'); tr.className='clickable'; tr.onclick=function(){ openPanel(r); };
-        tr.innerHTML='<td>'+esc(r['Piece ID'])+reqMark(r)+viralMark(r)+'</td><td>'+esc(r['Client'])+'</td><td>'+esc(r['Format'])+'</td>'+
+        tr.innerHTML='<td>'+esc(r['Piece ID'])+reqMark(r)+viralMark(r)+'</td><td>'+clientChip(r['Client'])+'</td><td>'+fmtChip(r['Format'])+'</td>'+
           '<td>'+platLabel(r['PlatformList'],r['Client'])+'</td><td>'+stagePill(r['Stage'])+'</td>'+
           '<td>'+esc(r['Next Step'])+'</td><td>'+esc(r['Chase Who'])+'</td>'+
           '<td>'+onTrack(r['On Track'])+'</td><td>'+esc(r['Publish Date'])+'</td><td>'+copyLink(r['Copy Link'])+'</td>';
@@ -602,7 +615,7 @@
         inStage.forEach(function(r){
           const c=document.createElement('div'); c.className='bcard'; c.onclick=function(){ openPanel(r); };
           c.innerHTML='<div class="bt">'+esc(r['Title']||r['Piece ID'])+reqMark(r)+viralMark(r)+'</div>'+
-            '<div class="bm">'+esc(r['Piece ID'])+' · '+esc(r['Format'])+'</div>'+
+            '<div class="bm">'+esc(r['Piece ID'])+' '+clientChip(r['Client'])+' '+fmtChip(r['Format'])+'</div>'+
             '<div class="bplat">'+platLabel(r['PlatformList'],r['Client'])+'</div>'+
             '<div>'+onTrack(r['On Track'])+' · <span class="muted">'+esc(r['Publish Date'])+'</span></div>';
           col.appendChild(c);
@@ -632,7 +645,7 @@
           renderTodayPosts(); renderPipe(); renderToday();
         };
         tr.innerHTML='<td>'+esc(r['Piece ID'])+viralMark(r)+(notReady?' <span class="urg">URGENT</span>':'')+'</td>'+
-          '<td>'+esc(r['Client'])+'</td><td>'+platLabel(r['PlatformList'],r['Client'])+'</td>'+
+          '<td>'+clientChip(r['Client'])+'</td><td>'+platLabel(r['PlatformList'],r['Client'])+'</td>'+
           '<td>'+esc(r['Title']||'')+'</td><td class="tpsel"></td><td>'+esc(r['Publish Date'])+'</td>';
         tr.querySelector('.tpsel').appendChild(sel);
         tb.appendChild(tr);
@@ -652,7 +665,7 @@
       if(!rows.length) tb.innerHTML='<tr><td colspan="8"><div class="empty">Nothing needs attention right now.</div></td></tr>';
       rows.forEach(function(r){
         const tr=document.createElement('tr'); tr.className='clickable'; tr.onclick=function(){ openPanel(r); };
-        tr.innerHTML='<td>'+esc(r['Piece ID'])+'</td><td>'+esc(r['Client'])+'</td><td>'+esc(r['Format'])+'</td>'+
+        tr.innerHTML='<td>'+esc(r['Piece ID'])+'</td><td>'+clientChip(r['Client'])+'</td><td>'+fmtChip(r['Format'])+'</td>'+
           '<td>'+stagePill(r['Stage'])+'</td><td>'+esc(r['Next Step'])+'</td><td>'+esc(r['Chase Who'])+'</td>'+
           '<td>'+onTrack(r['On Track'])+'</td><td>'+esc(r['Publish Date'])+'</td>';
         tb.appendChild(tr);
@@ -739,6 +752,12 @@
     }
     function todayISO(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
     function isReadyStage(s){ return /^(9 Ready to Publish|10 Published)/.test(s||''); }
+    // Notion-style pastel chips (soft bg, muted ink) for Format and Client.
+    const FMT_TONE={ 'Carousel':'#dbeafe|#1e40af','VO reel':'#ede9fe|#5b21b6','On-camera reel':'#ffedd5|#9a3412','Sit-down video':'#dcfce7|#166534','POV b-roll':'#fce7f3|#9d174d' };
+    const CLIENT_TONE={ 'Ice':'#e0f2fe|#075985','Lynn':'#fef9c3|#854d0e','Melissa':'#fae8ff|#86198f','SRU':'#dcfce7|#166534','Dianna':'#ffe4e6|#9f1239' };
+    function toneChip(v, map){ const t=(map[v]||'#eef0ee|#5a635a').split('|'); return v? '<span class="tchip" style="background:'+t[0]+';color:'+t[1]+'">'+esc(v)+'</span>':'<span class="muted">—</span>'; }
+    function fmtChip(f){ return toneChip(f, FMT_TONE); }
+    function clientChip(c){ return toneChip(c, CLIENT_TONE); }
     function onTrack(v){
       if(!v) return '<span class="t-muted">—</span>';
       let c='t-muted';
