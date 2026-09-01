@@ -55,7 +55,12 @@
     .seg button { border:none; border-radius:0; background:#fff; padding:8px 15px; }
     .seg button.on { background:var(--brand); color:#fff; }
     .count { color:var(--ink-soft); font-size:13px; }
-    .hidden { display:none; }
+    .hidden { display:none !important; }
+    .viral { color:#d9a400; font-weight:700; }
+    .linkbtn { background:none; border:none; color:var(--ink-soft); font:inherit; cursor:pointer; padding:6px 2px; }
+    .linkbtn:hover { color:var(--ink); }
+    tr.seemore td { background:#faf9f6; border-top:1px dashed var(--line); }
+    tr.parked-row td { background:#fbfbf9; color:var(--ink-soft); }
     .ok  { color:#3a6b52; background:#e9f2ec; border:1px solid #bcd8c8; padding:11px 13px; border-radius:10px; }
     .err { color:#9a453b; background:#f8ebe9; border:1px solid #ecc5c0; padding:11px 13px; border-radius:10px; }
     .muted { color:var(--ink-soft); }
@@ -317,6 +322,12 @@
       <div class="pid" id="pMeta"></div>
       <div class="field"><label>Stage</label><select id="pStage"></select></div>
       <div class="field"><label><input type="checkbox" id="pBlocked"> Blocked</label></div>
+      <div class="field"><label><input type="checkbox" id="pViral"> ★ Viral (mark once published)</label>
+        <div id="pViralLinks" class="hidden" style="margin-top:8px;display:grid;gap:8px">
+          <input type="text" id="pViralIG" placeholder="IG post URL (https://instagram.com/…)">
+          <input type="text" id="pViralTT" placeholder="TikTok post URL (https://tiktok.com/…)">
+        </div>
+      </div>
       <div class="field"><label>Copy link (Notion)</label><input type="text" id="pCopyLink" placeholder="https://notion.so/…"></div>
       <div class="field"><label>Footage &amp; photos needed</label>
         <div class="reqbox">
@@ -340,13 +351,15 @@
 
     const STAGES = ['🚩 Required Client Input','1 Copywriting','2 Copywriting Ready for Review','3 Copywriting Approved',
       '4 Waiting for Voiceover / Video','5 Voiceover / Video Received','6 In Production','7 Content Ready for Review','8 Content Approved',
-      '9 Ready to Publish','10 Published','◼️ Unselected','🔁 Rolled Over'];
+      '9 Ready to Publish','10 Published','On Hold','◼️ Unselected','🔁 Rolled Over'];
     const STAGE_COLOUR = {
       '🚩 Required Client Input':'st-flag','1 Copywriting':'st-1','2 Copywriting Ready for Review':'st-2',
       '3 Copywriting Approved':'st-3','4 Waiting for Voiceover / Video':'st-4','5 Voiceover / Video Received':'st-5',
       '6 In Production':'st-6','7 Content Ready for Review':'st-7','8 Content Approved':'st-8',
-      '9 Ready to Publish':'st-9','10 Published':'st-10','◼️ Unselected':'st-off','🔁 Rolled Over':'st-roll'};
-    const BOARD_HIDE = ['10 Published','◼️ Unselected'];
+      '9 Ready to Publish':'st-9','10 Published':'st-10','On Hold':'st-off','◼️ Unselected':'st-off','🔁 Rolled Over':'st-roll'};
+    const BOARD_HIDE = ['10 Published','On Hold','◼️ Unselected'];
+    // Parked = set aside, off the active board, shown in the table only via "see more".
+    const PARKED = ['On Hold','◼️ Unselected'];
 
     const PREFS = loadPrefs();
     let idToken = null, allRows = [], current = null, pendingRefresh = null, keepaliveStarted = false;
@@ -462,17 +475,29 @@
 
     function renderPipe(){
       const rows=filtered(); const tb=$('pipeBody'); tb.innerHTML='';
+      const active=rows.filter(function(r){ return PARKED.indexOf(r['Stage'])===-1; });
+      const parked=rows.filter(function(r){ return PARKED.indexOf(r['Stage'])!==-1; });
       if(!rows.length) tb.innerHTML='<tr><td colspan="10"><div class="empty">No pieces yet. Import a batch to get started.</div></td></tr>';
-      rows.forEach(function(r){
+      function rowTr(r){
         const tr=document.createElement('tr'); tr.className='clickable'; tr.onclick=function(){ openPanel(r); };
-        tr.innerHTML='<td>'+esc(r['Piece ID'])+reqMark(r)+'</td><td>'+esc(r['Client'])+'</td><td>'+esc(r['Format'])+'</td>'+
+        tr.innerHTML='<td>'+esc(r['Piece ID'])+reqMark(r)+viralMark(r)+'</td><td>'+esc(r['Client'])+'</td><td>'+esc(r['Format'])+'</td>'+
           '<td>'+chips(r['PlatformList'])+'</td><td>'+stagePill(r['Stage'])+'</td>'+
           '<td>'+esc(r['Next Step'])+'</td><td>'+esc(r['Chase Who'])+'</td>'+
           '<td>'+onTrack(r['On Track'])+'</td><td>'+esc(r['Publish Date'])+'</td><td>'+copyLink(r['Copy Link'])+'</td>';
         const a=tr.querySelector('a.lnk'); if(a) a.onclick=function(e){ e.stopPropagation(); };
-        tb.appendChild(tr);
-      });
-      $('pipeCount').textContent=rows.length+' piece(s)';
+        return tr;
+      }
+      active.forEach(function(r){ tb.appendChild(rowTr(r)); });
+      if(parked.length){
+        const sep=document.createElement('tr'); sep.className='seemore';
+        sep.innerHTML='<td colspan="10"><button type="button" id="parkedToggle" class="linkbtn">▸ See '+parked.length+' set aside (On Hold / Unselected)</button></td>';
+        tb.appendChild(sep);
+        const holder=[]; parked.forEach(function(r){ const tr=rowTr(r); tr.classList.add('parked-row','hidden'); tb.appendChild(tr); holder.push(tr); });
+        let open=false; sep.querySelector('#parkedToggle').onclick=function(e){ e.stopPropagation(); open=!open;
+          holder.forEach(function(tr){ tr.classList.toggle('hidden',!open); });
+          this.textContent=(open?'▾ Hide':'▸ See ')+' '+parked.length+' set aside (On Hold / Unselected)'; };
+      }
+      $('pipeCount').textContent=active.length+' active'+(parked.length?(' · '+parked.length+' set aside'):'')+'';
 
       const bv=$('boardView'); bv.innerHTML='';
       STAGES.filter(function(s){ return BOARD_HIDE.indexOf(s)===-1; }).forEach(function(stage){
@@ -526,6 +551,8 @@
       });
     }
 
+    function toggleViralLinks(){ $('pViralLinks').classList.toggle('hidden', !$('pViral').checked); }
+    document.addEventListener('DOMContentLoaded',function(){ var v=$('pViral'); if(v) v.addEventListener('change',toggleViralLinks); });
     function buildStageSelect(){ $('pStage').innerHTML=STAGES.map(function(s){ return '<option>'+esc(s)+'</option>'; }).join(''); }
     function openPanel(r){
       current=r;
@@ -534,6 +561,9 @@
       $('pStage').value=r['Stage']||'1 Copywriting';
       $('pBlocked').checked=r['Blocked']==='TRUE';
       $('pCopyLink').value=r['Copy Link']||'';
+      $('pViral').checked=r['Viral']==='TRUE';
+      $('pViralIG').value=r['Viral IG Link']||''; $('pViralTT').value=r['Viral TT Link']||'';
+      toggleViralLinks();
       setPStatus('','muted'); $('overlay').classList.add('show');
       curReqs=[]; renderReqList(); loadReqsFor(r['Piece ID']);
     }
@@ -546,6 +576,9 @@
       if($('pStage').value!==(current['Stage']||'')) changes['Stage']=$('pStage').value;
       if(($('pCopyLink').value||'')!==(current['Copy Link']||'')) changes['Copy Link']=$('pCopyLink').value;
       if($('pBlocked').checked!==(current['Blocked']==='TRUE')) changes['Blocked']=$('pBlocked').checked;
+      if($('pViral').checked!==(current['Viral']==='TRUE')) changes['Viral']=$('pViral').checked;
+      if(($('pViralIG').value||'')!==(current['Viral IG Link']||'')) changes['Viral IG Link']=$('pViralIG').value;
+      if(($('pViralTT').value||'')!==(current['Viral TT Link']||'')) changes['Viral TT Link']=$('pViralTT').value;
       if(!Object.keys(changes).length){ setPStatus('No changes.','muted'); return; }
       $('pSave').disabled=true; setPStatus('Saving…','muted');
       const data=await call('updatePiece',{ row:current.row, pieceId:current['Piece ID'], changes:changes });
@@ -555,6 +588,8 @@
       if(idx>=0) allRows[idx]=fresh; current=fresh;
       renderPipe(); renderToday(); setPStatus('Saved.','ok');
     };
+
+    function viralMark(r){ return (r['Viral']==='TRUE') ? ' <span class="viral" title="Marked viral">★</span>' : ''; }
 
     function reqMark(r){
       const n = r['openReqs']||0; if(!n) return '';

@@ -255,6 +255,11 @@
   @media (min-width:920px){
     .cal{min-width:0}
   }
+.viral { color:#d9a400; font-weight:700; }
+.viral-links { margin-top:6px; font-size:12px; }
+.viral-links a { color:#b98900; }
+#loading { min-height:64vh; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:12px; color:#767d76; }
+#loading .ico { font-size:34px; }
 </style>
 </head>
 <body>
@@ -269,6 +274,8 @@
 </div>
 
 <!-- ERROR -->
+<div id="loading"><div class="ico">📅</div><div>Loading your calendar…</div></div>
+
 <div id="error" class="wrap hidden"><div class="err" id="error-msg"></div></div>
 
 <!-- APP -->
@@ -307,6 +314,11 @@
       <div id="view-board" class="board"></div>
       <div id="view-table" class="tablewrap hidden"></div>
       <div id="view-cal" class="hidden"></div>
+    </section>
+
+    <section class="sec hidden" id="sec-viral">
+      <h2 class="sh">★ Viral <span class="count" id="viral-count"></span></h2>
+      <div id="viral-body"></div>
     </section>
 
     <section class="sec" id="sec-published">
@@ -398,11 +410,32 @@ function render(data){
   renderTable();
   renderBoard();
   renderCalendar();
+  renderViral();
   renderPublished();
   document.getElementById("all-count").textContent = STATE.rows.filter(r=>!isPublished(r)).length;
 
+  document.getElementById("loading").classList.add("hidden");
   document.getElementById("gate").classList.add("hidden");
   document.getElementById("app").classList.remove("hidden");
+}
+
+function isViral(r){ return r.viral===true || String(r.viral).toUpperCase()==="TRUE"; }
+function viralStar(r){ return isViral(r) ? ' <span class="viral" title="Viral">\u2605</span>' : ''; }
+function viralLinks(r){ if(!isViral(r)) return '';
+  const a=[]; if(r.viralIG) a.push('<a href="'+esc(r.viralIG)+'" target="_blank" rel="noopener">IG post</a>');
+  if(r.viralTT) a.push('<a href="'+esc(r.viralTT)+'" target="_blank" rel="noopener">TikTok post</a>');
+  return a.length ? '<div class="viral-links">'+a.join(' \u00b7 ')+'</div>' : ''; }
+function renderViral(){
+  const sec=document.getElementById("sec-viral"); const body=document.getElementById("viral-body");
+  if(!sec||!body) return;
+  const items=STATE.rows.filter(isViral).sort((a,b)=> (parseDate(b.publishDate)|| -8e15) - (parseDate(a.publishDate)|| -8e15));
+  document.getElementById("viral-count").textContent = items.length;
+  if(!items.length){ sec.classList.add("hidden"); return; }
+  sec.classList.remove("hidden");
+  body.innerHTML = '<div class="list">'+items.map(function(r){
+    return '<div class="row"><div><b>'+esc(r.pieceId)+'</b> \u2605 '+esc(r.title)
+      +'</div><div class="meta"><span class="due">'+fmtShort(parseDate(r.publishDate))+'</span>'+viralLinks(r)+'</div></div>';
+  }).join('')+'</div>';
 }
 
 function renderWaiting(){
@@ -491,9 +524,10 @@ function renderBoard(){
       .sort((a,b)=> (parseDate(a.publishDate)||8e15) - (parseDate(b.publishDate)||8e15));
     const cards = items.map(r=>{
       const link = r.copyLink ? '<a href="'+esc(r.copyLink)+'" target="_blank" rel="noopener">Open</a>' : "";
-      return '<div class="card"><div class="cid">'+esc(r.pieceId)+'</div>'
+      return '<div class="card"><div class="cid">'+esc(r.pieceId)+viralStar(r)+'</div>'
         + '<div class="ctitle">'+esc(r.title)+'</div>'
         + '<div class="cfoot"><span class="date">'+fmtShort(parseDate(r.publishDate))+'</span>'+link+'</div>'
+        + viralLinks(r)
         + '<div style="margin-top:8px">'+pillFor(r)+'</div></div>';
     }).join("");
     return '<div class="col"><h3>'+col.name+' <span class="n">'+items.length+'</span></h3>'
@@ -612,6 +646,7 @@ function setView(v){
    AUTH + DATA
    ============================================================ */
 function showError(msg){
+  document.getElementById("loading").classList.add("hidden");
   document.getElementById("gate").classList.add("hidden");
   document.getElementById("app").classList.add("hidden");
   document.getElementById("error-msg").textContent = msg;
