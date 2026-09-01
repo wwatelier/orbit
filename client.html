@@ -5,6 +5,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Orbit · Your Content Calendar</title>
 
+<script>
+// Start the network request the moment the page starts parsing, so the Apps Script
+// round trip (and its cold start) overlaps with rendering instead of following it.
+window.__orbitBoot = (function(){
+  try {
+    var k = new URLSearchParams(location.search).get("k");
+    if(!k) return null;
+    var url = "https://script.google.com/macros/s/AKfycbz4IrRMhmoOSZSVIB5CacHmMW6T7TFjEDDT-31Ke0C0sZAYy2uBdzMiBCXwG__IV33mwQ/exec";
+    return { key:k, promise: fetch(url, { method:"POST", body: JSON.stringify({ action:"clientRows", key:k }) })
+      .then(function(r){ return r.json(); }).catch(function(){ return null; }) };
+  } catch(e){ return null; }
+})();
+</script>
+
 <!--
   ============================================================
   ORBIT CLIENT DASHBOARD  ·  client.html
@@ -289,7 +303,29 @@
 .ppage button{font:inherit;font-size:12px;padding:5px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;cursor:pointer}
 .ppage button[disabled]{opacity:.45;cursor:default}
 .empty{padding:16px;color:var(--text-soft);font-size:13px}
-@media(max-width:820px){.parked{grid-template-columns:1fr}.tpcards{grid-template-columns:1fr}}
+@media(max-width:820px){
+  .parked{grid-template-columns:1fr}
+  .tpcards{grid-template-columns:1fr}
+  .wrap{padding:0 16px 72px}
+  header.page{padding:28px 16px 6px}
+  .hero{padding:18px 16px;border-radius:12px}
+  .hero-h{font-size:20px}
+  .tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .ptable{min-width:600px}
+  .board{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .ppage{flex-wrap:wrap}
+  .ppage button{min-height:40px;padding:8px 14px}
+  .phead{min-height:48px}
+  .pitem,.wrow{padding:12px}
+  .cal{min-width:640px}
+}
+@media(max-width:560px){
+  .hero-h{font-size:19px}
+  .tpcard{padding:12px}
+  .ptitle{font-size:24px}
+  .sh{font-size:16px}
+  a,button{-webkit-tap-highlight-color:rgba(63,90,73,.15)}
+}
 </style>
 </head>
 <body>
@@ -693,11 +729,13 @@ function renderParked(){
     const col=document.createElement("div"); col.className="pcol"+(open?" open":"");
     let body="";
     if(open){
-      body = g.items.length ? '<div class="plist">'+slice.map(r=>{
-          const link=r.copyLink?'<a href="'+esc(r.copyLink)+'" target="_blank" rel="noopener">Open</a>':"";
-          return '<div class="pitem"><div class="pi-t">'+esc(r.title||r.pieceId)+viralStar(r)+'</div>'
-            +'<div class="pi-m">'+esc(r.pieceId)+' · '+fmtChip(r.format)+' · '+fmtShort(parseDate(r.publishDate))+' '+link+'</div></div>';
-        }).join("")+'</div>'
+      body = g.items.length ? '<div class="tablewrap"><table class="ptable"><thead><tr><th>ID</th><th>Format</th><th>Title</th><th>Status</th><th>Date</th><th>Copy</th></tr></thead><tbody>'
+        + slice.map(r=>{
+            const link=r.copyLink?'<a href="'+esc(r.copyLink)+'" target="_blank" rel="noopener">Open</a>':'<span class="fmt">\u2014</span>';
+            return '<tr><td class="id">'+esc(r.pieceId)+viralStar(r)+'</td><td>'+fmtChip(r.format)+'</td>'
+              +'<td class="title">'+esc(r.title||"")+'</td><td>'+pillFor(r)+'</td>'
+              +'<td class="date">'+fmtShort(parseDate(r.publishDate))+'</td><td>'+link+'</td></tr>';
+          }).join("")+'</tbody></table></div>'
         +(pages>1?'<div class="ppage"><button class="pprev"'+(pg===0?" disabled":"")+'>&larr; Newer</button>'
           +'<span class="fmt">Page '+(pg+1)+' of '+pages+'</span>'
           +'<button class="pnext"'+(pg>=pages-1?" disabled":"")+'>Older &rarr;</button></div>':"")
@@ -747,11 +785,11 @@ async function loadRows(key){
   } catch(e){}
 
   try {
-    const res = await fetch(WEB_APP_URL, {
-      method:"POST",
-      body: JSON.stringify({ action:"clientRows", key }) // text/plain avoids a CORS preflight
-    });
-    const data = await res.json();
+    // Reuse the request already started in <head> if it's for this key.
+    const boot = window.__orbitBoot;
+    const inflight = (boot && boot.key===key) ? boot.promise : null;
+    const data = inflight ? await inflight
+      : await (await fetch(WEB_APP_URL, { method:"POST", body: JSON.stringify({ action:"clientRows", key }) })).json();
     if(!data || data.ok===false){
       if(hadCache){ markStale(false, "Couldn't refresh just now — showing your last view."); return; }
       if(data && data.error==="not_authorised"){
@@ -775,12 +813,14 @@ function markStale(on, msg){
   el.classList.toggle("hidden", !on && !msg);
   if(msg) setTimeout(()=>el.classList.add("hidden"), 4000);
 }
-window.addEventListener("load", ()=>{
+function orbitStart(){
   if(DEMO){ startDemo(); return; }
   const key = new URLSearchParams(location.search).get("k");
   if(!key){ showError("This link is missing its access code. Please open the link WWA sent you."); return; }
   loadRows(key);
-});
+}
+if(document.readyState==="loading") document.addEventListener("DOMContentLoaded", orbitStart);
+else orbitStart();
 
 /* ============================================================
    DEMO DATA  (sample Ice rows, dated around today so the week + calendar fill)
