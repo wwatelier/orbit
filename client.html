@@ -263,6 +263,32 @@
 .cplat { margin:4px 0 2px; }
 .tchip{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:500}
 .cplat .chip, .wrow .chip { display:inline-block; padding:2px 8px; margin:1px 3px 1px 0; border-radius:7px; font-size:11px; background:#e7efe9; color:#3f5a49; }
+.hero{background:linear-gradient(180deg,#f7f9f6,#fff);border:1px solid var(--line);border-radius:14px;padding:22px 24px}
+.hero-date{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-soft);margin-bottom:4px}
+.hero-h{margin:0 0 12px;font-size:23px}
+.tpcards{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
+.tpcard{border:1px solid var(--line);border-radius:12px;padding:14px;background:#fff}
+.tphead{display:flex;gap:6px;align-items:center;margin-bottom:8px}
+.tptitle{font-weight:600;line-height:1.35}
+.tpid{font-size:11px;color:var(--text-soft);margin:2px 0 8px}
+.tpdates{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
+.pdate{font-size:12px}.pdate .pd{color:var(--text-soft)}
+.parked{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;align-items:start}
+.pcol{border:1px solid var(--line);border-radius:12px;background:#fff;overflow:hidden}
+.pcol.open{grid-column:1/-1}
+.phead{width:100%;text-align:left;background:#faf9f6;border:none;font:inherit;font-weight:600;padding:12px 14px;cursor:pointer;display:flex;align-items:center;gap:8px}
+.pcol.open .phead{border-bottom:1px solid var(--line)}
+.phead .pn{background:#e9ece7;color:var(--text-soft);border-radius:20px;padding:1px 9px;font-size:11px}
+.phead .pcar{margin-left:auto;color:var(--text-soft)}
+.plist{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr))}
+.pitem{padding:10px 14px;border-bottom:1px solid var(--line)}
+.pi-t{font-size:13px;line-height:1.35}
+.pi-m{font-size:11px;color:var(--text-soft);margin-top:3px}
+.ppage{display:flex;align-items:center;justify-content:center;gap:12px;padding:10px;font-size:12px}
+.ppage button{font:inherit;font-size:12px;padding:5px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;cursor:pointer}
+.ppage button[disabled]{opacity:.45;cursor:default}
+.empty{padding:16px;color:var(--text-soft);font-size:13px}
+@media(max-width:820px){.parked{grid-template-columns:1fr}.tpcards{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -295,19 +321,22 @@
       </div>
     </section>
 
-    <section class="sec hidden" id="sec-today" style="margin-top:24px">
-      <h2 class="sh">Today's posts <span class="count" id="today-count"></span></h2>
-      <div id="today-body"></div>
-    </section>
-
-    <section class="sec" id="sec-waiting">
-      <h2 class="sh">Waiting on you <span class="count" id="waiting-count"></span></h2>
-      <div id="waiting-body"></div>
+    <section class="sec" id="sec-today" style="margin-top:24px">
+      <div class="hero">
+        <div class="hero-date" id="hero-date"></div>
+        <h2 class="hero-h">Today's posts <span class="count" id="today-count"></span></h2>
+        <div id="today-body"></div>
+      </div>
     </section>
 
     <section class="sec" id="sec-week">
       <h2 class="sh" id="week-title">This week</h2>
       <div class="week" id="week"></div>
+    </section>
+
+    <section class="sec" id="sec-waiting">
+      <h2 class="sh">Waiting on you <span class="count" id="waiting-count"></span></h2>
+      <div id="waiting-body"></div>
     </section>
 
     <section class="sec" id="sec-all">
@@ -329,9 +358,9 @@
       <div id="viral-body"></div>
     </section>
 
-    <section class="sec" id="sec-published">
-      <h2 class="sh">Published <span class="count" id="pub-count"></span></h2>
-      <div id="published-body"></div>
+    <section class="sec" id="sec-parked">
+      <h2 class="sh">Archive</h2>
+      <div id="parked-area" class="parked"></div>
     </section>
   </div>
 </div>
@@ -400,6 +429,7 @@ function toneFor(row){ return atRisk(row) ? {tone:"red",label:"At risk"} : class
    RENDER
    ============================================================ */
 let STATE = { rows:[], client:"", igFb:false };
+const PARKED = { open:"", page:{ pub:0, hold:0, uns:0 } };
 let CAL = { y:null, m:null };
 let PUB = { open:false, page:0, size:20 };
 const isPublished = r => classify(r.stage).group === "published";
@@ -421,7 +451,7 @@ function render(data){
   renderBoard();
   renderCalendar();
   renderViral();
-  renderPublished();
+  renderParked();
   document.getElementById("all-count").textContent = STATE.rows.filter(r=>!isPublished(r)).length;
 
   document.getElementById("loading").classList.add("hidden");
@@ -429,9 +459,23 @@ function render(data){
   document.getElementById("app").classList.remove("hidden");
 }
 
+function isParkedRow(r){ const s=String(r.stage||""); return /Unselected/i.test(s)||s.trim()==="On Hold"||/closed/i.test(s); }
 function isViral(r){ return r.viral===true || String(r.viral).toUpperCase()==="TRUE"; }
 const FMT_TONE={ 'Carousel':'#dbeafe|#1e40af','VO reel':'#ede9fe|#5b21b6','On-camera reel':'#ffedd5|#9a3412','Sit-down video':'#dcfce7|#166534','POV b-roll':'#fce7f3|#9d174d' };
 function fmtChip(f){ const t=(FMT_TONE[f]||'#eef0ee|#5a635a').split('|'); return f? '<span class="tchip" style="background:'+t[0]+';color:'+t[1]+'">'+esc(f)+'</span>':''; }
+function niceDate(ymd){ const d=parseDate(ymd); return d?fmtShort(d):"\u2014"; }
+function platDates(r){
+  const base=r.publishDate||"", ig=r.igDate||base, tt=r.ttDate||base;
+  const list=String(r.platform||"").split(",").map(s=>s.trim()).filter(Boolean);
+  const low=list.map(s=>s.toLowerCase()); const has=re=>low.some(x=>re.test(x)); const out=[];
+  if(has(/ig|instagram|reel|story/)) out.push([STATE.igFb?"IG & FB":"IG", ig]);
+  else if(has(/fb|facebook/)) out.push(["FB", ig]);
+  if(has(/tiktok|tt/)) out.push(["TikTok", tt]);
+  if(has(/linkedin/)) out.push(["LinkedIn", base]);
+  if(has(/website|web/)) out.push(["Website", base]);
+  if(!out.length) out.push(["Publish", base]);
+  return out.map(p=>'<div class="pdate"><span class="chip">'+esc(p[0])+'</span> <span class="pd">'+esc(niceDate(p[1]))+'</span></div>').join("");
+}
 function clientPlat(platform){
   const list=String(platform||"").split(",").map(s=>s.trim()).filter(Boolean);
   const low=list.map(s=>s.toLowerCase());
@@ -449,14 +493,19 @@ function renderTodayPosts(){
   const sec=document.getElementById("sec-today"), body=document.getElementById("today-body");
   if(!sec||!body) return;
   const iso=isoOf(today0());
-  const items=STATE.rows.filter(r=>{ const d=parseDate(r.publishDate); return d && isoOf(d)===iso; });
-  document.getElementById("today-count").textContent=items.length;
-  if(!items.length){ sec.classList.add("hidden"); return; }
+  const hd=document.getElementById("hero-date"); if(hd) hd.textContent=fmtShort(today0())+" "+today0().getFullYear();
+  const items=STATE.rows.filter(r=>{
+    return [r.publishDate, r.igDate, r.ttDate].some(v=>{ const d=parseDate(v); return d && isoOf(d)===iso; });
+  });
+  document.getElementById("today-count").textContent=items.length||"";
   sec.classList.remove("hidden");
-  body.innerHTML='<div class="list">'+items.map(r=>{
+  if(!items.length){ body.innerHTML='<div class="empty">Nothing posting today.</div>'; return; }
+  body.innerHTML='<div class="tpcards">'+items.map(r=>{
     const link=r.copyLink?'<a href="'+esc(r.copyLink)+'" target="_blank" rel="noopener">Open</a>':"";
-    return '<div class="wrow"><div><b>'+esc(r.pieceId)+'</b>'+viralStar(r)+' '+esc(r.title)+'</div>'
-      +'<div class="meta">'+clientPlat(r.platform)+' <span class="due">'+pillFor(r)+'</span>'+link+'</div></div>';
+    return '<div class="tpcard"><div class="tphead">'+fmtChip(r.format)+viralStar(r)+'</div>'
+      +'<div class="tptitle">'+esc(r.title||r.pieceId)+'</div><div class="tpid">'+esc(r.pieceId)+'</div>'
+      +'<div class="tpdates">'+platDates(r)+'</div>'
+      +'<div>'+pillFor(r)+' '+link+'</div></div>';
   }).join("")+'</div>';
 }
 
@@ -509,7 +558,7 @@ function renderWeek(){
   mon.setDate(mon.getDate() - ((mon.getDay()+6)%7));
   document.getElementById("week-title").textContent = "This week \u00b7 "+fmtShort(mon);
   const byDate = {};
-  STATE.rows.forEach(r=>{ const d=parseDate(r.publishDate); if(d){ (byDate[isoOf(d)]=byDate[isoOf(d)]||[]).push(r); } });
+  STATE.rows.forEach(r=>{ if(isParkedRow(r)) return; const d=parseDate(r.publishDate); if(d){ (byDate[isoOf(d)]=byDate[isoOf(d)]||[]).push(r); } });
 
   let html = "";
   for(let i=0;i<6;i++){
@@ -538,7 +587,7 @@ function renderWeek(){
 function pillFor(r){ const c = toneFor(r); return '<span class="pill '+c.tone+'">'+esc(c.label)+'</span>'; }
 
 function renderTable(){
-  const rows = STATE.rows.filter(r=>!isPublished(r)).sort((a,b)=> (parseDate(a.publishDate)||8e15) - (parseDate(b.publishDate)||8e15));
+  const rows = STATE.rows.filter(r=>!isPublished(r)&&!isParkedRow(r)).sort((a,b)=> (parseDate(a.publishDate)||8e15) - (parseDate(b.publishDate)||8e15));
   const body = rows.map(r=>{
     const link = r.copyLink ? '<a href="'+esc(r.copyLink)+'" target="_blank" rel="noopener">Open</a>' : '<span class="fmt">\u2014</span>';
     return '<tr><td class="id">'+esc(r.pieceId)+'</td>'
@@ -567,7 +616,7 @@ function renderBoard(){
       const link = r.copyLink ? '<a href="'+esc(r.copyLink)+'" target="_blank" rel="noopener">Open</a>' : "";
       return '<div class="card"><div class="cid">'+esc(r.pieceId)+viralStar(r)+'</div>'
         + '<div class="ctitle">'+esc(r.title)+'</div>'
-        + '<div class="cplat">'+fmtChip(r.format)+' '+clientPlat(r.platform)+'</div>'
+        + '<div class="cplat">'+fmtChip(r.format)+'</div><div class="tpdates">'+platDates(r)+'</div>'
         + '<div class="cfoot"><span class="date">'+fmtShort(parseDate(r.publishDate))+'</span>'+link+'</div>'
         + viralLinks(r)
         + '<div style="margin-top:8px">'+pillFor(r)+'</div></div>';
@@ -581,7 +630,7 @@ function renderBoard(){
 function renderCalendar(){
   const y = CAL.y, m = CAL.m;
   const byDate = {};
-  STATE.rows.forEach(r=>{ const d=parseDate(r.publishDate); if(d){ (byDate[isoOf(d)]=byDate[isoOf(d)]||[]).push(r); } });
+  STATE.rows.forEach(r=>{ if(isParkedRow(r)) return; const d=parseDate(r.publishDate); if(d){ (byDate[isoOf(d)]=byDate[isoOf(d)]||[]).push(r); } });
 
   const first = new Date(y,m,1);
   const start = new Date(first);
@@ -623,50 +672,43 @@ function renderCalendar(){
   document.getElementById("cal-today").addEventListener("click", ()=>{ const t=today0(); CAL.y=t.getFullYear(); CAL.m=t.getMonth(); renderCalendar(); });
 }
 
-function renderPublished(){
-  const items = STATE.rows.filter(isPublished)
-    .sort((a,b)=> (parseDate(b.publishDate)|| -8e15) - (parseDate(a.publishDate)|| -8e15)); // latest first
-  const sec = document.getElementById("sec-published");
-  const body = document.getElementById("published-body");
-  document.getElementById("pub-count").textContent = items.length || "";
-
-  if(!items.length){ sec.classList.add("hidden"); return; }
-  sec.classList.remove("hidden");
-
-  if(!PUB.open){
-    body.innerHTML = '<div class="morewrap"><button id="pub-toggle">View published content ('+items.length+')</button></div>';
-    document.getElementById("pub-toggle").addEventListener("click", ()=>{ PUB.open=true; PUB.page=0; renderPublished(); });
-    return;
-  }
-
-  const pages = Math.max(1, Math.ceil(items.length / PUB.size));
-  if(PUB.page > pages-1) PUB.page = pages-1;
-  const startI = PUB.page*PUB.size;
-  const shown = items.slice(startI, startI+PUB.size);
-
-  const rows = shown.map(r=>{
-    const link = r.copyLink ? '<a href="'+esc(r.copyLink)+'" target="_blank" rel="noopener">Open</a>' : '<span class="fmt">\u2014</span>';
-    return '<tr><td class="id">'+esc(r.pieceId)+'</td>'
-      + '<td class="title">'+esc(r.title)+'<div class="fmt">'+esc(r.format||"")+(r.platform?" \u00b7 "+esc(r.platform):"")+'</div></td>'
-      + '<td class="date">'+fmtShort(parseDate(r.publishDate))+'</td>'
-      + '<td>'+link+'</td></tr>';
-  }).join("");
-
-  let html = '<div class="tablewrap"><table>'
-    + '<thead><tr><th>ID</th><th>Title</th><th>Posted</th><th>Copy</th></tr></thead>'
-    + '<tbody>'+rows+'</tbody></table></div>'
-    + '<div class="pager">'
-    + '<button id="pub-prev"'+(PUB.page===0?' disabled':'')+'>Previous</button>'
-    + '<span class="pmeta">'+(startI+1)+'\u2013'+(startI+shown.length)+' of '+items.length+' \u00b7 page '+(PUB.page+1)+' of '+pages+'</span>'
-    + '<button id="pub-next"'+(PUB.page>=pages-1?' disabled':'')+'>Next</button>'
-    + '</div>'
-    + '<div class="pub-hide"><button id="pub-collapse">Hide published content</button></div>';
-  body.innerHTML = html;
-
-  const prev=document.getElementById("pub-prev"), next=document.getElementById("pub-next");
-  if(prev && !prev.disabled) prev.addEventListener("click", ()=>{ PUB.page--; renderPublished(); });
-  if(next && !next.disabled) next.addEventListener("click", ()=>{ PUB.page++; renderPublished(); });
-  document.getElementById("pub-collapse").addEventListener("click", ()=>{ PUB.open=false; renderPublished(); });
+function renderParked(){
+  const host=document.getElementById("parked-area"); if(!host) return;
+  const isUns=r=>/Unselected/i.test(r.stage||"");
+  const isHold=r=>String(r.stage||"").trim()==="On Hold";
+  const groups={
+    pub:{ label:"Published Work", items:STATE.rows.filter(r=>isPublished(r)&&!isUns(r)&&!isHold(r)) },
+    hold:{ label:"On Hold",       items:STATE.rows.filter(isHold) },
+    uns:{ label:"Unselected",     items:STATE.rows.filter(isUns) }
+  };
+  Object.keys(groups).forEach(k=>groups[k].items.sort((a,b)=>(parseDate(b.publishDate)||-8e15)-(parseDate(a.publishDate)||-8e15)));
+  host.innerHTML="";
+  Object.keys(groups).forEach(k=>{
+    const g=groups[k], open=PARKED.open===k, per=10;
+    const pages=Math.max(1,Math.ceil(g.items.length/per));
+    if(PARKED.page[k]>=pages) PARKED.page[k]=0;
+    const pg=PARKED.page[k], slice=g.items.slice(pg*per,(pg+1)*per);
+    const col=document.createElement("div"); col.className="pcol"+(open?" open":"");
+    let body="";
+    if(open){
+      body = g.items.length ? '<div class="plist">'+slice.map(r=>{
+          const link=r.copyLink?'<a href="'+esc(r.copyLink)+'" target="_blank" rel="noopener">Open</a>':"";
+          return '<div class="pitem"><div class="pi-t">'+esc(r.title||r.pieceId)+viralStar(r)+'</div>'
+            +'<div class="pi-m">'+esc(r.pieceId)+' · '+fmtChip(r.format)+' · '+fmtShort(parseDate(r.publishDate))+' '+link+'</div></div>';
+        }).join("")+'</div>'
+        +(pages>1?'<div class="ppage"><button class="pprev"'+(pg===0?" disabled":"")+'>&larr; Newer</button>'
+          +'<span class="fmt">Page '+(pg+1)+' of '+pages+'</span>'
+          +'<button class="pnext"'+(pg>=pages-1?" disabled":"")+'>Older &rarr;</button></div>':"")
+        : '<div class="empty">Nothing here.</div>';
+    }
+    col.innerHTML='<button class="phead" type="button">'+esc(g.label)+' <span class="pn">'+g.items.length+'</span><span class="pcar">'+(open?"\u25be":"\u25b8")+'</span></button>'
+      +'<div class="pbody'+(open?"":" hidden")+'">'+body+'</div>';
+    col.querySelector(".phead").addEventListener("click",()=>{ PARKED.open=open?"":k; renderParked(); });
+    const pv=col.querySelector(".pprev"), nx=col.querySelector(".pnext");
+    if(pv) pv.addEventListener("click",()=>{ if(PARKED.page[k]>0){ PARKED.page[k]--; renderParked(); } });
+    if(nx) nx.addEventListener("click",()=>{ if(PARKED.page[k]<pages-1){ PARKED.page[k]++; renderParked(); } });
+    host.appendChild(col);
+  });
 }
 
 function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m])); }

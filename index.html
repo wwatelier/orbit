@@ -59,6 +59,39 @@
     .viral { color:#d9a400; font-weight:700; }
     .chip.plat { background:#e7efe9; color:#3f5a49; }
     .tchip { display:inline-block; padding:2px 9px; border-radius:6px; font-size:12px; font-weight:500; letter-spacing:.01em; }
+    .hero { background:linear-gradient(180deg,#f7f9f6,#fff); border:1px solid var(--line); border-radius:14px; padding:22px 24px; }
+    .hero-date { font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft); margin-bottom:4px; }
+    .hero-h { margin:0 0 2px; font-size:24px; }
+    .tpcards { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:12px; margin:16px 0 8px; }
+    .tpcard { border:1px solid var(--line); border-radius:12px; padding:14px; background:#fff; }
+    .tpcard.urgent { border-color:#e39b9b; background:#fdf6f6; }
+    .tphead { display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin-bottom:8px; }
+    .tptitle { font-weight:600; line-height:1.35; margin-bottom:2px; }
+    .tpid { font-size:11px; color:var(--ink-soft); margin-bottom:8px; }
+    .tpdates { display:flex; flex-direction:column; gap:4px; margin-bottom:10px; }
+    .pdate { font-size:12px; }
+    .pdate .pd { color:var(--ink-soft); }
+    .tprow { display:flex; gap:8px; align-items:center; }
+    .tpmsg { min-height:14px; margin-top:6px; font-size:11px; }
+    .tpstage { font:inherit; font-size:12px; padding:5px 7px; border:1px solid var(--line); border-radius:8px; background:#fff; max-width:170px; }
+    .parked { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:14px; align-items:start; }
+    .pcol { border:1px solid var(--line); border-radius:12px; background:#fff; overflow:hidden; }
+    .pcol.open { grid-column:1/-1; }
+    .phead { width:100%; text-align:left; background:#faf9f6; border:none; border-bottom:1px solid transparent; font:inherit; font-weight:600;
+      padding:12px 14px; cursor:pointer; display:flex; align-items:center; gap:8px; }
+    .pcol.open .phead { border-bottom-color:var(--line); }
+    .phead .pn { background:#e9ece7; color:var(--ink-soft); border-radius:20px; padding:1px 9px; font-size:11px; font-weight:600; }
+    .phead .pcar { margin-left:auto; color:var(--ink-soft); }
+    .plist { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:2px; }
+    .pitem { padding:10px 14px; border-bottom:1px solid var(--line); cursor:pointer; }
+    .pitem:hover { background:#faf9f6; }
+    .pi-t { font-size:13px; line-height:1.35; }
+    .pi-m { font-size:11px; color:var(--ink-soft); margin-top:3px; }
+    .ppage { display:flex; align-items:center; justify-content:center; gap:12px; padding:10px; font-size:12px; }
+    .modal { position:fixed; inset:0; background:rgba(30,36,30,.34); display:flex; align-items:center; justify-content:center; z-index:60; }
+    .modalcard { background:#fff; border-radius:14px; padding:22px 24px; width:min(94vw,420px); box-shadow:0 20px 50px rgba(0,0,0,.2); }
+    .delab { display:block; font-size:12px; color:var(--ink-soft); margin-bottom:12px; }
+    .delab input { display:block; width:100%; margin-top:5px; font:inherit; padding:8px 9px; border:1px solid var(--line); border-radius:8px; }
     .bplat { margin:4px 0 2px; }
     .linkbtn { background:none; border:none; color:var(--ink-soft); font:inherit; cursor:pointer; padding:6px 2px; }
     .linkbtn:hover { color:var(--ink); }
@@ -83,6 +116,8 @@
       .addgrid { grid-template-columns:1fr 1fr; }
       .addgrid #acTitle, .addgrid #acAdd { grid-column:span 2; }
       .controls { flex-wrap:wrap; }
+      .parked { grid-template-columns:1fr; }
+      .tpcards { grid-template-columns:1fr; }
       .panel { width:min(96vw,560px); }
     }
     .ok  { color:#3a6b52; background:#e9f2ec; border:1px solid #bcd8c8; padding:11px 13px; border-radius:10px; }
@@ -191,8 +226,7 @@
   <div class="shell hidden" id="app">
     <nav class="sidebar">
       <div class="brand">Orbit<small>WealthWise Atelier</small></div>
-      <button class="navbtn" data-tab="today"><span class="ic">◎</span> Today's Work</button>
-      <button class="navbtn" data-tab="todayposts"><span class="ic">☀</span> Today's Posts</button>
+      <button class="navbtn" data-tab="today"><span class="ic">◎</span> Today</button>
       <button class="navbtn" data-tab="pipeline"><span class="ic">▤</span> Pipeline</button>
       <button class="navbtn" data-tab="assign"><span class="ic">◷</span> Assign Dates</button>
       <button class="navbtn" data-tab="import"><span class="ic">＋</span> Import</button>
@@ -204,22 +238,23 @@
     </nav>
 
     <main class="main">
-      <section class="hidden" id="tab-todayposts">
-        <div class="head"><div><h2>Today's Posts</h2><p class="sub">Scheduled to publish today. Anything not ready is flagged red. Change status inline — it saves to the master.</p></div><span class="count" id="tpCount"></span></div>
-        <div class="surface" style="margin-top:16px"><div class="tablewrap">
-          <table><thead><tr><th>Piece ID</th><th>Client</th><th>Platform</th><th>Title</th><th>Status</th><th>Publish</th></tr></thead><tbody id="tpBody"></tbody></table>
-        </div></div>
-      </section>
-
       <section class="hidden" id="tab-today">
-        <div class="head"><div><h2>Today's Work</h2><p class="sub">Pieces that need a hand — behind schedule, waiting on the client, or posting soon.</p></div><span class="count" id="todayCount"></span></div>
+        <div class="hero">
+          <div class="hero-date" id="heroDate"></div>
+          <h2 class="hero-h">Today's posts</h2>
+          <p class="sub">Going live today. Not ready yet shows red. Change status or dates right here — it saves to the master.</p>
+          <div id="tpCards" class="tpcards"></div>
+          <span class="count" id="tpCount"></span>
+        </div>
+
+        <div class="head" style="margin-top:26px"><div><h3 style="margin:0">Today's work</h3><p class="sub">Pieces that need a hand — behind schedule, waiting on the client, or posting soon.</p></div><span class="count" id="todayCount"></span></div>
         <div class="controls">
           <label class="inline">View as
             <select id="todayRole"><option value="all">All</option><option value="designer">Graphic Designer</option><option value="editor">Video Editor</option></select>
           </label>
         </div>
         <div class="surface" style="margin-top:16px"><div class="tablewrap">
-          <table><thead><tr><th>Piece ID</th><th>Client</th><th>Format</th><th>Stage</th><th>Next Step</th><th>Chase Who</th><th>On Track</th><th>Publish</th></tr></thead><tbody id="todayBody"></tbody></table>
+          <table><thead><tr><th>Piece ID</th><th>Client</th><th>Format</th><th>Stage</th><th>Next Step</th><th>Chase Who</th><th>On Track</th><th>Posting dates</th></tr></thead><tbody id="todayBody"></tbody></table>
         </div></div>
       </section>
 
@@ -238,8 +273,9 @@
           </label>
         </div>
         <div class="surface" id="tableView"><div class="tablewrap">
-          <table><thead><tr><th>Piece ID</th><th>Client</th><th>Format</th><th>Platform</th><th>Stage</th><th>Next Step</th><th>Chase Who</th><th>On Track</th><th>Publish</th><th>Copy</th></tr></thead><tbody id="pipeBody"></tbody></table>
+          <table><thead><tr><th>Piece ID</th><th>Client</th><th>Format</th><th>Platform & dates</th><th>Stage</th><th>Next Step</th><th>Chase Who</th><th>On Track</th><th>Dates</th><th>Copy</th></tr></thead><tbody id="pipeBody"></tbody></table>
         </div></div>
+        <div id="parkedArea" class="parked"></div>
         <div id="boardView" class="board hidden"></div>
       </section>
 
@@ -394,6 +430,18 @@
     </div>
   </div>
 
+  <div id="dateEditor" class="modal hidden">
+    <div class="modalcard">
+      <h3 style="margin:0 0 4px">Posting dates</h3>
+      <div class="muted" id="deTitle" style="font-size:12px;margin-bottom:14px"></div>
+      <label class="delab">Main publish date <input type="date" id="dePublish"></label>
+      <label class="delab">IG date <span class="muted">(blank = same as main)</span> <input type="date" id="deIG"></label>
+      <label class="delab">TikTok date <span class="muted">(blank = same as main)</span> <input type="date" id="deTT"></label>
+      <div class="pstatus muted" id="deMsg"></div>
+      <div class="controls" style="margin:14px 0 0"><button class="primary" id="deSave">Save dates</button><button class="small" id="deCancel">Cancel</button></div>
+    </div>
+  </div>
+
   <script>
     const CLIENT_ID = '543895724243-cbielh8h6qnqau5nh5p8jp7j4cplfge1.apps.googleusercontent.com';
     const EXEC_URL  = 'https://script.google.com/macros/s/AKfycbz4IrRMhmoOSZSVIB5CacHmMW6T7TFjEDDT-31Ke0C0sZAYy2uBdzMiBCXwG__IV33mwQ/exec';
@@ -485,15 +533,34 @@
     function showTab(name){
       PREFS.tab=name; savePrefs();
       document.querySelectorAll('.navbtn[data-tab]').forEach(function(b){ b.classList.toggle('active', b.dataset.tab===name); });
-      ['today','todayposts','pipeline','assign','import','handoff','invoices','clientview','log'].forEach(function(t){ $('tab-'+t).classList.toggle('hidden', t!==name); });
+      ['today','pipeline','assign','import','handoff','invoices','clientview','log'].forEach(function(t){ $('tab-'+t).classList.toggle('hidden', t!==name); });
       if(name==='log') loadLog();
-      if(name==='todayposts'){ loadMeta().then(function(){ renderTodayPosts(); }); }
+      if(name==='today'){ loadMeta().then(function(){ renderTodayPosts(); }); }
       if(name==='assign'){ loadMeta().then(function(){ renderAssign(); }); }
       if(name==='invoices'){ loadMeta().then(function(){ fillFromBilling(); loadInvoices(); }); }
       if(name==='clientview'){ const tb=$('clientLinksBody'); if(tb) tb.innerHTML='<tr><td colspan="3"><div class="empty">Loading client links…</div></td></tr>'; loadMeta().then(function(){ renderClientLinks(); }); }
     }
 
     $('refresh').onclick = loadRows;
+    (function(){
+      var s=document.getElementById('deSave'), c=document.getElementById('deCancel');
+      if(c) c.onclick=closeDateEditor;
+      if(s) s.onclick=async function(){
+        const rowNo=Number($('dateEditor').dataset.row); const r=allRows.filter(function(x){ return x.row===rowNo; })[0];
+        if(!r){ closeDateEditor(); return; }
+        const changes={ 'Publish Date':$('dePublish').value||'', 'IG Date':$('deIG').value||'', 'TikTok Date':$('deTT').value||'' };
+        if(changes['Publish Date']){ const d=new Date(changes['Publish Date']+'T00:00:00');
+          if(d.getDay()===0){ $('deMsg').className='pstatus err'; $('deMsg').textContent='Main date is a Sunday — pick another day.'; return; } }
+        if(changes['Publish Date']) changes['Ready By']=minus14(changes['Publish Date']);
+        s.disabled=true; $('deMsg').className='pstatus muted'; $('deMsg').textContent='Saving…';
+        const res=await savePiece(r, changes);
+        s.disabled=false;
+        if(!res.ok){ $('deMsg').className='pstatus err'; $('deMsg').textContent='Failed: '+res.error+' — nothing saved, try again.'; return; }
+        $('deMsg').className='pstatus ok'; $('deMsg').textContent='Saved.';
+        renderTodayPosts(); renderPipe(); renderToday();
+        setTimeout(closeDateEditor, 600);
+      };
+    })();
     $('viralOnly').onchange = function(){ PREFS.viralOnly=$('viralOnly').checked; savePrefs(); renderPipe(); };
     $('logRefresh').onclick = loadLog;
     $('clientFilter').onchange = function(){ PREFS.client=$('clientFilter').value; savePrefs(); renderPipe(); renderToday(); };
@@ -570,7 +637,7 @@
       if(!metaLoaded){ await loadMeta(); metaLoaded=true; }
       const data = await call('listRows');
       if(!data.ok){ $('pipeCount').textContent=data.error; return; }
-      allRows = data.result.rows||[]; renderPipe(); renderToday();
+      allRows = data.result.rows||[]; renderPipe(); renderToday(); renderTodayPosts();
     }
     function isVideoFormat(fmt){ return /reel|video|voiceover|on-?camera|sit-?down|pov/i.test(fmt||''); }
     function roleMatches(fmt, role){ if(role==='designer') return !isVideoFormat(fmt); if(role==='editor') return isVideoFormat(fmt); return true; }
@@ -582,29 +649,21 @@
 
     function renderPipe(){
       const rows=filtered(); const tb=$('pipeBody'); tb.innerHTML='';
-      const active=rows.filter(function(r){ return PARKED.indexOf(r['Stage'])===-1; });
-      const parked=rows.filter(function(r){ return PARKED.indexOf(r['Stage'])!==-1; });
+      const active=rows.filter(function(r){ return PARKED.indexOf(r['Stage'])===-1 && !/^10 Published/.test(r['Stage']||''); });
       if(!rows.length) tb.innerHTML='<tr><td colspan="10"><div class="empty">No pieces yet. Import a batch to get started.</div></td></tr>';
       function rowTr(r){
         const tr=document.createElement('tr'); tr.className='clickable'; tr.onclick=function(){ openPanel(r); };
         tr.innerHTML='<td>'+esc(r['Piece ID'])+reqMark(r)+viralMark(r)+'</td><td>'+clientChip(r['Client'])+'</td><td>'+fmtChip(r['Format'])+'</td>'+
-          '<td>'+platLabel(r['PlatformList'],r['Client'])+'</td><td>'+stagePill(r['Stage'])+'</td>'+
+          '<td>'+platDates(r)+'</td><td>'+stagePill(r['Stage'])+'</td>'+
           '<td>'+esc(r['Next Step'])+'</td><td>'+esc(r['Chase Who'])+'</td>'+
-          '<td>'+onTrack(r['On Track'])+'</td><td>'+esc(r['Publish Date'])+'</td><td>'+copyLink(r['Copy Link'])+'</td>';
+          '<td>'+onTrack(r['On Track'])+'</td><td><button class="small editdates">Dates</button></td><td>'+copyLink(r['Copy Link'])+'</td>';
         const a=tr.querySelector('a.lnk'); if(a) a.onclick=function(e){ e.stopPropagation(); };
+        tr.querySelector('.editdates').onclick=function(e){ e.stopPropagation(); openDateEditor(r); };
         return tr;
       }
       active.forEach(function(r){ tb.appendChild(rowTr(r)); });
-      if(parked.length){
-        const sep=document.createElement('tr'); sep.className='seemore';
-        sep.innerHTML='<td colspan="10"><button type="button" id="parkedToggle" class="linkbtn">▸ See '+parked.length+' set aside (On Hold / Unselected)</button></td>';
-        tb.appendChild(sep);
-        const holder=[]; parked.forEach(function(r){ const tr=rowTr(r); tr.classList.add('parked-row','hidden'); tb.appendChild(tr); holder.push(tr); });
-        let open=false; sep.querySelector('#parkedToggle').onclick=function(e){ e.stopPropagation(); open=!open;
-          holder.forEach(function(tr){ tr.classList.toggle('hidden',!open); });
-          this.textContent=(open?'▾ Hide':'▸ See ')+' '+parked.length+' set aside (On Hold / Unselected)'; };
-      }
-      $('pipeCount').textContent=active.length+' active'+(parked.length?(' · '+parked.length+' set aside'):'')+'';
+      renderParked(rows);
+      $('pipeCount').textContent=active.length+' active';
 
       const bv=$('boardView'); bv.innerHTML='';
       STAGES.filter(function(s){ return BOARD_HIDE.indexOf(s)===-1; }).forEach(function(stage){
@@ -627,31 +686,55 @@
 
     function renderTodayPosts(){
       const iso=todayISO();
-      const rows=allRows.filter(function(r){ return (r['Publish Date']||'')===iso; })
-        .sort(function(a,b){ return (a['Client']||'').localeCompare(b['Client']||''); });
-      const tb=$('tpBody'); tb.innerHTML='';
-      if(!rows.length){ tb.innerHTML='<tr><td colspan="6"><div class="empty">Nothing scheduled to publish today.</div></td></tr>'; $('tpCount').textContent='0 posts today'; return; }
+      const hd=$('heroDate'); if(hd) hd.textContent=niceDate(iso)+' · '+new Date().getFullYear();
+      const wrap=$('tpCards'); if(!wrap) return; wrap.innerHTML='';
+      const rows=allRows.filter(function(r){
+        const base=r['Publish Date']||'';
+        return base===iso || (r['IG Date']||'')===iso || (r['TikTok Date']||'')===iso;
+      }).sort(function(a,b){ return (a['Client']||'').localeCompare(b['Client']||''); });
+      if(!rows.length){ wrap.innerHTML='<div class="empty">Nothing scheduled to publish today.</div>'; $('tpCount').textContent='0 posts today'; return; }
       let urgent=0;
       rows.forEach(function(r){
         const notReady=!isReadyStage(r['Stage']); if(notReady) urgent++;
-        const tr=document.createElement('tr'); if(notReady) tr.className='urgent';
+        const card=document.createElement('div'); card.className='tpcard'+(notReady?' urgent':'');
+        card.innerHTML='<div class="tphead">'+clientChip(r['Client'])+' '+fmtChip(r['Format'])+viralMark(r)+(notReady?'<span class="urg">URGENT</span>':'')+'</div>'+
+          '<div class="tptitle">'+esc(r['Title']||r['Piece ID'])+'</div>'+
+          '<div class="tpid">'+esc(r['Piece ID'])+'</div>'+
+          '<div class="tpdates">'+platDates(r)+'</div>'+
+          '<div class="tprow"><span class="tpsel"></span><button class="small tpdate">Edit dates</button></div>'+
+          '<div class="pstatus muted tpmsg"></div>';
         const sel=document.createElement('select'); sel.className='tpstage';
         sel.innerHTML=STAGES.map(function(s){ return '<option'+(s===r['Stage']?' selected':'')+'>'+esc(s)+'</option>'; }).join('');
-        sel.onchange=async function(){ sel.disabled=true;
-          const data=await call('updatePiece',{ row:r.row, pieceId:r['Piece ID'], changes:{ 'Stage':sel.value } });
+        const msg=card.querySelector('.tpmsg');
+        sel.onchange=async function(){ sel.disabled=true; msg.className='pstatus muted tpmsg'; msg.textContent='Saving…';
+          const res=await savePiece(r,{ 'Stage':sel.value });
           sel.disabled=false;
-          if(!data.ok){ alert(data.error); return; }
-          const fresh=data.result.row; const idx=allRows.findIndex(function(x){ return x.row===fresh.row; }); if(idx>=0) allRows[idx]=fresh;
-          renderTodayPosts(); renderPipe(); renderToday();
+          if(!res.ok){ msg.className='pstatus err tpmsg'; msg.textContent='Failed: '+res.error+' — try again.'; return; }
+          msg.className='pstatus ok tpmsg'; msg.textContent='Saved.'; renderTodayPosts(); renderPipe(); renderToday();
         };
-        tr.innerHTML='<td>'+esc(r['Piece ID'])+viralMark(r)+(notReady?' <span class="urg">URGENT</span>':'')+'</td>'+
-          '<td>'+clientChip(r['Client'])+'</td><td>'+platLabel(r['PlatformList'],r['Client'])+'</td>'+
-          '<td>'+esc(r['Title']||'')+'</td><td class="tpsel"></td><td>'+esc(r['Publish Date'])+'</td>';
-        tr.querySelector('.tpsel').appendChild(sel);
-        tb.appendChild(tr);
+        card.querySelector('.tpsel').appendChild(sel);
+        card.querySelector('.tpdate').onclick=function(){ openDateEditor(r); };
+        wrap.appendChild(card);
       });
       $('tpCount').textContent=rows.length+' post(s) today'+(urgent?(' · '+urgent+' not ready'):'');
     }
+
+    // ── One shared save + date editor, used by Today and Pipeline ──
+    async function savePiece(r, changes){
+      const data=await call('updatePiece',{ row:r.row, pieceId:r['Piece ID'], changes:changes });
+      if(!data.ok) return {ok:false,error:data.error||'save failed'};
+      const fresh=data.result.row; const idx=allRows.findIndex(function(x){ return x.row===fresh.row; });
+      if(idx>=0) allRows[idx]=fresh;
+      if(current && current.row===fresh.row) current=fresh;
+      return {ok:true,row:fresh};
+    }
+    function openDateEditor(r){
+      $('deTitle').textContent=r['Piece ID']+' · '+(r['Title']||'');
+      $('dePublish').value=r['Publish Date']||''; $('deIG').value=r['IG Date']||''; $('deTT').value=r['TikTok Date']||'';
+      $('deMsg').className='pstatus muted'; $('deMsg').textContent='Leave IG or TikTok blank to use the main publish date.';
+      $('dateEditor').classList.remove('hidden'); $('dateEditor').dataset.row=r.row;
+    }
+    function closeDateEditor(){ $('dateEditor').classList.add('hidden'); }
 
     function renderToday(){
       const rows=filtered().filter(function(r){
@@ -667,7 +750,8 @@
         const tr=document.createElement('tr'); tr.className='clickable'; tr.onclick=function(){ openPanel(r); };
         tr.innerHTML='<td>'+esc(r['Piece ID'])+'</td><td>'+clientChip(r['Client'])+'</td><td>'+fmtChip(r['Format'])+'</td>'+
           '<td>'+stagePill(r['Stage'])+'</td><td>'+esc(r['Next Step'])+'</td><td>'+esc(r['Chase Who'])+'</td>'+
-          '<td>'+onTrack(r['On Track'])+'</td><td>'+esc(r['Publish Date'])+'</td>';
+          '<td>'+onTrack(r['On Track'])+'</td><td>'+platDates(r)+'<button class="small editdates">Dates</button></td>';
+        tr.querySelector('.editdates').onclick=function(e){ e.stopPropagation(); openDateEditor(r); };
         tb.appendChild(tr);
       });
       $('todayCount').textContent=rows.length+' piece(s) need attention';
@@ -725,6 +809,48 @@
       renderPipe(); renderToday(); setPStatus('Saved.','ok');
     };
 
+    // ── Parked area: three collapsed columns, 10 per page, newest first ──
+    const PARKED_STATE={ open:'', page:{ pub:0, hold:0, uns:0 } };
+    function renderParked(rows){
+      const host=$('parkedArea'); if(!host) return;
+      const groups={
+        pub:{ label:'Published Work', items:rows.filter(function(r){ return /^10 Published/.test(r['Stage']||''); }) },
+        hold:{ label:'On Hold',       items:rows.filter(function(r){ return (r['Stage']||'')==='On Hold'; }) },
+        uns:{ label:'Unselected',     items:rows.filter(function(r){ return /Unselected/.test(r['Stage']||''); }) }
+      };
+      Object.keys(groups).forEach(function(k){
+        groups[k].items.sort(function(a,b){ return (b['Publish Date']||'').localeCompare(a['Publish Date']||''); });
+      });
+      host.innerHTML='';
+      Object.keys(groups).forEach(function(k){
+        const g=groups[k], open=PARKED_STATE.open===k, per=10;
+        const pages=Math.max(1, Math.ceil(g.items.length/per));
+        if(PARKED_STATE.page[k]>=pages) PARKED_STATE.page[k]=0;
+        const pg=PARKED_STATE.page[k], slice=g.items.slice(pg*per,(pg+1)*per);
+        const col=document.createElement('div'); col.className='pcol'+(open?' open':'');
+        let body='';
+        if(open){
+          body= g.items.length ? '<div class="plist">'+slice.map(function(r){
+              return '<div class="pitem" data-row="'+r.row+'"><div class="pi-t">'+esc(r['Title']||r['Piece ID'])+'</div>'+
+                '<div class="pi-m">'+esc(r['Piece ID'])+' · '+clientChip(r['Client'])+' · <span class="muted">'+esc(niceDate(r['Publish Date']))+'</span></div></div>';
+            }).join('')+'</div>'+
+            (pages>1?'<div class="ppage"><button class="small pprev"'+(pg===0?' disabled':'')+'>← Newer</button>'+
+              '<span class="muted">Page '+(pg+1)+' of '+pages+'</span>'+
+              '<button class="small pnext"'+(pg>=pages-1?' disabled':'')+'>Older →</button></div>':'')
+            : '<div class="empty">Nothing here.</div>';
+        }
+        col.innerHTML='<button class="phead" type="button">'+esc(g.label)+' <span class="pn">'+g.items.length+'</span><span class="pcar">'+(open?'▾':'▸')+'</span></button>'+
+          '<div class="pbody'+(open?'':' hidden')+'">'+body+'</div>';
+        col.querySelector('.phead').onclick=function(){ PARKED_STATE.open = open?'':k; renderPipe(); };
+        const prev=col.querySelector('.pprev'), next=col.querySelector('.pnext');
+        if(prev) prev.onclick=function(){ if(PARKED_STATE.page[k]>0){ PARKED_STATE.page[k]--; renderPipe(); } };
+        if(next) next.onclick=function(){ if(PARKED_STATE.page[k]<pages-1){ PARKED_STATE.page[k]++; renderPipe(); } };
+        col.querySelectorAll('.pitem').forEach(function(el){ el.onclick=function(){
+          const r=allRows.filter(function(x){ return String(x.row)===el.dataset.row; })[0]; if(r) openPanel(r); }; });
+        host.appendChild(col);
+      });
+    }
+
     function viralMark(r){ return (r['Viral']==='TRUE') ? ' <span class="viral" title="Marked viral">★</span>' : ''; }
 
     function reqMark(r){
@@ -758,6 +884,24 @@
     function toneChip(v, map){ const t=(map[v]||'#eef0ee|#5a635a').split('|'); return v? '<span class="tchip" style="background:'+t[0]+';color:'+t[1]+'">'+esc(v)+'</span>':'<span class="muted">—</span>'; }
     function fmtChip(f){ return toneChip(f, FMT_TONE); }
     function clientChip(c){ return toneChip(c, CLIENT_TONE); }
+    function niceDate(ymd){ if(!ymd) return '—'; const d=new Date(ymd+'T00:00:00'); if(isNaN(d)) return ymd;
+      const D=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], M=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      return D[d.getDay()]+' '+d.getDate()+' '+M[d.getMonth()]; }
+    // One line per platform, always showing the platform name and its date.
+    function platDates(r){
+      const base=r['Publish Date']||'', ig=r['IG Date']||base, tt=r['TikTok Date']||base;
+      const list=(r['PlatformList']||[]).map(function(s){return String(s).trim();}).filter(Boolean);
+      const low=list.map(function(s){return s.toLowerCase();});
+      const has=function(re){ return low.some(function(x){ return re.test(x); }); };
+      const out=[];
+      if(has(/ig|instagram|reel|story/)) out.push([igFbOn(r['Client'])?'IG & FB':'IG', ig]);
+      else if(has(/fb|facebook/)) out.push(['FB', ig]);
+      if(has(/tiktok|tt/)) out.push(['TikTok', tt]);
+      if(has(/linkedin/)) out.push(['LinkedIn', base]);
+      if(has(/website|web/)) out.push(['Website', base]);
+      if(!out.length) out.push(['Publish', base]);
+      return out.map(function(p){ return '<div class="pdate"><span class="chip plat">'+esc(p[0])+'</span> <span class="pd">'+esc(niceDate(p[1]))+'</span></div>'; }).join('');
+    }
     function onTrack(v){
       if(!v) return '<span class="t-muted">—</span>';
       let c='t-muted';
