@@ -487,29 +487,48 @@
     const $ = function (id){ return document.getElementById(id); };
 
     window.onload = function () {
-      google.accounts.id.initialize({ client_id:CLIENT_ID, callback:onCredential, auto_select:true, itp_support:true, use_fedcm_for_prompt:true });
+      google.accounts.id.initialize({ client_id:CLIENT_ID, callback:onCredential, auto_select:true, itp_support:true });
       google.accounts.id.renderButton($('signin'), { theme:'outline', size:'large', text:'signin_with' });
-      // Returning users: mask with "signing you in" and let auto-select re-auth silently (survives refresh/idle).
       $('signin').style.display='none';
       $('whoami').className='muted'; $('whoami').textContent='Signing you in…';
-      let settled=false;
-      const revealButton=function(msg){ if(settled) return; settled=true;
-        $('signin').style.display=''; $('whoami').textContent=msg||'Please sign in to continue.'; };
-      try {
-        google.accounts.id.prompt(function(n){
-          try{ if(n && (n.isNotDisplayed && n.isNotDisplayed() || n.isSkippedMoment && n.isSkippedMoment())) revealButton(); }catch(e){ revealButton(); }
-        });
-      } catch(e){ revealButton(); }
-      // Safety net: if nothing came back in 6s, show the button so the user is never stuck on "Signing in…".
-      setTimeout(function(){ if(!idToken) revealButton(); }, 6000);
+
+      // 1) Reuse the stored token if it hasn't expired — this is what makes a refresh keep you signed in.
+      const saved = loadToken();
+      if (saved) { idToken = saved; startSession(); return; }
+
+      // 2) No usable token: ask Google to re-issue one silently.
+      trySilentSignIn();
     };
+
+    function revealSignIn(msg){
+      $('signin').style.display='';
+      $('whoami').className='muted';
+      $('whoami').textContent = msg || 'Please sign in to continue.';
+    }
+    function trySilentSignIn(){
+      try { google.accounts.id.prompt(); } catch(e){}
+      setTimeout(function(){ if(!idToken) revealSignIn(); }, 5000);
+    }
+    // Token store — ID tokens are valid ~1h; keep it so a page refresh doesn't force a new sign-in.
+    function tokenExp(t){ try { return (JSON.parse(atob(t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))).exp||0)*1000; } catch(e){ return 0; } }
+    function saveToken(t){ try { localStorage.setItem('orbitTok', t); } catch(e){} }
+    function loadToken(){
+      try { const t=localStorage.getItem('orbitTok'); if(!t) return null;
+        // 60s safety margin so we never send a token that expires mid-request.
+        if (tokenExp(t) - Date.now() < 60000) { localStorage.removeItem('orbitTok'); return null; }
+        return t;
+      } catch(e){ return null; }
+    }
+    function clearToken(){ try { localStorage.removeItem('orbitTok'); } catch(e){} }
 
     async function call(action, payload){
       let data = await rawCall(action, payload);
       // If the token expired mid-session, silently fetch a fresh one and retry once.
       if (data && data.ok === false && /token|authoris|authoriz|expired|aud/i.test(data.error||'')) {
         await refreshToken();
+        if (idToken) saveToken(idToken);
         data = await rawCall(action, payload);
+        if (data && data.ok === false && /token|authoris|authoriz|expired|aud/i.test(data.error||'') && action!=='whoami') sessionLost();
       }
       return data;
     }
@@ -524,21 +543,46 @@
         try {
           pendingRefresh = resolve;
           google.accounts.id.prompt();          // silent; callback onCredential updates idToken
-          setTimeout(function(){ if(pendingRefresh){ pendingRefresh=null; resolve(); } }, 4000);
+          setTimeout(function(){ if(pendingRefresh){ pendingRefresh=null; resolve(); } }, 5000);
         } catch(e){ resolve(); }
       });
+    }
+    // If a call still fails after a silent renewal, the session is genuinely gone — ask for a real sign-in.
+    function sessionLost(){
+      clearToken(); idToken=null;
+      $('app').classList.add('hidden'); $('signScreen').classList.remove('hidden');
+      revealSignIn('Your session expired. Please sign in again.');
     }
 
     async function onCredential(resp){
       idToken = resp.credential;
-      if (pendingRefresh) { const r = pendingRefresh; pendingRefresh = null; r(); }   // resolve silent refresh
+      saveToken(idToken);
+      if (pendingRefresh) { const r = pendingRefresh; pendingRefresh = null; r(); return; }   // silent refresh only
+      startSession();
+    }
+
+    async function startSession(){
       if (!keepaliveStarted) { keepaliveStarted = true;
-        // Renew every ~30 min (Google ID tokens last ~60) so long-idle sessions never expire out from under you.
-        setInterval(function(){ try { google.accounts.id.prompt(); } catch(e){} }, 30*60*1000);
+        // Renew a few minutes before the token actually expires, so long sessions never drop.
+        setInterval(function(){
+          const left = tokenExp(idToken||'') - Date.now();
+          if (left < 6*60*1000) { try { google.accounts.id.prompt(); } catch(e){} }
+        }, 4*60*1000);
+        // Coming back to the tab after sleep: re-check immediately rather than waiting for the timer.
+        document.addEventListener('visibilitychange', function(){
+          if(document.visibilityState==='visible' && idToken && tokenExp(idToken)-Date.now() < 6*60*1000){
+            try { google.accounts.id.prompt(); } catch(e){}
+          }
+        });
       }
       $('whoami').className='muted'; $('whoami').textContent='Checking with Orbit…';
       const data = await call('whoami');
-      if(!data.ok){ $('whoami').className='err'; $('whoami').textContent=data.error||'Sign-in rejected.'; return; }
+      if(!data.ok){
+        clearToken(); idToken=null;
+        $('whoami').className='err'; $('whoami').textContent=data.error||'Sign-in rejected.';
+        revealSignIn(data.error||'Please sign in again.');
+        return;
+      }
       $('signScreen').classList.add('hidden'); $('app').classList.remove('hidden');
       $('whoamiMin').textContent = data.result.email;
       buildStageSelect(); buildReqTypes();
@@ -546,8 +590,9 @@
       await loadRows();
     }
     $('signout').onclick = function(){
-      google.accounts.id.disableAutoSelect(); idToken=null;
+      google.accounts.id.disableAutoSelect(); idToken=null; clearToken();
       $('app').classList.add('hidden'); $('signScreen').classList.remove('hidden');
+      $('signin').style.display='';
       $('whoami').className='muted'; $('whoami').textContent='Signed out. Sign in again above.';
     };
 

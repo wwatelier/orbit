@@ -263,6 +263,7 @@
 .cplat { margin:4px 0 2px; }
 .tchip{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:500}
 .cplat .chip, .wrow .chip { display:inline-block; padding:2px 8px; margin:1px 3px 1px 0; border-radius:7px; font-size:11px; background:#e7efe9; color:#3f5a49; }
+.stalebar{position:fixed;top:0;left:0;right:0;z-index:50;background:#3f5a49;color:#fff;font-size:12px;text-align:center;padding:6px 10px}
 .hero{background:linear-gradient(180deg,#f7f9f6,#fff);border:1px solid var(--line);border-radius:14px;padding:22px 24px}
 .hero-date{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-soft);margin-bottom:4px}
 .hero-h{margin:0 0 12px;font-size:23px}
@@ -303,6 +304,7 @@
 </div>
 
 <!-- ERROR -->
+<div id="staleBar" class="stalebar hidden"></div>
 <div id="loading"><div class="ico">📅</div><div>Loading your calendar…</div></div>
 
 <div id="error" class="wrap hidden"><div class="err" id="error-msg"></div></div>
@@ -737,20 +739,41 @@ function showError(msg){
   document.getElementById("error").classList.remove("hidden");
 }
 async function loadRows(key){
-  const res = await fetch(WEB_APP_URL, {
-    method:"POST",
-    body: JSON.stringify({ action:"clientRows", key }) // text/plain avoids a CORS preflight
-  });
-  const data = await res.json();
-  if(!data || data.ok===false){
-    if(data && data.error==="not_authorised"){
-      showError("This link isn't recognised. Please ask WWA for your calendar link.");
+  // Show last-known data immediately so the page is never a blank wait.
+  let hadCache = false;
+  try {
+    const cached = localStorage.getItem("orbitClient_"+key);
+    if (cached) { render(JSON.parse(cached)); hadCache = true; markStale(true); }
+  } catch(e){}
+
+  try {
+    const res = await fetch(WEB_APP_URL, {
+      method:"POST",
+      body: JSON.stringify({ action:"clientRows", key }) // text/plain avoids a CORS preflight
+    });
+    const data = await res.json();
+    if(!data || data.ok===false){
+      if(hadCache){ markStale(false, "Couldn't refresh just now — showing your last view."); return; }
+      if(data && data.error==="not_authorised"){
+        showError("This link isn't recognised. Please ask WWA for your calendar link.");
+        return;
+      }
+      showError("Couldn't load your calendar. Please try again in a moment.");
       return;
     }
-    showError("Couldn't load your calendar. Please try again in a moment.");
-    return;
+    try { localStorage.setItem("orbitClient_"+key, JSON.stringify(data)); } catch(e){}
+    render(data); markStale(false);
+  } catch(err){
+    if(hadCache){ markStale(false, "Offline — showing your last view."); return; }
+    showError("Couldn't load your calendar. Please check your connection and try again.");
   }
-  render(data);
+}
+function markStale(on, msg){
+  const el = document.getElementById("staleBar");
+  if(!el) return;
+  el.textContent = msg || "Updating…";
+  el.classList.toggle("hidden", !on && !msg);
+  if(msg) setTimeout(()=>el.classList.add("hidden"), 4000);
 }
 window.addEventListener("load", ()=>{
   if(DEMO){ startDemo(); return; }
