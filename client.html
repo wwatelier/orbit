@@ -459,7 +459,7 @@ function render(data){
   document.getElementById("app").classList.remove("hidden");
 }
 
-function isParkedRow(r){ const s=String(r.stage||""); return /Unselected/i.test(s)||s.trim()==="On Hold"||/closed/i.test(s); }
+function isParkedRow(r){ const s=String(r.stage||""); return classify(s).group==="closed" || s.trim()==="On Hold" || /closed/i.test(s); }
 function isViral(r){ return r.viral===true || String(r.viral).toUpperCase()==="TRUE"; }
 const FMT_TONE={ 'Carousel':'#dbeafe|#1e40af','VO reel':'#ede9fe|#5b21b6','On-camera reel':'#ffedd5|#9a3412','Sit-down video':'#dcfce7|#166534','POV b-roll':'#fce7f3|#9d174d' };
 function fmtChip(f){ const t=(FMT_TONE[f]||'#eef0ee|#5a635a').split('|'); return f? '<span class="tchip" style="background:'+t[0]+';color:'+t[1]+'">'+esc(f)+'</span>':''; }
@@ -495,6 +495,7 @@ function renderTodayPosts(){
   const iso=isoOf(today0());
   const hd=document.getElementById("hero-date"); if(hd) hd.textContent=fmtShort(today0())+" "+today0().getFullYear();
   const items=STATE.rows.filter(r=>{
+    if(isParkedRow(r)) return false;
     return [r.publishDate, r.igDate, r.ttDate].some(v=>{ const d=parseDate(v); return d && isoOf(d)===iso; });
   });
   document.getElementById("today-count").textContent=items.length||"";
@@ -679,7 +680,7 @@ function renderParked(){
   const groups={
     pub:{ label:"Published Work", items:STATE.rows.filter(r=>isPublished(r)&&!isUns(r)&&!isHold(r)) },
     hold:{ label:"On Hold",       items:STATE.rows.filter(isHold) },
-    uns:{ label:"Unselected",     items:STATE.rows.filter(isUns) }
+    uns:{ label:"Unselected",     items:STATE.rows.filter(r=>isUns(r)||classify(r.stage).group==="closed") }
   };
   Object.keys(groups).forEach(k=>groups[k].items.sort((a,b)=>(parseDate(b.publishDate)||-8e15)-(parseDate(a.publishDate)||-8e15)));
   host.innerHTML="";

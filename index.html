@@ -92,6 +92,15 @@
     .modalcard { background:#fff; border-radius:14px; padding:22px 24px; width:min(94vw,420px); box-shadow:0 20px 50px rgba(0,0,0,.2); }
     .delab { display:block; font-size:12px; color:var(--ink-soft); margin-bottom:12px; }
     .delab input { display:block; width:100%; margin-top:5px; font:inherit; padding:8px 9px; border:1px solid var(--line); border-radius:8px; }
+    .delab input[type=checkbox] { display:inline-block; width:auto; margin:0 6px 0 0; }
+    .peboxes { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .pebox { font-size:13px; display:flex; align-items:center; gap:7px; padding:7px 9px; border:1px solid var(--line); border-radius:8px; cursor:pointer; }
+    .cellbtn { cursor:pointer; }
+    .cellbtn:hover { background:#f3f6f2; outline:1px solid var(--line); }
+    .ptable { width:100%; border-collapse:collapse; font-size:13px; }
+    .ptable th { text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-soft); padding:8px 12px; border-bottom:1px solid var(--line); }
+    .ptable td { padding:9px 12px; border-bottom:1px solid var(--line); }
+    .ptable tr:hover td { background:#faf9f6; }
     .bplat { margin:4px 0 2px; }
     .linkbtn { background:none; border:none; color:var(--ink-soft); font:inherit; cursor:pointer; padding:6px 2px; }
     .linkbtn:hover { color:var(--ink); }
@@ -254,7 +263,7 @@
           </label>
         </div>
         <div class="surface" style="margin-top:16px"><div class="tablewrap">
-          <table><thead><tr><th>Piece ID</th><th>Client</th><th>Format</th><th>Stage</th><th>Next Step</th><th>Chase Who</th><th>On Track</th><th>Posting dates</th></tr></thead><tbody id="todayBody"></tbody></table>
+          <table><thead><tr><th>Piece ID</th><th>Client</th><th>Format</th><th>Stage</th><th>On Track</th><th>Posting dates</th></tr></thead><tbody id="todayBody"></tbody></table>
         </div></div>
       </section>
 
@@ -273,7 +282,7 @@
           </label>
         </div>
         <div class="surface" id="tableView"><div class="tablewrap">
-          <table><thead><tr><th>Piece ID</th><th>Client</th><th>Format</th><th>Platform & dates</th><th>Stage</th><th>Next Step</th><th>Chase Who</th><th>On Track</th><th>Dates</th><th>Copy</th></tr></thead><tbody id="pipeBody"></tbody></table>
+          <table><thead><tr><th>Piece ID</th><th>Client</th><th>Format</th><th>Platform</th><th>Stage</th><th>On Track</th><th>Date</th><th>Copy</th></tr></thead><tbody id="pipeBody"></tbody></table>
         </div></div>
         <div id="parkedArea" class="parked"></div>
         <div id="boardView" class="board hidden"></div>
@@ -430,6 +439,17 @@
     </div>
   </div>
 
+  <div id="platEditor" class="modal hidden">
+    <div class="modalcard">
+      <h3 style="margin:0 0 4px">Platforms</h3>
+      <div class="muted" id="peTitle" style="font-size:12px;margin-bottom:14px"></div>
+      <div id="peBoxes" class="peboxes"></div>
+      <label class="delab" style="margin-top:10px"><input type="checkbox" id="peAll"> Apply to the whole batch <span class="muted" id="peBatchInfo"></span></label>
+      <div class="pstatus muted" id="peMsg"></div>
+      <div class="controls" style="margin:14px 0 0"><button class="primary" id="peSave">Save platforms</button><button class="small" id="peCancel">Cancel</button></div>
+    </div>
+  </div>
+
   <div id="dateEditor" class="modal hidden">
     <div class="modalcard">
       <h3 style="margin:0 0 4px">Posting dates</h3>
@@ -437,6 +457,8 @@
       <label class="delab">Main publish date <input type="date" id="dePublish"></label>
       <label class="delab">IG date <span class="muted">(blank = same as main)</span> <input type="date" id="deIG"></label>
       <label class="delab">TikTok date <span class="muted">(blank = same as main)</span> <input type="date" id="deTT"></label>
+      <label class="delab"><input type="checkbox" id="deAllPlat" checked> Apply main date to all platforms <span class="muted">(clears IG/TikTok overrides)</span></label>
+      <label class="delab"><input type="checkbox" id="deBatch"> Apply to the whole batch <span class="muted" id="deBatchInfo"></span></label>
       <div class="pstatus muted" id="deMsg"></div>
       <div class="controls" style="margin:14px 0 0"><button class="primary" id="deSave">Save dates</button><button class="small" id="deCancel">Cancel</button></div>
     </div>
@@ -548,17 +570,22 @@
       if(s) s.onclick=async function(){
         const rowNo=Number($('dateEditor').dataset.row); const r=allRows.filter(function(x){ return x.row===rowNo; })[0];
         if(!r){ closeDateEditor(); return; }
-        const changes={ 'Publish Date':$('dePublish').value||'', 'IG Date':$('deIG').value||'', 'TikTok Date':$('deTT').value||'' };
-        if(changes['Publish Date']){ const d=new Date(changes['Publish Date']+'T00:00:00');
-          if(d.getDay()===0){ $('deMsg').className='pstatus err'; $('deMsg').textContent='Main date is a Sunday — pick another day.'; return; } }
-        if(changes['Publish Date']) changes['Ready By']=minus14(changes['Publish Date']);
+        const main=$('dePublish').value||'';
+        const allPlat=$('deAllPlat').checked;
+        const changes={ 'Publish Date':main,
+          'IG Date': allPlat ? '' : ($('deIG').value||''),
+          'TikTok Date': allPlat ? '' : ($('deTT').value||'') };
+        if(main){ const d=new Date(main+'T00:00:00');
+          if(d.getDay()===0){ $('deMsg').className='pstatus err'; $('deMsg').textContent='Main date is a Sunday — pick another day.'; return; }
+          changes['Ready By']=minus14(main); }
+        const targets=$('deBatch').checked ? batchMates(r) : [r];
         s.disabled=true; $('deMsg').className='pstatus muted'; $('deMsg').textContent='Saving…';
-        const res=await savePiece(r, changes);
+        let done=0, failed=[];
+        for(const t of targets){ const res=await savePiece(t, changes); if(res.ok) done++; else failed.push(t['Piece ID']+': '+res.error); }
         s.disabled=false;
-        if(!res.ok){ $('deMsg').className='pstatus err'; $('deMsg').textContent='Failed: '+res.error+' — nothing saved, try again.'; return; }
-        $('deMsg').className='pstatus ok'; $('deMsg').textContent='Saved.';
+        if(failed.length){ $('deMsg').className='pstatus err'; $('deMsg').textContent='Saved '+done+', failed — '+failed.join(' · ')+'. Try again.'; }
+        else { $('deMsg').className='pstatus ok'; $('deMsg').textContent='Saved '+done+' piece(s).'; setTimeout(closeDateEditor,600); }
         renderTodayPosts(); renderPipe(); renderToday();
-        setTimeout(closeDateEditor, 600);
       };
     })();
     $('viralOnly').onchange = function(){ PREFS.viralOnly=$('viralOnly').checked; savePrefs(); renderPipe(); };
@@ -650,15 +677,15 @@
     function renderPipe(){
       const rows=filtered(); const tb=$('pipeBody'); tb.innerHTML='';
       const active=rows.filter(function(r){ return PARKED.indexOf(r['Stage'])===-1 && !/^10 Published/.test(r['Stage']||''); });
-      if(!rows.length) tb.innerHTML='<tr><td colspan="10"><div class="empty">No pieces yet. Import a batch to get started.</div></td></tr>';
+      if(!rows.length) tb.innerHTML='<tr><td colspan="8"><div class="empty">No pieces yet. Import a batch to get started.</div></td></tr>';
       function rowTr(r){
         const tr=document.createElement('tr'); tr.className='clickable'; tr.onclick=function(){ openPanel(r); };
         tr.innerHTML='<td>'+esc(r['Piece ID'])+reqMark(r)+viralMark(r)+'</td><td>'+clientChip(r['Client'])+'</td><td>'+fmtChip(r['Format'])+'</td>'+
-          '<td>'+platDates(r)+'</td><td>'+stagePill(r['Stage'])+'</td>'+
-          '<td>'+esc(r['Next Step'])+'</td><td>'+esc(r['Chase Who'])+'</td>'+
-          '<td>'+onTrack(r['On Track'])+'</td><td><button class="small editdates">Dates</button></td><td>'+copyLink(r['Copy Link'])+'</td>';
+          '<td class="cellbtn platcell">'+platLabel(r['PlatformList'],r['Client'])+'</td><td>'+stagePill(r['Stage'])+'</td>'+
+          '<td>'+onTrack(r['On Track'])+'</td><td class="cellbtn datecell">'+platDates(r)+'</td><td>'+copyLink(r['Copy Link'])+'</td>';
         const a=tr.querySelector('a.lnk'); if(a) a.onclick=function(e){ e.stopPropagation(); };
-        tr.querySelector('.editdates').onclick=function(e){ e.stopPropagation(); openDateEditor(r); };
+        tr.querySelector('.platcell').onclick=function(e){ e.stopPropagation(); openPlatformEditor(r); };
+        tr.querySelector('.datecell').onclick=function(e){ e.stopPropagation(); openDateEditor(r); };
         return tr;
       }
       active.forEach(function(r){ tb.appendChild(rowTr(r)); });
@@ -719,6 +746,44 @@
       $('tpCount').textContent=rows.length+' post(s) today'+(urgent?(' · '+urgent+' not ready'):'');
     }
 
+    // Batch = pieces sharing the client + the batch number embedded in the Piece ID (e.g. C12.1 -> 12).
+    function batchOf(id){ const m=String(id||'').match(/(\d+)\.\d+\s*$/); return m?m[1]:''; }
+    function batchMates(r){ const b=batchOf(r['Piece ID']); if(!b) return [r];
+      return allRows.filter(function(x){ return x['Client']===r['Client'] && batchOf(x['Piece ID'])===b; }); }
+
+    const PLAT_OPTIONS=['IG Reels','IG Post','TikTok','Facebook','LinkedIn','Website'];
+    function openPlatformEditor(r){
+      $('peTitle').textContent=r['Piece ID']+' · '+(r['Title']||'');
+      const cur=(r['PlatformList']||[]).map(function(s){return String(s).trim().toLowerCase();});
+      $('peBoxes').innerHTML=PLAT_OPTIONS.map(function(p){
+        const on=cur.indexOf(p.toLowerCase())!==-1;
+        return '<label class="pebox"><input type="checkbox" value="'+esc(p)+'"'+(on?' checked':'')+'> '+esc(p)+'</label>';
+      }).join('');
+      $('peAll').checked=false;
+      $('peBatchInfo').textContent='('+batchMates(r).length+' piece(s))';
+      $('peMsg').className='pstatus muted'; $('peMsg').textContent=igFbOn(r['Client'])?'This client posts IG and Facebook together.':'';
+      $('platEditor').classList.remove('hidden'); $('platEditor').dataset.row=r.row;
+    }
+    function closePlatformEditor(){ $('platEditor').classList.add('hidden'); }
+    (function(){
+      var s=document.getElementById('peSave'), c=document.getElementById('peCancel');
+      if(c) c.onclick=closePlatformEditor;
+      if(s) s.onclick=async function(){
+        const rowNo=Number($('platEditor').dataset.row); const r=allRows.filter(function(x){ return x.row===rowNo; })[0];
+        if(!r){ closePlatformEditor(); return; }
+        const picked=Array.from($('peBoxes').querySelectorAll('input:checked')).map(function(i){ return i.value; });
+        const targets=$('peAll').checked ? batchMates(r) : [r];
+        s.disabled=true; $('peMsg').className='pstatus muted'; $('peMsg').textContent='Saving…';
+        let done=0, failed=[];
+        for(const t of targets){ const res=await savePiece(t,{ 'Platform':picked.join(', ') });
+          if(res.ok) done++; else failed.push(t['Piece ID']); }
+        s.disabled=false;
+        if(failed.length){ $('peMsg').className='pstatus err'; $('peMsg').textContent='Saved '+done+', failed: '+failed.join(', ')+' — try again.'; }
+        else { $('peMsg').className='pstatus ok'; $('peMsg').textContent='Saved '+done+' piece(s).'; setTimeout(closePlatformEditor,600); }
+        renderPipe(); renderToday(); renderTodayPosts();
+      };
+    })();
+
     // ── One shared save + date editor, used by Today and Pipeline ──
     async function savePiece(r, changes){
       const data=await call('updatePiece',{ row:r.row, pieceId:r['Piece ID'], changes:changes });
@@ -732,6 +797,8 @@
       $('deTitle').textContent=r['Piece ID']+' · '+(r['Title']||'');
       $('dePublish').value=r['Publish Date']||''; $('deIG').value=r['IG Date']||''; $('deTT').value=r['TikTok Date']||'';
       $('deMsg').className='pstatus muted'; $('deMsg').textContent='Leave IG or TikTok blank to use the main publish date.';
+      $('deAllPlat').checked = !(r['IG Date']||r['TikTok Date']);
+      $('deBatch').checked=false; $('deBatchInfo').textContent='('+batchMates(r).length+' piece(s))';
       $('dateEditor').classList.remove('hidden'); $('dateEditor').dataset.row=r.row;
     }
     function closeDateEditor(){ $('dateEditor').classList.add('hidden'); }
@@ -745,13 +812,13 @@
         return clientCourt||behind||soon;
       });
       const tb=$('todayBody'); tb.innerHTML='';
-      if(!rows.length) tb.innerHTML='<tr><td colspan="8"><div class="empty">Nothing needs attention right now.</div></td></tr>';
+      if(!rows.length) tb.innerHTML='<tr><td colspan="6"><div class="empty">Nothing needs attention right now.</div></td></tr>';
       rows.forEach(function(r){
         const tr=document.createElement('tr'); tr.className='clickable'; tr.onclick=function(){ openPanel(r); };
         tr.innerHTML='<td>'+esc(r['Piece ID'])+'</td><td>'+clientChip(r['Client'])+'</td><td>'+fmtChip(r['Format'])+'</td>'+
-          '<td>'+stagePill(r['Stage'])+'</td><td>'+esc(r['Next Step'])+'</td><td>'+esc(r['Chase Who'])+'</td>'+
-          '<td>'+onTrack(r['On Track'])+'</td><td>'+platDates(r)+'<button class="small editdates">Dates</button></td>';
-        tr.querySelector('.editdates').onclick=function(e){ e.stopPropagation(); openDateEditor(r); };
+          '<td>'+stagePill(r['Stage'])+'</td>'+
+          '<td>'+onTrack(r['On Track'])+'</td><td class="cellbtn datecell">'+platDates(r)+'</td>';
+        tr.querySelector('.datecell').onclick=function(e){ e.stopPropagation(); openDateEditor(r); };
         tb.appendChild(tr);
       });
       $('todayCount').textContent=rows.length+' piece(s) need attention';
@@ -830,10 +897,12 @@
         const col=document.createElement('div'); col.className='pcol'+(open?' open':'');
         let body='';
         if(open){
-          body= g.items.length ? '<div class="plist">'+slice.map(function(r){
-              return '<div class="pitem" data-row="'+r.row+'"><div class="pi-t">'+esc(r['Title']||r['Piece ID'])+'</div>'+
-                '<div class="pi-m">'+esc(r['Piece ID'])+' · '+clientChip(r['Client'])+' · <span class="muted">'+esc(niceDate(r['Publish Date']))+'</span></div></div>';
-            }).join('')+'</div>'+
+          body= g.items.length ? '<div class="tablewrap"><table class="ptable"><thead><tr><th>Piece ID</th><th>Client</th><th>Format</th><th>Title</th><th>Stage</th><th>Date</th></tr></thead><tbody>'+
+            slice.map(function(r){
+              return '<tr class="clickable pitem" data-row="'+r.row+'"><td>'+esc(r['Piece ID'])+viralMark(r)+'</td><td>'+clientChip(r['Client'])+'</td>'+
+                '<td>'+fmtChip(r['Format'])+'</td><td>'+esc(r['Title']||'')+'</td><td>'+stagePill(r['Stage'])+'</td>'+
+                '<td>'+esc(niceDate(r['Publish Date']))+'</td></tr>';
+            }).join('')+'</tbody></table></div>'+
             (pages>1?'<div class="ppage"><button class="small pprev"'+(pg===0?' disabled':'')+'>← Newer</button>'+
               '<span class="muted">Page '+(pg+1)+' of '+pages+'</span>'+
               '<button class="small pnext"'+(pg>=pages-1?' disabled':'')+'>Older →</button></div>':'')
