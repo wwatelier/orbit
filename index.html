@@ -57,10 +57,33 @@
     .count { color:var(--ink-soft); font-size:13px; }
     .hidden { display:none !important; }
     .viral { color:#d9a400; font-weight:700; }
+    .chip.plat { background:#e7efe9; color:#3f5a49; }
+    .bplat { margin:4px 0 2px; }
     .linkbtn { background:none; border:none; color:var(--ink-soft); font:inherit; cursor:pointer; padding:6px 2px; }
     .linkbtn:hover { color:var(--ink); }
     tr.seemore td { background:#faf9f6; border-top:1px dashed var(--line); }
     tr.parked-row td { background:#fbfbf9; color:var(--ink-soft); }
+    tr.urgent td { background:#fdecec; }
+    .urg { display:inline-block; margin-left:6px; padding:1px 7px; border-radius:6px; background:#d64545; color:#fff; font-size:10px; font-weight:700; letter-spacing:.03em; }
+    .tpstage { font:inherit; padding:5px 7px; border:1px solid var(--line); border-radius:8px; background:#fff; }
+    .addgrid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; align-items:center; }
+    .addgrid input, .addgrid select { font:inherit; padding:8px 9px; border:1px solid var(--line); border-radius:8px; }
+    .addgrid #acTitle { grid-column:span 2; }
+    .addgrid #acAdd { grid-column:span 2; }
+    @media (max-width:820px){
+      .shell { grid-template-columns:1fr !important; }
+      .sidebar { flex-direction:row; flex-wrap:nowrap; gap:6px; padding:10px 12px;
+        border-right:none; border-bottom:1px solid var(--sidebar-line); overflow-x:auto; -webkit-overflow-scrolling:touch; }
+      .sidebar .navbtn { flex:0 0 auto; white-space:nowrap; }
+      .sidefoot { display:none; }
+      .main { padding:16px 14px !important; }
+      .tablewrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+      .board { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+      .addgrid { grid-template-columns:1fr 1fr; }
+      .addgrid #acTitle, .addgrid #acAdd { grid-column:span 2; }
+      .controls { flex-wrap:wrap; }
+      .panel { width:min(96vw,560px); }
+    }
     .ok  { color:#3a6b52; background:#e9f2ec; border:1px solid #bcd8c8; padding:11px 13px; border-radius:10px; }
     .err { color:#9a453b; background:#f8ebe9; border:1px solid #ecc5c0; padding:11px 13px; border-radius:10px; }
     .muted { color:var(--ink-soft); }
@@ -168,6 +191,7 @@
     <nav class="sidebar">
       <div class="brand">Orbit<small>WealthWise Atelier</small></div>
       <button class="navbtn" data-tab="today"><span class="ic">◎</span> Today's Work</button>
+      <button class="navbtn" data-tab="todayposts"><span class="ic">☀</span> Today's Posts</button>
       <button class="navbtn" data-tab="pipeline"><span class="ic">▤</span> Pipeline</button>
       <button class="navbtn" data-tab="assign"><span class="ic">◷</span> Assign Dates</button>
       <button class="navbtn" data-tab="import"><span class="ic">＋</span> Import</button>
@@ -179,6 +203,13 @@
     </nav>
 
     <main class="main">
+      <section class="hidden" id="tab-todayposts">
+        <div class="head"><div><h2>Today's Posts</h2><p class="sub">Scheduled to publish today. Anything not ready is flagged red. Change status inline — it saves to the master.</p></div><span class="count" id="tpCount"></span></div>
+        <div class="surface" style="margin-top:16px"><div class="tablewrap">
+          <table><thead><tr><th>Piece ID</th><th>Client</th><th>Platform</th><th>Title</th><th>Status</th><th>Publish</th></tr></thead><tbody id="tpBody"></tbody></table>
+        </div></div>
+      </section>
+
       <section class="hidden" id="tab-today">
         <div class="head"><div><h2>Today's Work</h2><p class="sub">Pieces that need a hand — behind schedule, waiting on the client, or posting soon.</p></div><span class="count" id="todayCount"></span></div>
         <div class="controls">
@@ -199,6 +230,7 @@
           </label>
           <label class="inline">View <span class="seg"><button id="viewTable" class="on">Table</button><button id="viewBoard">Board</button></span></label>
           <button id="refresh" class="small">Refresh</button>
+          <label class="inline"><input type="checkbox" id="viralOnly"> ★ Viral only</label>
           <span class="count" id="pipeCount"></span>
           <label class="inline viewas">View as
             <select id="roleView"><option value="all">All</option><option value="designer">Graphic Designer</option><option value="editor">Video Editor</option></select>
@@ -221,6 +253,7 @@
           </label>
           <button id="assignRefresh" class="small">Refresh</button>
           <button class="primary" id="assignSaveAll">Save all suggested</button>
+          <button id="rearrangeAll" class="small">Auto-rearrange whole board</button>
           <span class="pstatus muted" id="assignStatus"></span>
         </div>
         <div class="surface"><div class="tablewrap">
@@ -231,6 +264,21 @@
       <section class="hidden" id="tab-import">
         <div class="head"><div><h2>Import a batch</h2><p class="sub">Paste Block A with its header row. Validate first — Save turns on only when nothing is blocking.</p></div></div>
         <div class="surface" style="padding:20px;margin-top:16px">
+          <h3 style="margin:0 0 12px;font-size:15px">Add one piece</h3>
+          <div class="addgrid">
+            <input type="text" id="acId" placeholder="Piece ID (e.g. C12.1)">
+            <select id="acClient"><option>Ice</option><option>Lynn</option><option>Melissa</option><option>SRU</option><option>Dianna</option></select>
+            <select id="acFormat"><option>Carousel</option><option>VO reel</option><option>On-camera reel</option><option>Sit-down video</option><option>POV b-roll</option></select>
+            <input type="text" id="acPlatform" placeholder="Platform (e.g. IG, TikTok)">
+            <input type="text" id="acTitle" placeholder="Title">
+            <input type="date" id="acDate">
+            <select id="acStage"></select>
+            <button class="primary" id="acAdd">Add piece</button>
+          </div>
+          <span class="pstatus muted" id="acStatus"></span>
+        </div>
+        <div class="surface" style="padding:20px;margin-top:16px">
+          <h3 style="margin:0 0 12px;font-size:15px">Paste a batch</h3>
           <textarea id="tsv" placeholder="Piece ID&#9;Client&#9;Format&#9;Platform&#9;Title&#9;Publish Date&#9;Ready By&#9;Stage&#9;Founder&#9;Copy Link"></textarea>
           <div class="controls" style="margin-bottom:0"><button class="primary" id="validate">Validate</button><button class="primary" id="save" disabled>Save to Sheet</button><span class="pstatus muted" id="impStatus"></span></div>
           <div class="report" id="report"></div>
@@ -424,14 +472,16 @@
     function showTab(name){
       PREFS.tab=name; savePrefs();
       document.querySelectorAll('.navbtn[data-tab]').forEach(function(b){ b.classList.toggle('active', b.dataset.tab===name); });
-      ['today','pipeline','assign','import','handoff','invoices','clientview','log'].forEach(function(t){ $('tab-'+t).classList.toggle('hidden', t!==name); });
+      ['today','todayposts','pipeline','assign','import','handoff','invoices','clientview','log'].forEach(function(t){ $('tab-'+t).classList.toggle('hidden', t!==name); });
       if(name==='log') loadLog();
+      if(name==='todayposts'){ loadMeta().then(function(){ renderTodayPosts(); }); }
       if(name==='assign'){ loadMeta().then(function(){ renderAssign(); }); }
       if(name==='invoices'){ loadMeta().then(function(){ fillFromBilling(); loadInvoices(); }); }
       if(name==='clientview'){ loadMeta().then(function(){ renderClientLinks(); }); }
     }
 
     $('refresh').onclick = loadRows;
+    $('viralOnly').onchange = function(){ PREFS.viralOnly=$('viralOnly').checked; savePrefs(); renderPipe(); };
     $('logRefresh').onclick = loadLog;
     $('clientFilter').onchange = function(){ PREFS.client=$('clientFilter').value; savePrefs(); renderPipe(); renderToday(); };
     $('viewTable').onclick=function(){ setView('table'); };
@@ -446,8 +496,7 @@
     $('assignStyle').onchange=function(){ PREFS.assignStyle=$('assignStyle').value; savePrefs(); renderAssign(); };
     $('assignStyle').value = PREFS.assignStyle||'alternate';
     $('assignRefresh').onclick=function(){ loadRows().then(function(){ renderAssign(); }); };
-    $('assignSaveAll').onclick=async function(){
-      const trs=Array.from($('assignBody').querySelectorAll('tr')); let done=0, fail=0; setAssign('Saving…','muted');
+    $('assignSaveAll').onclick=async function(){      const trs=Array.from($('assignBody').querySelectorAll('tr')); let done=0, fail=0; setAssign('Saving…','muted');
       for(const tr of trs){ const btn=tr.querySelector('button[data-save]'); if(!btn) continue;
         const dateEl=tr.querySelector('input[type=date]'); const catchEl=tr.querySelector('input[type=checkbox]');
         const res=await assignOne(btn.dataset.save, Number(btn.dataset.row), dateEl.value, catchEl.checked);
@@ -455,12 +504,57 @@
       renderAssign(); renderPipe(); renderToday();
       setAssign('Saved '+done+(fail?(' · '+fail+' skipped (fix and retry)'):'')+'.', fail?'err':'ok');
     };
+    // ── Add one piece (reuses the Block A importer with a single row) ──
+    const BLOCK_A_HEADER='Piece ID\tClient\tFormat\tPlatform\tTitle\tPublish Date\tReady By\tStage\tFounder\tCopy Link';
+    function acStatus(m,c){ if($('acStatus')){ $('acStatus').className='pstatus '+(c||'muted'); $('acStatus').textContent=m; } }
+    document.addEventListener('DOMContentLoaded',function(){ if($('acStage')) $('acStage').innerHTML=STAGES.map(function(s){return '<option>'+esc(s)+'</option>';}).join(''); });
+    (function(){ var b=document.getElementById('acAdd'); if(!b) return;
+      b.onclick=async function(){
+        const id=($('acId').value||'').trim(); if(!id){ acStatus('Piece ID is required.','err'); return; }
+        const date=($('acDate').value||'').trim(); const ready=date?minus14(date):'';
+        const row=[id,$('acClient').value,$('acFormat').value,($('acPlatform').value||'').trim(),($('acTitle').value||'').trim(),date,ready,$('acStage').value,'',''];
+        const tsv=BLOCK_A_HEADER+'\n'+row.join('\t');
+        b.disabled=true; acStatus('Adding…','muted');
+        const v=await call('validateBatch',{tsv:tsv});
+        if(!v.ok){ b.disabled=false; acStatus(v.error,'err'); return; }
+        const blocked=(v.result.rows||[]).some(function(r){ return r.errors&&r.errors.length; });
+        if(blocked){ b.disabled=false; acStatus((v.result.rows[0].errors||['Blocked'])[0],'err'); return; }
+        const d=await call('importBatch',{tsv:tsv}); b.disabled=false;
+        if(!d.ok){ acStatus(d.error,'err'); return; }
+        acStatus('Added '+id+'.','ok'); $('acId').value='';$('acTitle').value='';$('acPlatform').value='';$('acDate').value='';
+        loadRows();
+      };
+    })();
+
+    // ── Auto-rearrange: re-space every unpublished, non-parked piece across each client's posting days ──
+    (function(){ var b=document.getElementById('rearrangeAll'); if(!b) return;
+      b.onclick=async function(){
+        if(!confirm('Re-suggest and save posting dates for all unpublished pieces? Published pieces are never touched.')) return;
+        b.disabled=true; setAssign('Rearranging…','muted');
+        const style=PREFS.assignStyle||'alternate';
+        const byClient={};
+        allRows.forEach(function(r){ const s=r['Stage']||'';
+          if(/^10 Published/.test(s) || PARKED.indexOf(s)!==-1) return;
+          (byClient[r['Client']]=byClient[r['Client']]||[]).push(r); });
+        let done=0, fail=0;
+        for(const cl of Object.keys(byClient)){
+          const pieces=byClient[cl].slice().sort(function(a,b){ return (a['Publish Date']||'zzz').localeCompare(b['Publish Date']||'zzz'); });
+          const sugg=suggestDatesForClient(cl, pieces, style);
+          for(const p of pieces){ const ymd=sugg[p['Piece ID']]; if(!ymd) continue;
+            const res=await assignOne(p['Piece ID'], p.row, ymd, true); if(res.ok) done++; else fail++; }
+        }
+        b.disabled=false; renderAssign(); renderPipe(); renderToday();
+        setAssign('Rearranged '+done+' piece(s)'+(fail?(' · '+fail+' skipped'):'')+'.', fail?'err':'ok');
+      };
+    })();
+
     function setView(v){ PREFS.view=v; savePrefs();
       $('viewTable').classList.toggle('on',v==='table'); $('viewBoard').classList.toggle('on',v==='board');
       $('tableView').classList.toggle('hidden',v!=='table'); $('boardView').classList.toggle('hidden',v!=='board'); }
 
     async function loadRows(){
       $('pipeCount').textContent='Loading…';
+      if(!metaLoaded){ await loadMeta(); metaLoaded=true; }
       const data = await call('listRows');
       if(!data.ok){ $('pipeCount').textContent=data.error; return; }
       allRows = data.result.rows||[]; renderPipe(); renderToday();
@@ -469,7 +563,7 @@
     function roleMatches(fmt, role){ if(role==='designer') return !isVideoFormat(fmt); if(role==='editor') return isVideoFormat(fmt); return true; }
     function filtered(){
       const want=PREFS.client||''; const role=normRole(PREFS.role);
-      return allRows.filter(function(r){ return (!want||r['Client']===want) && roleMatches(r['Format'],role); })
+      return allRows.filter(function(r){ return (!want||r['Client']===want) && roleMatches(r['Format'],role) && (!PREFS.viralOnly || r['Viral']==='TRUE'); })
         .sort(function(a,b){ return (a['Publish Date']||'').localeCompare(b['Publish Date']||''); });
     }
 
@@ -481,7 +575,7 @@
       function rowTr(r){
         const tr=document.createElement('tr'); tr.className='clickable'; tr.onclick=function(){ openPanel(r); };
         tr.innerHTML='<td>'+esc(r['Piece ID'])+reqMark(r)+viralMark(r)+'</td><td>'+esc(r['Client'])+'</td><td>'+esc(r['Format'])+'</td>'+
-          '<td>'+chips(r['PlatformList'])+'</td><td>'+stagePill(r['Stage'])+'</td>'+
+          '<td>'+platLabel(r['PlatformList'],r['Client'])+'</td><td>'+stagePill(r['Stage'])+'</td>'+
           '<td>'+esc(r['Next Step'])+'</td><td>'+esc(r['Chase Who'])+'</td>'+
           '<td>'+onTrack(r['On Track'])+'</td><td>'+esc(r['Publish Date'])+'</td><td>'+copyLink(r['Copy Link'])+'</td>';
         const a=tr.querySelector('a.lnk'); if(a) a.onclick=function(e){ e.stopPropagation(); };
@@ -507,14 +601,43 @@
         col.innerHTML='<div class="bh">'+stagePill(stage)+'<span class="n">'+inStage.length+'</span></div>';
         inStage.forEach(function(r){
           const c=document.createElement('div'); c.className='bcard'; c.onclick=function(){ openPanel(r); };
-          c.innerHTML='<div class="bt">'+esc(r['Title']||r['Piece ID'])+reqMark(r)+'</div>'+
+          c.innerHTML='<div class="bt">'+esc(r['Title']||r['Piece ID'])+reqMark(r)+viralMark(r)+'</div>'+
             '<div class="bm">'+esc(r['Piece ID'])+' · '+esc(r['Format'])+'</div>'+
+            '<div class="bplat">'+platLabel(r['PlatformList'],r['Client'])+'</div>'+
             '<div>'+onTrack(r['On Track'])+' · <span class="muted">'+esc(r['Publish Date'])+'</span></div>';
           col.appendChild(c);
         });
         bv.appendChild(col);
       });
       if(!bv.children.length) bv.innerHTML='<div class="empty">Nothing in the active pipeline.</div>';
+    }
+
+    function renderTodayPosts(){
+      const iso=todayISO();
+      const rows=allRows.filter(function(r){ return (r['Publish Date']||'')===iso; })
+        .sort(function(a,b){ return (a['Client']||'').localeCompare(b['Client']||''); });
+      const tb=$('tpBody'); tb.innerHTML='';
+      if(!rows.length){ tb.innerHTML='<tr><td colspan="6"><div class="empty">Nothing scheduled to publish today.</div></td></tr>'; $('tpCount').textContent='0 posts today'; return; }
+      let urgent=0;
+      rows.forEach(function(r){
+        const notReady=!isReadyStage(r['Stage']); if(notReady) urgent++;
+        const tr=document.createElement('tr'); if(notReady) tr.className='urgent';
+        const sel=document.createElement('select'); sel.className='tpstage';
+        sel.innerHTML=STAGES.map(function(s){ return '<option'+(s===r['Stage']?' selected':'')+'>'+esc(s)+'</option>'; }).join('');
+        sel.onchange=async function(){ sel.disabled=true;
+          const data=await call('updatePiece',{ row:r.row, pieceId:r['Piece ID'], changes:{ 'Stage':sel.value } });
+          sel.disabled=false;
+          if(!data.ok){ alert(data.error); return; }
+          const fresh=data.result.row; const idx=allRows.findIndex(function(x){ return x.row===fresh.row; }); if(idx>=0) allRows[idx]=fresh;
+          renderTodayPosts(); renderPipe(); renderToday();
+        };
+        tr.innerHTML='<td>'+esc(r['Piece ID'])+viralMark(r)+(notReady?' <span class="urg">URGENT</span>':'')+'</td>'+
+          '<td>'+esc(r['Client'])+'</td><td>'+platLabel(r['PlatformList'],r['Client'])+'</td>'+
+          '<td>'+esc(r['Title']||'')+'</td><td class="tpsel"></td><td>'+esc(r['Publish Date'])+'</td>';
+        tr.querySelector('.tpsel').appendChild(sel);
+        tb.appendChild(tr);
+      });
+      $('tpCount').textContent=rows.length+' post(s) today'+(urgent?(' · '+urgent+' not ready'):'');
     }
 
     function renderToday(){
@@ -598,6 +721,24 @@
     }
     function stagePill(s){ if(!s) return ''; return '<span class="pill '+(STAGE_COLOUR[s]||'st-off')+'">'+esc(s)+'</span>'; }
     function chips(list){ return (list||[]).map(function(p){ return '<span class="chip">'+esc(p)+'</span>'; }).join('')||'<span class="muted">—</span>'; }
+    function igFbOn(client){ return !!(META && META.igFb && META.igFb[client]); }
+    // Platform labels with IG&FB grouping (neutral text chips, not brand logos).
+    function platLabel(list, client){
+      list=(list||[]).map(function(s){return String(s).trim();}).filter(Boolean);
+      const low=list.map(function(s){return s.toLowerCase();});
+      const has=function(re){ return low.some(function(x){ return re.test(x); }); };
+      const out=[];
+      if(has(/ig|instagram|reel|story/)) out.push(igFbOn(client)?'IG & FB':'IG');
+      else if(has(/fb|facebook/)) out.push('FB');
+      if(has(/tiktok|tt/)) out.push('TikTok');
+      if(has(/linkedin/)) out.push('LinkedIn');
+      if(has(/website|web/)) out.push('Website');
+      list.forEach(function(p){ if(!/ig|instagram|reel|story|fb|facebook|tiktok|tt|linkedin|website|web/i.test(p)) out.push(p); });
+      const seen={}; const uniq=out.filter(function(x){ if(seen[x])return false; seen[x]=1; return true; });
+      return uniq.length? uniq.map(function(x){ return '<span class="chip plat">'+esc(x)+'</span>'; }).join('') : '<span class="muted">—</span>';
+    }
+    function todayISO(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+    function isReadyStage(s){ return /^(9 Ready to Publish|10 Published)/.test(s||''); }
     function onTrack(v){
       if(!v) return '<span class="t-muted">—</span>';
       let c='t-muted';
@@ -812,6 +953,7 @@ sched,
 
     // ── Invoicing ──
     let META = { settings:{}, billing:{}, clients:[] };
+    let metaLoaded=false;
     async function loadMeta(){
       const data = await call('getMeta');
       if (data.ok) META = data.result;

@@ -260,6 +260,8 @@
 .viral-links a { color:#b98900; }
 #loading { min-height:64vh; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:12px; color:#767d76; }
 #loading .ico { font-size:34px; }
+.cplat { margin:4px 0 2px; }
+.cplat .chip, .wrow .chip { display:inline-block; padding:2px 8px; margin:1px 3px 1px 0; border-radius:7px; font-size:11px; background:#e7efe9; color:#3f5a49; }
 </style>
 </head>
 <body>
@@ -290,6 +292,11 @@
       <div class="notice">
         <div>This is your live view. There's nothing for you to update. Your WWA team keeps everything current for you. If something needs a decision from you, it appears under <b>Waiting on you</b> below.</div>
       </div>
+    </section>
+
+    <section class="sec hidden" id="sec-today" style="margin-top:24px">
+      <h2 class="sh">Today's posts <span class="count" id="today-count"></span></h2>
+      <div id="today-body"></div>
     </section>
 
     <section class="sec" id="sec-waiting">
@@ -391,7 +398,7 @@ function toneFor(row){ return atRisk(row) ? {tone:"red",label:"At risk"} : class
 /* ============================================================
    RENDER
    ============================================================ */
-let STATE = { rows:[], client:"" };
+let STATE = { rows:[], client:"", igFb:false };
 let CAL = { y:null, m:null };
 let PUB = { open:false, page:0, size:20 };
 const isPublished = r => classify(r.stage).group === "published";
@@ -399,12 +406,14 @@ const isPublished = r => classify(r.stage).group === "published";
 function render(data){
   STATE.rows = (data.rows||[]).slice();
   STATE.client = data.client || "";
+  STATE.igFb = data.igFb===true || String(data.igFb).toUpperCase()==="TRUE";
   const t = today0(); CAL.y = t.getFullYear(); CAL.m = t.getMonth();
   PUB.open = false; PUB.page = 0;
 
   document.getElementById("client-name").textContent =
     STATE.client ? STATE.client+" · content calendar" : "Your content calendar";
 
+  renderTodayPosts();
   renderWaiting();
   renderWeek();
   renderTable();
@@ -420,6 +429,35 @@ function render(data){
 }
 
 function isViral(r){ return r.viral===true || String(r.viral).toUpperCase()==="TRUE"; }
+function clientPlat(platform){
+  const list=String(platform||"").split(",").map(s=>s.trim()).filter(Boolean);
+  const low=list.map(s=>s.toLowerCase());
+  const has=re=>low.some(x=>re.test(x)); const out=[];
+  if(has(/ig|instagram|reel|story/)) out.push(STATE.igFb?"IG & FB":"IG");
+  else if(has(/fb|facebook/)) out.push("FB");
+  if(has(/tiktok|tt/)) out.push("TikTok");
+  if(has(/linkedin/)) out.push("LinkedIn");
+  if(has(/website|web/)) out.push("Website");
+  list.forEach(p=>{ if(!/ig|instagram|reel|story|fb|facebook|tiktok|tt|linkedin|website|web/i.test(p)) out.push(p); });
+  const seen={}, uniq=out.filter(x=>seen[x]?false:(seen[x]=1));
+  return uniq.length ? uniq.map(x=>'<span class="chip">'+esc(x)+'</span>').join(" ") : "";
+}
+function renderTodayPosts(){
+  const sec=document.getElementById("sec-today"), body=document.getElementById("today-body");
+  if(!sec||!body) return;
+  const iso=isoOf(today0());
+  const items=STATE.rows.filter(r=>{ const d=parseDate(r.publishDate); return d && isoOf(d)===iso; });
+  document.getElementById("today-count").textContent=items.length;
+  if(!items.length){ sec.classList.add("hidden"); return; }
+  sec.classList.remove("hidden");
+  body.innerHTML='<div class="list">'+items.map(r=>{
+    const link=r.copyLink?'<a href="'+esc(r.copyLink)+'" target="_blank" rel="noopener">Open</a>':"";
+    return '<div class="wrow"><div><b>'+esc(r.pieceId)+'</b>'+viralStar(r)+' '+esc(r.title)+'</div>'
+      +'<div class="meta">'+clientPlat(r.platform)+' <span class="due">'+pillFor(r)+'</span>'+link+'</div></div>';
+  }).join("")+'</div>';
+}
+
+
 function viralStar(r){ return isViral(r) ? ' <span class="viral" title="Viral">\u2605</span>' : ''; }
 function viralLinks(r){ if(!isViral(r)) return '';
   const a=[]; if(r.viralIG) a.push('<a href="'+esc(r.viralIG)+'" target="_blank" rel="noopener">IG post</a>');
@@ -526,6 +564,7 @@ function renderBoard(){
       const link = r.copyLink ? '<a href="'+esc(r.copyLink)+'" target="_blank" rel="noopener">Open</a>' : "";
       return '<div class="card"><div class="cid">'+esc(r.pieceId)+viralStar(r)+'</div>'
         + '<div class="ctitle">'+esc(r.title)+'</div>'
+        + '<div class="cplat">'+clientPlat(r.platform)+'</div>'
         + '<div class="cfoot"><span class="date">'+fmtShort(parseDate(r.publishDate))+'</span>'+link+'</div>'
         + viralLinks(r)
         + '<div style="margin-top:8px">'+pillFor(r)+'</div></div>';
