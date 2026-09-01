@@ -452,7 +452,7 @@ function render(data){
   renderCalendar();
   renderViral();
   renderParked();
-  document.getElementById("all-count").textContent = STATE.rows.filter(r=>!isPublished(r)).length;
+  document.getElementById("all-count").textContent = STATE.rows.filter(r=>!isPublished(r)&&!isParkedRow(r)).length;
 
   document.getElementById("loading").classList.add("hidden");
   document.getElementById("gate").classList.add("hidden");
@@ -607,11 +607,10 @@ function renderBoard(){
     {key:"waiting",   name:"Waiting on you"},
     {key:"progress",  name:"In progress"},
     {key:"ready",     name:"Ready to publish"},
-    {key:"closed",    name:"Closed"},
   ];
   const html = cols.map(col=>{
     const items = STATE.rows
-      .filter(r=>classify(r.stage).group===col.key)
+      .filter(r=>!isParkedRow(r) && classify(r.stage).group===col.key)
       .sort((a,b)=> (parseDate(a.publishDate)||8e15) - (parseDate(b.publishDate)||8e15));
     const cards = items.map(r=>{
       const link = r.copyLink ? '<a href="'+esc(r.copyLink)+'" target="_blank" rel="noopener">Open</a>' : "";
