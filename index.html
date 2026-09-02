@@ -58,6 +58,17 @@
     .hidden { display:none !important; }
     .viral { color:#d9a400; font-weight:700; }
     .chip.plat { background:#e7efe9; color:#3f5a49; }
+    .obh { font-size:13px; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-soft); margin:22px 0 10px; }
+    .obh:first-child { margin-top:0; }
+    .obgrid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    .ob { display:block; font-size:12px; color:var(--ink-soft); }
+    .ob input[type=text], .ob input[type=number], .ob select { display:block; width:100%; margin-top:5px; font:inherit; padding:9px 10px; border:1px solid var(--line); border-radius:8px; }
+    .ob input[type=checkbox] { margin-right:7px; }
+    .ob .hint { display:block; margin-top:5px; font-size:11px; color:var(--ink-soft); opacity:.85; }
+    .req { color:#c0554f; }
+    .daybox { display:flex; flex-wrap:wrap; gap:7px; margin-top:6px; }
+    .daychip { display:flex; align-items:center; gap:6px; padding:7px 11px; border:1px solid var(--line); border-radius:8px; font-size:12px; cursor:pointer; background:#fff; }
+    tr.justmade td { background:#eaf5ec; }
     .tchip { display:inline-block; padding:2px 9px; border-radius:6px; font-size:12px; font-weight:500; letter-spacing:.01em; }
     .hero { background:linear-gradient(180deg,#f7f9f6,#fff); border:1px solid var(--line); border-radius:14px; padding:22px 24px; }
     .hero-date { font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft); margin-bottom:4px; }
@@ -133,6 +144,8 @@
       .ptable { min-width:640px; }
       .modalcard { width:min(94vw,420px); max-height:88vh; overflow-y:auto; }
       .peboxes { grid-template-columns:1fr; }
+      .obgrid { grid-template-columns:1fr; }
+      .obgrid .ob[style*='span 2'] { grid-column:auto; }
       .pebox { min-height:44px; }
       .ppage { flex-wrap:wrap; }
       .ppage button, .small { min-height:40px; }
@@ -253,6 +266,7 @@
       <button class="navbtn" data-tab="import"><span class="ic">＋</span> Import</button>
       <button class="navbtn" data-tab="handoff"><span class="ic">✎</span> Prompts &amp; Handoffs</button>
       <button class="navbtn" data-tab="invoices"><span class="ic">฿</span> Invoices</button>
+      <button class="navbtn" data-tab="onboard"><span class="ic">✛</span> Onboard Client</button>
       <button class="navbtn" data-tab="clientview"><span class="ic">↗</span> Client View</button>
       <button class="navbtn" data-tab="log"><span class="ic">≡</span> Activity Log</button>
       <div class="sidefoot"><div class="who" id="whoamiMin"></div><button id="signout">Sign out</button></div>
@@ -403,6 +417,64 @@
         <div class="surface" style="margin-top:16px"><div class="tablewrap">
           <table><thead><tr><th>Invoice No</th><th>Client</th><th>Total</th><th>Status</th><th>Issued</th><th>Paid</th><th></th></tr></thead><tbody id="invListBody"></tbody></table>
         </div></div>
+      </section>
+
+      <section class="hidden" id="tab-onboard">
+        <div class="head"><div><h2>Onboard a client</h2><p class="sub">Fill this once and the client is set up everywhere: profile, posting rhythm, billing, dropdowns, and their private calendar link.</p></div></div>
+
+        <div class="surface" style="padding:22px;margin-top:16px">
+          <h3 class="obh">The basics</h3>
+          <div class="obgrid">
+            <label class="ob">Client name <span class="req">*</span>
+              <input type="text" id="obName" placeholder="e.g. Ice">
+              <span class="hint">Must match exactly what you'll use in Piece IDs and imports.</span></label>
+            <label class="ob">Social handles
+              <input type="text" id="obHandles" placeholder="@planwithice"></label>
+            <label class="ob">Founder(s)
+              <input type="text" id="obFounders" placeholder="Ice  ·  comma-separate if several">
+              <span class="hint">Who on the client side must act. Blank uses the client name.</span></label>
+            <label class="ob">Notes
+              <input type="text" id="obNotes" placeholder="Anything the team should know"></label>
+          </div>
+
+          <h3 class="obh">Content rhythm</h3>
+          <div class="obgrid">
+            <label class="ob">Pieces per batch (quota)
+              <input type="number" id="obQuota" min="1" placeholder="24"></label>
+            <label class="ob">Batch cadence
+              <input type="text" id="obCadence" value="4-week"></label>
+            <label class="ob" style="grid-column:span 2">Posting days
+              <span class="daybox" id="obDays"></span>
+              <span class="hint">Days this client posts. Used to suggest dates and avoid double-booking.</span></label>
+            <label class="ob" style="grid-column:span 2"><input type="checkbox" id="obIgFb"> Their Instagram is linked to Facebook
+              <span class="hint">Tick if posting to IG also posts to FB — the calendar then shows "IG &amp; FB" as one action.</span></label>
+          </div>
+
+          <h3 class="obh">Billing</h3>
+          <div class="obgrid">
+            <label class="ob">Package description
+              <input type="text" id="obBaseDesc" placeholder="Monthly content package"></label>
+            <label class="ob">Billing cycle
+              <select id="obCycle"><option>Monthly</option><option>Quarterly</option><option>Per batch</option></select></label>
+            <label class="ob">Base fee (THB)
+              <input type="number" id="obBaseTHB" min="0" placeholder="0"></label>
+            <label class="ob">Base fee (SGD)
+              <input type="number" id="obBaseSGD" min="0" placeholder="0"></label>
+            <label class="ob">Add-on description
+              <input type="text" id="obAddDesc" placeholder="Optional"></label>
+            <label class="ob">Primary currency
+              <select id="obCurrency"><option>THB</option><option>SGD</option></select></label>
+            <label class="ob">Add-on fee (THB)
+              <input type="number" id="obAddTHB" min="0" placeholder="0"></label>
+            <label class="ob">Add-on fee (SGD)
+              <input type="number" id="obAddSGD" min="0" placeholder="0"></label>
+          </div>
+
+          <div class="controls" style="margin:18px 0 0">
+            <button class="primary" id="obCreate">Create client</button>
+            <span class="pstatus muted" id="obStatus"></span>
+          </div>
+        </div>
       </section>
 
       <section class="hidden" id="tab-clientview">
@@ -612,13 +684,53 @@
     function showTab(name){
       PREFS.tab=name; savePrefs();
       document.querySelectorAll('.navbtn[data-tab]').forEach(function(b){ b.classList.toggle('active', b.dataset.tab===name); });
-      ['today','pipeline','assign','import','handoff','invoices','clientview','log'].forEach(function(t){ $('tab-'+t).classList.toggle('hidden', t!==name); });
+      ['today','pipeline','assign','import','handoff','invoices','onboard','clientview','log'].forEach(function(t){ $('tab-'+t).classList.toggle('hidden', t!==name); });
       if(name==='log') loadLog();
       if(name==='today'){ loadMeta().then(function(){ renderTodayPosts(); }); }
       if(name==='assign'){ loadMeta().then(function(){ renderAssign(); }); }
       if(name==='invoices'){ loadMeta().then(function(){ fillFromBilling(); loadInvoices(); }); }
+      if(name==='onboard'){ buildDayBox(); }
       if(name==='clientview'){ const tb=$('clientLinksBody'); if(tb) tb.innerHTML='<tr><td colspan="3"><div class="empty">Loading client links…</div></td></tr>'; loadMeta().then(function(){ renderClientLinks(); }); }
     }
+
+    // ── Onboard a client ──
+    const OB_DAYS=['Mon','Tue','Wed','Thu','Fri','Sat'];
+    function buildDayBox(){
+      const box=$('obDays'); if(!box||box.dataset.built) return; box.dataset.built='1';
+      box.innerHTML=OB_DAYS.map(function(d){
+        return '<label class="daychip"><input type="checkbox" value="'+d+'" checked> '+d+'</label>'; }).join('');
+    }
+    function obSet(m,c){ $('obStatus').className='pstatus '+(c||'muted'); $('obStatus').textContent=m; }
+    (function(){
+      var b=document.getElementById('obCreate'); if(!b) return;
+      b.onclick=async function(){
+        const name=($('obName').value||'').trim();
+        if(!name){ obSet('Client name is required.','err'); $('obName').focus(); return; }
+        const days=Array.from($('obDays').querySelectorAll('input:checked')).map(function(i){ return i.value; });
+        if(!days.length){ obSet('Pick at least one posting day.','err'); return; }
+        const payload={ client:name,
+          handles:($('obHandles').value||'').trim(), founders:($('obFounders').value||'').trim(),
+          notes:($('obNotes').value||'').trim(), quota:($('obQuota').value||''),
+          cadence:($('obCadence').value||'4-week').trim(), postingDays:days.join(','),
+          igFb:$('obIgFb').checked,
+          baseDesc:($('obBaseDesc').value||'').trim(), baseTHB:($('obBaseTHB').value||0), baseSGD:($('obBaseSGD').value||0),
+          addDesc:($('obAddDesc').value||'').trim(), addTHB:($('obAddTHB').value||0), addSGD:($('obAddSGD').value||0),
+          currency:$('obCurrency').value, cycle:$('obCycle').value };
+        b.disabled=true; obSet('Creating '+name+'…','muted');
+        const data=await call('onboardClient', payload);
+        b.disabled=false;
+        if(!data.ok){ obSet('Failed: '+data.error, 'err'); return; }
+        obSet(name+' created. Opening Client View…','ok');
+        // Clear the form, refresh meta so the new client appears in every dropdown, then jump to the link.
+        ['obName','obHandles','obFounders','obNotes','obQuota','obBaseDesc','obBaseTHB','obBaseSGD','obAddDesc','obAddTHB','obAddSGD']
+          .forEach(function(id){ if($(id)) $(id).value=''; });
+        $('obIgFb').checked=false;
+        metaLoaded=false; await loadMeta(); metaLoaded=true;
+        NEW_CLIENT=data.result.client;
+        showTab('clientview');
+      };
+    })();
+    let NEW_CLIENT='';
 
     $('refresh').onclick = loadRows;
     (function(){
@@ -1424,6 +1536,7 @@ sched,
       const clients=(META && META.clients && META.clients.length) ? META.clients : ['Ice','Lynn','Melissa','SRU','Dianna'];
       clients.forEach(function(cl){
         const key=keys[cl]; const tr=document.createElement('tr');
+        if(NEW_CLIENT && cl===NEW_CLIENT) tr.className='justmade';
         if(!key){
           tr.innerHTML='<td>'+esc(cl)+'</td><td class="muted">No link key set — add one in the Clients tab</td><td></td>';
           tb.appendChild(tr); return;
