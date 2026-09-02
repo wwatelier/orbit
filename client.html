@@ -336,7 +336,7 @@ window.__orbitBoot = (function(){
   <h1>Your content calendar</h1>
   <p>Sign in with the Google account WWA shared this with to see your schedule and anything waiting on you.</p>
   <div id="gbtn"></div>
-  <div class="note">You get a read-only view of your own content only. Approvals still happen on each Notion copy page.</div>
+  <div class="note">You get a read-only view of your own content only. Approvals still happen on each copy page.</div>
 </div>
 
 <!-- ERROR -->
@@ -540,7 +540,7 @@ function renderTodayPosts(){
   sec.classList.remove("hidden");
   if(!items.length){ body.innerHTML='<div class="empty">Nothing posting today.</div>'; return; }
   body.innerHTML='<div class="tpcards">'+items.map(r=>{
-    const link=r.copyLink?'<a href="'+esc(r.copyLink)+'" target="_blank" rel="noopener">Open</a>':"";
+    const link=r.copyLink?'<a href="'+esc(r.copyLink)+'" target="_blank" rel="noopener">Open Copy</a>':"";
     return '<div class="tpcard"><div class="tphead">'+fmtChip(r.format)+viralStar(r)+'</div>'
       +'<div class="tptitle">'+esc(r.title||r.pieceId)+'</div><div class="tpid">'+esc(r.pieceId)+'</div>'
       +'<div class="tpdates">'+platDates(r)+'</div>'
@@ -581,7 +581,7 @@ function renderWaiting(){
     const c = classify(r.stage);
     const n = daysAway(parseDate(r.publishDate));
     const soon = (n!==null && n<=2) ? "soon" : "";
-    const link = r.copyLink ? '<a href="'+esc(r.copyLink)+'" target="_blank" rel="noopener">Open in Notion</a>' : "";
+    const link = r.copyLink ? '<a href="'+esc(r.copyLink)+'" target="_blank" rel="noopener">Open Copy</a>' : "";
     return '<div class="wrow"><div class="top">'
       + '<span class="id">'+esc(r.pieceId)+'</span>'
       + '<span class="title">'+esc(r.title)+'</span>'
@@ -628,7 +628,7 @@ function pillFor(r){ const c = toneFor(r); return '<span class="pill '+c.tone+'"
 function renderTable(){
   const rows = STATE.rows.filter(r=>!isPublished(r)&&!isParkedRow(r)).sort((a,b)=> (parseDate(a.publishDate)||8e15) - (parseDate(b.publishDate)||8e15));
   const body = rows.map(r=>{
-    const link = r.copyLink ? '<a href="'+esc(r.copyLink)+'" target="_blank" rel="noopener">Open</a>' : '<span class="fmt">\u2014</span>';
+    const link = r.copyLink ? '<a href="'+esc(r.copyLink)+'" target="_blank" rel="noopener">Open Copy</a>' : '<span class="fmt">\u2014</span>';
     return '<tr><td class="id">'+esc(r.pieceId)+'</td>'
       + '<td class="title">'+esc(r.title)+'<div class="fmt">'+esc(r.format||"")+(r.platform?" \u00b7 "+esc(r.platform):"")+'</div></td>'
       + '<td class="date">'+fmtShort(parseDate(r.publishDate))+'</td>'
@@ -651,7 +651,7 @@ function renderBoard(){
       .filter(r=>!isParkedRow(r) && classify(r.stage).group===col.key)
       .sort((a,b)=> (parseDate(a.publishDate)||8e15) - (parseDate(b.publishDate)||8e15));
     const cards = items.map(r=>{
-      const link = r.copyLink ? '<a href="'+esc(r.copyLink)+'" target="_blank" rel="noopener">Open</a>' : "";
+      const link = r.copyLink ? '<a href="'+esc(r.copyLink)+'" target="_blank" rel="noopener">Open Copy</a>' : "";
       return '<div class="card"><div class="cid">'+esc(r.pieceId)+viralStar(r)+'</div>'
         + '<div class="ctitle">'+esc(r.title)+'</div>'
         + '<div class="cplat">'+fmtChip(r.format)+'</div><div class="tpdates">'+platDates(r)+'</div>'
@@ -731,7 +731,7 @@ function renderParked(){
     if(open){
       body = g.items.length ? '<div class="tablewrap"><table class="ptable"><thead><tr><th>ID</th><th>Format</th><th>Title</th><th>Status</th><th>Date</th><th>Copy</th></tr></thead><tbody>'
         + slice.map(r=>{
-            const link=r.copyLink?'<a href="'+esc(r.copyLink)+'" target="_blank" rel="noopener">Open</a>':'<span class="fmt">\u2014</span>';
+            const link=r.copyLink?'<a href="'+esc(r.copyLink)+'" target="_blank" rel="noopener">Open Copy</a>':'<span class="fmt">\u2014</span>';
             return '<tr><td class="id">'+esc(r.pieceId)+viralStar(r)+'</td><td>'+fmtChip(r.format)+'</td>'
               +'<td class="title">'+esc(r.title||"")+'</td><td>'+pillFor(r)+'</td>'
               +'<td class="date">'+fmtShort(parseDate(r.publishDate))+'</td><td>'+link+'</td></tr>';
