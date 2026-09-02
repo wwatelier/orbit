@@ -112,6 +112,8 @@
     .ptable th { text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-soft); padding:8px 12px; border-bottom:1px solid var(--line); }
     .ptable td { padding:9px 12px; border-bottom:1px solid var(--line); }
     .ptable tr:hover td { background:#faf9f6; }
+    .ptable tr.notready td { background:#fdf6f6; }
+    .ptable tr.notready:hover td { background:#fbeeee; }
     .bplat { margin:4px 0 2px; }
     .linkbtn { background:none; border:none; color:var(--ink-soft); font:inherit; cursor:pointer; padding:6px 2px; }
     .linkbtn:hover { color:var(--ink); }
@@ -314,7 +316,7 @@
           <div class="hero-date" id="heroDate"></div>
           <h2 class="hero-h">Today's posts</h2>
           <p class="sub">Going live today. Not ready yet shows red. Change status or dates right here — it saves to the master.</p>
-          <div id="tpCards" class="tpcards"></div>
+          <div class="tablewrap" style="margin-top:16px"><table class="ptable"><thead><tr><th>Piece ID</th><th>Client</th><th>Format</th><th>Title</th><th>Posting dates</th><th>Stage</th><th></th></tr></thead><tbody id="tpBody"></tbody></table></div>
           <span class="count" id="tpCount"></span>
         </div>
 
@@ -346,8 +348,8 @@
         <div class="surface" id="tableView"><div class="tablewrap">
           <table><thead><tr><th>Piece ID</th><th>Client</th><th>Format</th><th>Platform</th><th>Stage</th><th>On Track</th><th>Date</th><th>Copy</th></tr></thead><tbody id="pipeBody"></tbody></table>
         </div></div>
-        <div id="parkedArea" class="parked"></div>
         <div id="boardView" class="board hidden"></div>
+        <div id="parkedArea" class="parked"></div>
       </section>
 
       <section class="hidden" id="tab-assign">
@@ -1017,34 +1019,31 @@
     function renderTodayPosts(){
       const iso=todayISO();
       const hd=$('heroDate'); if(hd) hd.textContent=niceDate(iso)+' · '+new Date().getFullYear();
-      const wrap=$('tpCards'); if(!wrap) return; wrap.innerHTML='';
+      const tb=$('tpBody'); if(!tb) return; tb.innerHTML='';
       const rows=allRows.filter(function(r){
         const base=r['Publish Date']||'';
         return base===iso || (r['IG Date']||'')===iso || (r['TikTok Date']||'')===iso;
       }).sort(function(a,b){ return (a['Client']||'').localeCompare(b['Client']||''); });
-      if(!rows.length){ wrap.innerHTML='<div class="empty">Nothing scheduled to publish today.</div>'; $('tpCount').textContent='0 posts today'; return; }
+      if(!rows.length){ tb.innerHTML='<tr><td colspan="7"><div class="empty">Nothing scheduled to publish today.</div></td></tr>'; $('tpCount').textContent='0 posts today'; return; }
       let urgent=0;
       rows.forEach(function(r){
         const notReady=!isReadyStage(r['Stage']); if(notReady) urgent++;
-        const card=document.createElement('div'); card.className='tpcard'+(notReady?' urgent':'');
-        card.innerHTML='<div class="tphead">'+clientChip(r['Client'])+' '+fmtChip(r['Format'])+viralMark(r)+(notReady?'<span class="urg">URGENT</span>':'')+'</div>'+
-          '<div class="tptitle">'+esc(r['Title']||r['Piece ID'])+'</div>'+
-          '<div class="tpid">'+esc(r['Piece ID'])+'</div>'+
-          '<div class="tpdates">'+platDates(r)+'</div>'+
-          '<div class="tprow"><span class="tpsel"></span><button class="small tpdate">Edit dates</button></div>'+
-          '<div class="pstatus muted tpmsg"></div>';
+        const tr=document.createElement('tr'); if(notReady) tr.className='notready';
+        tr.innerHTML='<td>'+esc(r['Piece ID'])+viralMark(r)+(notReady?'<span class="urg">URGENT</span>':'')+'</td>'+
+          '<td>'+clientChip(r['Client'])+'</td><td>'+fmtChip(r['Format'])+'</td>'+
+          '<td>'+esc(r['Title']||'')+'</td>'+
+          '<td>'+platDates(r)+'</td>'+
+          '<td class="tpstagecell"></td>'+
+          '<td><button class="small tpdate">Edit dates</button></td>';
         const sel=document.createElement('select'); sel.className='tpstage';
         sel.innerHTML=STAGES.map(function(s){ return '<option'+(s===r['Stage']?' selected':'')+'>'+esc(s)+'</option>'; }).join('');
-        const msg=card.querySelector('.tpmsg');
-        sel.onchange=async function(){ sel.disabled=true; msg.className='pstatus muted tpmsg'; msg.textContent='Saving…';
-          const res=await savePiece(r,{ 'Stage':sel.value });
-          sel.disabled=false;
-          if(!res.ok){ msg.className='pstatus err tpmsg'; msg.textContent=TT('Failed: ')+res.error+TT(' — try again.'); return; }
-          msg.className='pstatus ok tpmsg'; msg.textContent='Saved.'; renderTodayPosts(); renderPipe(); renderToday();
+        sel.onchange=async function(){ sel.disabled=true;
+          const res=await savePiece(r,{ 'Stage':sel.value }); sel.disabled=false;
+          if(res.ok){ renderTodayPosts(); renderPipe(); renderToday(); }
         };
-        card.querySelector('.tpsel').appendChild(sel);
-        card.querySelector('.tpdate').onclick=function(){ openDateEditor(r); };
-        wrap.appendChild(card);
+        tr.querySelector('.tpstagecell').appendChild(sel);
+        tr.querySelector('.tpdate').onclick=function(){ openDateEditor(r); };
+        tb.appendChild(tr);
       });
       $('tpCount').textContent=rows.length+TT(' post(s) today')+(urgent?(' · '+urgent+TT(' not ready')):'');
     }

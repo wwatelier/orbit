@@ -539,13 +539,14 @@ function renderTodayPosts(){
   document.getElementById("today-count").textContent=items.length||"";
   sec.classList.remove("hidden");
   if(!items.length){ body.innerHTML='<div class="empty">Nothing posting today.</div>'; return; }
-  body.innerHTML='<div class="tpcards">'+items.map(r=>{
-    const link=r.copyLink?'<a href="'+esc(r.copyLink)+'" target="_blank" rel="noopener">Open Copy</a>':"";
-    return '<div class="tpcard"><div class="tphead">'+fmtChip(r.format)+viralStar(r)+'</div>'
-      +'<div class="tptitle">'+esc(r.title||r.pieceId)+'</div><div class="tpid">'+esc(r.pieceId)+'</div>'
-      +'<div class="tpdates">'+platDates(r)+'</div>'
-      +'<div>'+pillFor(r)+' '+link+'</div></div>';
-  }).join("")+'</div>';
+  body.innerHTML='<div class="tablewrap"><table class="ptable"><thead><tr><th>ID</th><th>Format</th><th>Title</th><th>Posting</th><th>Status</th><th>Copy</th></tr></thead><tbody>'+items.map(r=>{
+    const link=r.copyLink?'<a href="'+esc(r.copyLink)+'" target="_blank" rel="noopener">Open Copy</a>':'\u2014';
+    return '<tr><td>'+esc(r.pieceId)+viralStar(r)+'</td><td>'+fmtChip(r.format)+'</td>'
+      +'<td>'+esc(r.title||'')+'</td>'
+      +'<td>'+platDates(r)+'</td>'
+      +'<td>'+pillFor(r)+'</td>'
+      +'<td>'+link+'</td></tr>';
+  }).join("")+'</tbody></table></div>';
 }
 
 
