@@ -799,12 +799,19 @@
       PREFS.tab=name; savePrefs();
       document.querySelectorAll('.navbtn[data-tab]').forEach(function(b){ b.classList.toggle('active', b.dataset.tab===name); });
       ['today','pipeline','assign','import','handoff','invoices','onboard','clientview','log'].forEach(function(t){ $('tab-'+t).classList.toggle('hidden', t!==name); });
+      // META (client links, billing, posting days) is already loaded and cached — render from it now,
+      // and refresh it silently in the background instead of blocking each tab open on a getMeta round-trip.
+      const metaReady = !!(META && META.clients);
+      const refreshMeta = function(after){ loadMeta().then(function(){ if(after) after(); }); };
       if(name==='log') loadLog();
-      if(name==='today'){ loadMeta().then(function(){ renderTodayPosts(); }); }
-      if(name==='assign'){ loadMeta().then(function(){ renderAssign(); }); }
-      if(name==='invoices'){ loadMeta().then(function(){ fillFromBilling(); loadInvoices(); }); }
+      if(name==='today'){ if(metaReady){ renderTodayPosts(); refreshMeta(renderTodayPosts); } else loadMeta().then(renderTodayPosts); }
+      if(name==='assign'){ if(metaReady){ renderAssign(); refreshMeta(renderAssign); } else loadMeta().then(renderAssign); }
+      if(name==='invoices'){ if(metaReady){ fillFromBilling(); loadInvoices(); refreshMeta(fillFromBilling); } else loadMeta().then(function(){ fillFromBilling(); loadInvoices(); }); }
       if(name==='onboard'){ buildDayBox(); }
-      if(name==='clientview'){ const tb=$('clientLinksBody'); if(tb) tb.innerHTML='<tr><td colspan="3"><div class="empty">Loading client links…</div></td></tr>'; loadMeta().then(function(){ renderClientLinks(); }); }
+      if(name==='clientview'){
+        if(metaReady){ renderClientLinks(); refreshMeta(renderClientLinks); }
+        else { const tb=$('clientLinksBody'); if(tb) tb.innerHTML='<tr><td colspan="3"><div class="empty">Loading client links…</div></td></tr>'; loadMeta().then(renderClientLinks); }
+      }
     }
 
     // ── Onboard a client ──
