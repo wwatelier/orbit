@@ -245,21 +245,19 @@
       .navbtn,.controls,.head,.sidebar{ display:none !important; }
     }
 
-    /* language toggle (added; overlay only, no layout shift) */
-    .langtoggle { position:fixed; top:14px; right:16px; z-index:45; display:inline-flex;
-      background:var(--panel); border:1px solid var(--line); border-radius:9px; overflow:hidden;
-      box-shadow:0 1px 6px rgba(90,125,110,.10); }
+    /* language toggle (added; anchored top-right of content, no layout shift) */
+    .main { position:relative; }
+    .langtoggle { position:absolute; top:26px; right:32px; z-index:20; display:inline-flex;
+      background:var(--panel); border:1px solid var(--line); border-radius:9px; overflow:hidden; }
     .langtoggle button { border:none; background:transparent; color:var(--ink-soft); font:inherit;
       font-size:12px; font-weight:600; padding:6px 11px; cursor:pointer; border-radius:0; line-height:1.2; }
     .langtoggle button.on { background:var(--brand); color:#fff; }
     .langtoggle button:not(.on):hover { background:var(--brand-soft); color:var(--ink); }
-    @media (max-width:820px){ .langtoggle { top:auto; bottom:14px; right:14px;
-      box-shadow:0 2px 10px rgba(42,47,44,.18); } }
+    @media (max-width:820px){ .langtoggle { top:16px; right:14px; } }
     @media print { .langtoggle { display:none !important; } }
   </style>
 </head>
 <body>
-  <div id="langToggle" class="langtoggle" role="group" aria-label="Language"><button id="langEN" type="button" class="on">EN</button><button id="langTH" type="button">TH</button></div>
 
   <div class="signwrap" id="signScreen">
     <div class="signcard">
@@ -286,6 +284,7 @@
     </nav>
 
     <main class="main">
+      <div id="langToggle" class="langtoggle" role="group" aria-label="Language"><button id="langEN" type="button" class="on">EN</button><button id="langTH" type="button">TH</button></div>
       <section class="hidden" id="tab-today">
         <div class="hero">
           <div class="hero-date" id="heroDate"></div>
