@@ -114,6 +114,7 @@
     .ptable tr:hover td { background:#faf9f6; }
     .ptable tr.notready td { background:#fdf6f6; }
     .ptable tr.notready:hover td { background:#fbeeee; }
+    .rowtitle { font-size:11px; color:var(--ink-soft); font-weight:400; max-width:300px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-top:2px; }
     .bplat { margin:4px 0 2px; }
     .linkbtn { background:none; border:none; color:var(--ink-soft); font:inherit; cursor:pointer; padding:6px 2px; }
     .linkbtn:hover { color:var(--ink); }
@@ -281,6 +282,14 @@
     .sp-pct { margin-top:10px; font-size:12px; color:var(--ink-soft); font-variant-numeric:tabular-nums; }
     .saveprog.err .sp-bar { background:#c0392b; }
     .saveprog.err .sp-msg { color:#c0392b; }
+    .sp-ok { display:none; margin-top:16px; font:inherit; font-size:13px; font-weight:600; color:#fff;
+      background:var(--brand); border:none; border-radius:8px; padding:8px 24px; cursor:pointer; }
+    .saveprog.ok .sp-ok, .saveprog.err .sp-ok { display:inline-block; }
+    .saveprog.err .sp-ok { background:#c0392b; }
+    .saveprog.ok .sp-msg { color:var(--brand); }
+    .saveprog.ok .sp-msg::before { content:"\2713  "; }
+    .saveprog.ok .sp-track, .saveprog.ok .sp-pct,
+    .saveprog.err .sp-track, .saveprog.err .sp-pct { display:none; }
   </style>
 </head>
 <body>
@@ -316,7 +325,7 @@
           <div class="hero-date" id="heroDate"></div>
           <h2 class="hero-h">Today's posts</h2>
           <p class="sub">Going live today. Not ready yet shows red. Change status or dates right here — it saves to the master.</p>
-          <div class="tablewrap" style="margin-top:16px"><table class="ptable"><thead><tr><th>Piece ID</th><th>Client</th><th>Format</th><th>Title</th><th>Posting dates</th><th>Stage</th><th></th></tr></thead><tbody id="tpBody"></tbody></table></div>
+          <div class="tablewrap" style="margin-top:16px"><table class="ptable"><thead><tr><th>Piece ID</th><th>Client</th><th>Format</th><th>Platform</th><th>Title</th><th>Posting dates</th><th>Stage</th><th></th></tr></thead><tbody id="tpBody"></tbody></table></div>
           <span class="count" id="tpCount"></span>
         </div>
 
@@ -327,7 +336,7 @@
           </label>
         </div>
         <div class="surface" style="margin-top:16px"><div class="tablewrap">
-          <table><thead><tr><th>Piece ID</th><th>Client</th><th>Format</th><th>Stage</th><th>On Track</th><th>Posting dates</th><th>Copy</th></tr></thead><tbody id="todayBody"></tbody></table>
+          <table><thead><tr><th>Piece ID</th><th>Client</th><th>Format</th><th>Platform</th><th>Stage</th><th>On Track</th><th>Posting dates</th><th>Copy</th></tr></thead><tbody id="todayBody"></tbody></table>
         </div></div>
       </section>
 
@@ -538,6 +547,7 @@
       <div class="pid" id="pMeta"></div>
       <div class="field"><label>Stage</label><select id="pStage"></select></div>
       <div class="field"><label>Publish date</label><input type="date" id="pDate" style="font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px"></div>
+      <div class="field"><label>Platforms</label><div id="pPlat" class="peboxes"></div></div>
       <div class="field"><label><input type="checkbox" id="pBlocked"> Blocked</label></div>
       <div class="field"><label><input type="checkbox" id="pViral"> ★ Viral (mark once published)</label>
         <div id="pViralLinks" class="hidden" style="margin-top:8px;display:grid;gap:8px">
@@ -639,28 +649,33 @@
     const WRITE_ACT = { updatePiece:1, updatePieces:1, importBatch:1, generateInvoice:1, markPaid:1, onboardClient:1, addRequest:1, markReceived:1 };
     let PROG_SUPPRESS = false;
     const Progress = (function(){
-      let box, bar, pctEl, msgEl, timer=null, val=0;
+      let box, bar, pctEl, msgEl, okBtn, timer=null, dtimer=null, val=0;
       function build(){
         if(box) return;
         box=document.createElement('div'); box.className='saveprog';
         box.innerHTML='<div class="sp-card"><div class="sp-msg">Saving…</div>'+
-          '<div class="sp-track"><div class="sp-bar"></div></div><div class="sp-pct">0%</div></div>';
+          '<div class="sp-track"><div class="sp-bar"></div></div><div class="sp-pct">0%</div>'+
+          '<button type="button" class="sp-ok">OK</button></div>';
         document.body.appendChild(box);
         bar=box.querySelector('.sp-bar'); pctEl=box.querySelector('.sp-pct'); msgEl=box.querySelector('.sp-msg');
+        okBtn=box.querySelector('.sp-ok'); okBtn.onclick=close;
       }
       function set(p){ val=Math.max(0,Math.min(100,Math.round(p))); bar.style.width=val+'%'; pctEl.textContent=val+'%'; }
       function stop(){ if(timer){ clearInterval(timer); timer=null; } }
+      function close(){ if(dtimer){ clearTimeout(dtimer); dtimer=null; } if(box) box.classList.remove('show'); }
       function begin(msg, total){
-        build(); msgEl.textContent=msg||'Saving…'; box.classList.remove('ok','err'); box.classList.add('show'); set(0); stop();
+        build(); if(dtimer){ clearTimeout(dtimer); dtimer=null; }
+        msgEl.textContent=msg||'Saving…'; box.classList.remove('ok','err'); box.classList.add('show'); set(0); stop();
         if(!total || total<=1){                       // single request: animate toward 90% while it's in flight
           timer=setInterval(function(){ if(val<90) set(val + Math.max(1,(90-val)*0.14)); }, 90);
         }
       }
       function step(done, total){ stop(); set(total? (done/total*100) : 100); }
       function end(ok, msg){
-        build(); stop(); set(100); if(msg) msgEl.textContent=msg;
-        box.classList.add(ok?'ok':'err');
-        setTimeout(function(){ box.classList.remove('show'); }, ok?450:1300);
+        build(); stop(); set(100); msgEl.textContent = msg || (ok?'Saved.':'Save failed');
+        box.classList.add(ok?'ok':'err');            // shows the ✓ and the OK button
+        if(dtimer) clearTimeout(dtimer);
+        dtimer=setTimeout(close, ok?2600:6000);       // stays clearly visible; OK dismisses immediately
       }
       return { begin:begin, step:step, end:end };
     })();
@@ -985,7 +1000,7 @@
       if(!rows.length) tb.innerHTML='<tr><td colspan="8"><div class="empty">No pieces yet. Import a batch to get started.</div></td></tr>';
       function rowTr(r){
         const tr=document.createElement('tr'); tr.className='clickable'; tr.onclick=function(){ openPanel(r); };
-        tr.innerHTML='<td>'+esc(r['Piece ID'])+reqMark(r)+viralMark(r)+'</td><td>'+clientChip(r['Client'])+'</td><td>'+fmtChip(r['Format'])+'</td>'+
+        tr.innerHTML='<td>'+esc(r['Piece ID'])+reqMark(r)+viralMark(r)+'<div class="rowtitle">'+esc(r['Title']||'')+'</div></td><td>'+clientChip(r['Client'])+'</td><td>'+fmtChip(r['Format'])+'</td>'+
           '<td class="cellbtn platcell">'+platLabel(r['PlatformList'],r['Client'])+'</td><td>'+stagePill(r['Stage'])+'</td>'+
           '<td>'+onTrack(r['On Track'])+'</td><td class="cellbtn datecell">'+platDates(r)+'</td><td>'+copyLink(r['Copy Link'])+'</td>';
         const a=tr.querySelector('a.lnk'); if(a) a.onclick=function(e){ e.stopPropagation(); };
@@ -1025,13 +1040,14 @@
         const base=r['Publish Date']||'';
         return base===iso || (r['IG Date']||'')===iso || (r['TikTok Date']||'')===iso;
       }).sort(function(a,b){ return (a['Client']||'').localeCompare(b['Client']||''); });
-      if(!rows.length){ tb.innerHTML='<tr><td colspan="7"><div class="empty">Nothing scheduled to publish today.</div></td></tr>'; $('tpCount').textContent='0 posts today'; return; }
+      if(!rows.length){ tb.innerHTML='<tr><td colspan="8"><div class="empty">Nothing scheduled to publish today.</div></td></tr>'; $('tpCount').textContent='0 posts today'; return; }
       let urgent=0;
       rows.forEach(function(r){
         const notReady=!isReadyStage(r['Stage']); if(notReady) urgent++;
         const tr=document.createElement('tr'); if(notReady) tr.className='notready';
         tr.innerHTML='<td>'+esc(r['Piece ID'])+viralMark(r)+(notReady?'<span class="urg">URGENT</span>':'')+'</td>'+
           '<td>'+clientChip(r['Client'])+'</td><td>'+fmtChip(r['Format'])+'</td>'+
+          '<td>'+platLabel(r['PlatformList'],r['Client'])+'</td>'+
           '<td>'+esc(r['Title']||'')+'</td>'+
           '<td>'+platDates(r)+'</td>'+
           '<td class="tpstagecell"></td>'+
@@ -1139,10 +1155,11 @@
         return clientCourt||behind||soon;
       });
       const tb=$('todayBody'); tb.innerHTML='';
-      if(!rows.length) tb.innerHTML='<tr><td colspan="7"><div class="empty">Nothing needs attention right now.</div></td></tr>';
+      if(!rows.length) tb.innerHTML='<tr><td colspan="8"><div class="empty">Nothing needs attention right now.</div></td></tr>';
       rows.forEach(function(r){
         const tr=document.createElement('tr'); tr.className='clickable'; tr.onclick=function(){ openPanel(r); };
-        tr.innerHTML='<td>'+esc(r['Piece ID'])+'</td><td>'+clientChip(r['Client'])+'</td><td>'+fmtChip(r['Format'])+'</td>'+
+        tr.innerHTML='<td>'+esc(r['Piece ID'])+'<div class="rowtitle">'+esc(r['Title']||'')+'</div></td><td>'+clientChip(r['Client'])+'</td><td>'+fmtChip(r['Format'])+'</td>'+
+          '<td>'+platLabel(r['PlatformList'],r['Client'])+'</td>'+
           '<td>'+stagePill(r['Stage'])+'</td>'+
           '<td>'+onTrack(r['On Track'])+'</td><td class="cellbtn datecell">'+platDates(r)+'</td><td>'+copyLink(r['Copy Link'])+'</td>';
         tr.querySelector('.datecell').onclick=function(e){ e.stopPropagation(); openDateEditor(r); };
@@ -1174,6 +1191,7 @@
       $('pMeta').textContent=r['Piece ID']+' · '+r['Client']+' · '+r['Format']+(r['PlatformList'].length?' · '+r['PlatformList'].join(', '):'');
       $('pStage').value=r['Stage']||'1 Copywriting';
       $('pDate').value=r['Publish Date']||'';
+      $('pPlat').innerHTML=PLAT_OPTIONS.map(function(p){ const on=(r['PlatformList']||[]).some(function(t){ return PLAT_MATCH[p] && PLAT_MATCH[p].test(t); }); return '<label class="pebox"><input type="checkbox" value="'+esc(p)+'"'+(on?' checked':'')+'> '+esc(p)+'</label>'; }).join('');
       $('pBlocked').checked=r['Blocked']==='TRUE';
       $('pCopyLink').value=r['Copy Link']||'';
       $('pViral').checked=r['Viral']==='TRUE';
@@ -1194,6 +1212,9 @@
       if($('pViral').checked!==(current['Viral']==='TRUE')) changes['Viral']=$('pViral').checked;
       if(($('pViralIG').value||'')!==(current['Viral IG Link']||'')) changes['Viral IG Link']=$('pViralIG').value;
       if(($('pViralTT').value||'')!==(current['Viral TT Link']||'')) changes['Viral TT Link']=$('pViralTT').value;
+      const origPlat=PLAT_OPTIONS.filter(function(p){ return (current['PlatformList']||[]).some(function(t){ return PLAT_MATCH[p] && PLAT_MATCH[p].test(t); }); }).join(', ');
+      const pickedPlat=Array.from($('pPlat').querySelectorAll('input:checked')).map(function(i){ return i.value; }).join(', ');
+      if(pickedPlat!==origPlat) changes['Platform']=pickedPlat;
       const newDate=($('pDate').value||'').trim(), curDate=(current['Publish Date']||'').trim();
       if(newDate!==curDate){
         if(newDate){ const dd=new Date(newDate+'T00:00:00'); if(dd.getDay()===0){ setPStatus('Publish date is a Sunday — pick another day.','err'); return; } }
