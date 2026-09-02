@@ -427,6 +427,7 @@
           <button id="hoKindReminder">Client reminder</button>
           <button id="hoKindLinks">Missing links</button>
         </div>
+        <p class="sub" id="hoHelp" style="margin:-8px 0 16px"></p>
         <div class="surface" style="padding:18px">
           <div class="controls" style="margin:0 0 12px">
             <button class="primary" id="hoGenerate">Generate</button>
@@ -541,7 +542,7 @@
       </section>
 
       <section class="hidden" id="tab-log">
-        <div class="head"><div><h2>Activity Log</h2><p class="sub">Every change made through the dashboard, newest first.</p></div><button class="small" id="logRefresh">Refresh</button></div>
+        <div class="head"><div><h2>Activity Log</h2><p class="sub">Every change made through the dashboard, newest first.</p></div><button class="small" id="logRefresh" style="margin-right:80px">Refresh</button></div>
         <div class="surface" style="margin-top:16px"><div class="tablewrap">
           <table><thead><tr><th>When</th><th>Who</th><th>Piece</th><th>Field</th><th>From</th><th>To</th></tr></thead><tbody id="logBody"></tbody></table>
         </div></div>
@@ -814,7 +815,7 @@
     function saveSnapshot(){
       try { localStorage.setItem('orbitSnap', JSON.stringify({ email:myEmail, meta:META, rows:allRows, ts:Date.now() })); } catch(e){}
     }
-    function clearSnapshot(){ try { localStorage.removeItem('orbitSnap'); } catch(e){} }
+    function clearSnapshot(){ try { localStorage.removeItem('orbitSnap'); localStorage.removeItem('orbitLog'); } catch(e){} }
     $('signout').onclick = function(){
       google.accounts.id.disableAutoSelect(); idToken=null; clearToken(); clearSnapshot();
       $('app').classList.add('hidden'); $('signScreen').classList.remove('hidden');
@@ -1190,18 +1191,27 @@
       $('todayCount').textContent=rows.length+' piece(s) need attention';
     }
 
-    async function loadLog(){
-      const tb=$('logBody'); tb.innerHTML='<tr><td colspan="6"><div class="empty">Loading…</div></td></tr>';
-      const data=await call('listLog',{limit:200});
-      if(!data.ok){ tb.innerHTML='<tr><td colspan="6"><div class="empty">'+esc(data.error)+'</div></td></tr>'; return; }
-      const rows=data.result.rows||[]; tb.innerHTML='';
-      if(!rows.length){ tb.innerHTML='<tr><td colspan="6"><div class="empty">No activity yet.</div></td></tr>'; return; }
+    function renderLogRows(rows){
+      const tb=$('logBody'); if(!tb) return;
+      if(!rows || !rows.length){ tb.innerHTML='<tr><td colspan="6"><div class="empty">No activity yet.</div></td></tr>'; return; }
+      tb.innerHTML='';
       rows.forEach(function(r){
         const tr=document.createElement('tr');
         tr.innerHTML='<td class="muted">'+esc(r.when)+'</td><td>'+esc(r.who)+'</td><td>'+esc(r.piece)+'</td>'+
           '<td>'+esc(r.field)+'</td><td class="muted">'+esc(r.from||'—')+'</td><td>'+esc(r.to||'—')+'</td>';
         tb.appendChild(tr);
       });
+    }
+    async function loadLog(){
+      const tb=$('logBody');
+      let cached=null; try{ cached=JSON.parse(localStorage.getItem('orbitLog')||'null'); }catch(e){}
+      if(cached && cached.length){ renderLogRows(cached); }                 // instant from cache
+      else { tb.innerHTML='<tr><td colspan="6"><div class="empty">Loading…</div></td></tr>'; }
+      const data=await call('listLog',{limit:200});
+      if(!data.ok){ if(!(cached&&cached.length)) tb.innerHTML='<tr><td colspan="6"><div class="empty">'+esc(data.error)+'</div></td></tr>'; return; }
+      const rows=data.result.rows||[];
+      renderLogRows(rows);
+      try{ localStorage.setItem('orbitLog', JSON.stringify(rows)); }catch(e){}
     }
 
     function toggleViralLinks(){ $('pViralLinks').classList.toggle('hidden', !$('pViral').checked); }
@@ -1391,13 +1401,21 @@
 
     // ── Prompts & Handoffs ──
     let hoKind = 'schedule';
+    const HO_HELP = {
+      schedule: 'AI prompt to plan a batch. Fill in the Batch no., Generate, then paste it into your AI (Claude/ChatGPT) to draft the batch layout. Internal — not sent to the client.',
+      reminder: 'A ready-to-send message listing what the client still owes — approvals, input, footage. Send it to the client when you need to chase a decision.',
+      links: 'A checklist of pieces that still have no copy link. Use it internally to see which pieces need a Notion/Google-Doc page made.'
+    };
+    function setHoHelp(){ const el=$('hoHelp'); if(el) el.textContent=HO_HELP[hoKind]||''; }
     document.querySelectorAll('#tab-handoff .seg button').forEach(function(b){
       b.onclick = function(){
         document.querySelectorAll('#tab-handoff .seg button').forEach(function(x){ x.classList.remove('on'); });
         b.classList.add('on');
         hoKind = b.id === 'hoKindReminder' ? 'reminder' : (b.id === 'hoKindLinks' ? 'links' : 'schedule');
+        setHoHelp();
       };
     });
+    setHoHelp();
     $('hoGenerate').onclick = async function(){
       const client = $('hoClient').value;
       const rows = allRows.filter(function(r){ return r['Client']===client; });
