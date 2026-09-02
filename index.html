@@ -265,6 +265,18 @@
       background:#fff; color:var(--ink-soft); cursor:pointer; white-space:nowrap; font:inherit; font-size:11px; }
     .markgrp .mini:hover { background:var(--brand-soft); color:var(--ink); border-color:var(--brand-line); }
     .markgrp .mini:disabled { opacity:.5; cursor:default; }
+    /* saving-progress overlay */
+    .saveprog { position:fixed; inset:0; display:none; align-items:center; justify-content:center;
+      background:rgba(30,36,30,.28); z-index:80; }
+    .saveprog.show { display:flex; }
+    .sp-card { background:#fff; border:1px solid var(--line); border-radius:14px; padding:20px 22px;
+      width:min(90vw,320px); box-shadow:0 8px 30px rgba(42,47,44,.2); text-align:center; }
+    .sp-msg { font-size:14px; font-weight:600; color:var(--ink); margin-bottom:14px; }
+    .sp-track { height:8px; background:var(--line-soft); border-radius:99px; overflow:hidden; }
+    .sp-bar { height:100%; width:0; background:var(--brand); border-radius:99px; transition:width .18s ease; }
+    .sp-pct { margin-top:10px; font-size:12px; color:var(--ink-soft); font-variant-numeric:tabular-nums; }
+    .saveprog.err .sp-bar { background:#c0392b; }
+    .saveprog.err .sp-msg { color:#c0392b; }
   </style>
 </head>
 <body>
@@ -618,6 +630,36 @@
     let reqKinds = ['B-Rolls','Pictures'], curReqs = [];
     const $ = function (id){ return document.getElementById(id); };
 
+    // ── Global saving-progress overlay (shows on every write; real % for batches) ──
+    const WRITE_ACT = { updatePiece:1, importBatch:1, generateInvoice:1, markPaid:1, onboardClient:1, addRequest:1, markReceived:1 };
+    let PROG_SUPPRESS = false;
+    const Progress = (function(){
+      let box, bar, pctEl, msgEl, timer=null, val=0;
+      function build(){
+        if(box) return;
+        box=document.createElement('div'); box.className='saveprog';
+        box.innerHTML='<div class="sp-card"><div class="sp-msg">Saving…</div>'+
+          '<div class="sp-track"><div class="sp-bar"></div></div><div class="sp-pct">0%</div></div>';
+        document.body.appendChild(box);
+        bar=box.querySelector('.sp-bar'); pctEl=box.querySelector('.sp-pct'); msgEl=box.querySelector('.sp-msg');
+      }
+      function set(p){ val=Math.max(0,Math.min(100,Math.round(p))); bar.style.width=val+'%'; pctEl.textContent=val+'%'; }
+      function stop(){ if(timer){ clearInterval(timer); timer=null; } }
+      function begin(msg, total){
+        build(); msgEl.textContent=msg||'Saving…'; box.classList.remove('ok','err'); box.classList.add('show'); set(0); stop();
+        if(!total || total<=1){                       // single request: animate toward 90% while it's in flight
+          timer=setInterval(function(){ if(val<90) set(val + Math.max(1,(90-val)*0.14)); }, 90);
+        }
+      }
+      function step(done, total){ stop(); set(total? (done/total*100) : 100); }
+      function end(ok, msg){
+        build(); stop(); set(100); if(msg) msgEl.textContent=msg;
+        box.classList.add(ok?'ok':'err');
+        setTimeout(function(){ box.classList.remove('show'); }, ok?450:1300);
+      }
+      return { begin:begin, step:step, end:end };
+    })();
+
     window.onload = function () {
       google.accounts.id.initialize({ client_id:CLIENT_ID, callback:onCredential, auto_select:true, itp_support:true });
       google.accounts.id.renderButton($('signin'), { theme:'outline', size:'large', text:'signin_with' });
@@ -654,6 +696,8 @@
     function clearToken(){ try { localStorage.removeItem('orbitTok'); } catch(e){} }
 
     async function call(action, payload){
+      const showProg = WRITE_ACT[action] && !PROG_SUPPRESS;
+      if(showProg) Progress.begin('Saving…');
       let data = await rawCall(action, payload);
       // If the token expired mid-session, silently fetch a fresh one and retry once.
       if (data && data.ok === false && /token|authoris|authoriz|expired|aud/i.test(data.error||'')) {
@@ -662,6 +706,7 @@
         data = await rawCall(action, payload);
         if (data && data.ok === false && /token|authoris|authoriz|expired|aud/i.test(data.error||'') && action!=='whoami') sessionLost();
       }
+      if(showProg) Progress.end(!!(data && data.ok), (data && data.ok) ? 'Saved.' : 'Save failed');
       return data;
     }
     async function rawCall(action, payload){
@@ -819,7 +864,10 @@
         const targets=$('deBatch').checked ? batchMates(r) : [r];
         s.disabled=true; $('deMsg').className='pstatus muted'; $('deMsg').textContent='Saving…';
         let done=0, failed=[];
-        for(const t of targets){ const res=await savePiece(t, changes); if(res.ok) done++; else failed.push(t['Piece ID']+': '+res.error); }
+        Progress.begin('Saving…', targets.length); PROG_SUPPRESS=true;
+        try{ for(const t of targets){ const res=await savePiece(t, changes); if(res.ok) done++; else failed.push(t['Piece ID']+': '+res.error); Progress.step(done+failed.length, targets.length); } }
+        finally{ PROG_SUPPRESS=false; }
+        Progress.end(!failed.length, 'Saved.');
         s.disabled=false;
         if(failed.length){ $('deMsg').className='pstatus err'; $('deMsg').textContent=TT('Saved ')+done+TT(', failed — ')+failed.join(' · ')+TT('. Try again.'); }
         else { $('deMsg').className='pstatus ok'; $('deMsg').textContent=TT('Saved ')+done+TT(' piece(s).'); setTimeout(closeDateEditor,600); }
@@ -842,10 +890,14 @@
     $('assignStyle').value = PREFS.assignStyle||'alternate';
     $('assignRefresh').onclick=function(){ loadRows().then(function(){ renderAssign(); }); };
     $('assignSaveAll').onclick=async function(){      const trs=Array.from($('assignBody').querySelectorAll('tr')); let done=0, fail=0; setAssign('Saving…','muted');
-      for(const tr of trs){ const btn=tr.querySelector('button[data-save]'); if(!btn) continue;
+      const rows=trs.filter(function(tr){ return tr.querySelector('button[data-save]'); }); let idx=0;
+      Progress.begin('Saving…', rows.length); PROG_SUPPRESS=true;
+      try{ for(const tr of rows){ const btn=tr.querySelector('button[data-save]');
         const dateEl=tr.querySelector('input[type=date]'); const catchEl=tr.querySelector('input[type=checkbox]');
         const res=await assignOne(btn.dataset.save, Number(btn.dataset.row), dateEl.value, catchEl.checked);
-        if(res.ok) done++; else fail++; }
+        if(res.ok) done++; else fail++; Progress.step(++idx, rows.length); } }
+      finally{ PROG_SUPPRESS=false; }
+      Progress.end(!fail, 'Saved.');
       renderAssign(); renderPipe(); renderToday();
       setAssign(TT('Saved ')+done+(fail?(' · '+fail+TT(' skipped (fix and retry)')):'')+'.', fail?'err':'ok');
     };
@@ -882,12 +934,17 @@
           if(/^10 Published/.test(s) || PARKED.indexOf(s)!==-1) return;
           (byClient[r['Client']]=byClient[r['Client']]||[]).push(r); });
         let done=0, fail=0;
+        const jobs=[];
         for(const cl of Object.keys(byClient)){
           const pieces=byClient[cl].slice().sort(function(a,b){ return (a['Publish Date']||'zzz').localeCompare(b['Publish Date']||'zzz'); });
           const sugg=suggestDatesForClient(cl, pieces, style);
-          for(const p of pieces){ const ymd=sugg[p['Piece ID']]; if(!ymd) continue;
-            const res=await assignOne(p['Piece ID'], p.row, ymd, true); if(res.ok) done++; else fail++; }
+          for(const p of pieces){ const ymd=sugg[p['Piece ID']]; if(ymd) jobs.push({p:p, ymd:ymd}); }
         }
+        let idx=0;
+        Progress.begin('Saving…', jobs.length); PROG_SUPPRESS=true;
+        try{ for(const j of jobs){ const res=await assignOne(j.p['Piece ID'], j.p.row, j.ymd, true); if(res.ok) done++; else fail++; Progress.step(++idx, jobs.length); } }
+        finally{ PROG_SUPPRESS=false; }
+        Progress.end(!fail, 'Saved.');
         b.disabled=false; renderAssign(); renderPipe(); renderToday();
         setAssign('Rearranged '+done+' piece(s)'+(fail?(' · '+fail+' skipped'):'')+'.', fail?'err':'ok');
       };
@@ -990,12 +1047,14 @@
     function batchMates(r){ const b=batchOf(r['Piece ID']); if(!b) return [r];
       return allRows.filter(function(x){ return x['Client']===r['Client'] && batchOf(x['Piece ID'])===b; }); }
 
-    const PLAT_OPTIONS=['IG Reels','IG Post','TikTok','Facebook','LinkedIn','Website'];
+    const PLAT_OPTIONS=['IG & FB','TikTok','LinkedIn','Website Article'];
+    // Match a stored token (old or new) to one of the four options, so the editor pre-checks correctly.
+    const PLAT_MATCH={ 'IG & FB':/ig|instagram|reel|story|fb|facebook/i, 'TikTok':/tiktok|tt/i, 'LinkedIn':/linkedin/i, 'Website Article':/website|web|article/i };
     function openPlatformEditor(r){
       $('peTitle').textContent=r['Piece ID']+' · '+(r['Title']||'');
       const cur=(r['PlatformList']||[]).map(function(s){return String(s).trim().toLowerCase();});
       $('peBoxes').innerHTML=PLAT_OPTIONS.map(function(p){
-        const on=cur.indexOf(p.toLowerCase())!==-1;
+        const on=cur.some(function(t){ return PLAT_MATCH[p] && PLAT_MATCH[p].test(t); });
         return '<label class="pebox"><input type="checkbox" value="'+esc(p)+'"'+(on?' checked':'')+'> '+esc(p)+'</label>';
       }).join('');
       $('peAll').checked=false;
@@ -1014,8 +1073,11 @@
         const targets=$('peAll').checked ? batchMates(r) : [r];
         s.disabled=true; $('peMsg').className='pstatus muted'; $('peMsg').textContent='Saving…';
         let done=0, failed=[];
-        for(const t of targets){ const res=await savePiece(t,{ 'Platform':picked.join(', ') });
-          if(res.ok) done++; else failed.push(t['Piece ID']); }
+        Progress.begin('Saving…', targets.length); PROG_SUPPRESS=true;
+        try{ for(const t of targets){ const res=await savePiece(t,{ 'Platform':picked.join(', ') });
+          if(res.ok) done++; else failed.push(t['Piece ID']); Progress.step(done+failed.length, targets.length); } }
+        finally{ PROG_SUPPRESS=false; }
+        Progress.end(!failed.length, 'Saved.');
         s.disabled=false;
         if(failed.length){ $('peMsg').className='pstatus err'; $('peMsg').textContent=TT('Saved ')+done+TT(', failed: ')+failed.join(', ')+TT(' — try again.'); }
         else { $('peMsg').className='pstatus ok'; $('peMsg').textContent=TT('Saved ')+done+TT(' piece(s).'); setTimeout(closePlatformEditor,600); }
@@ -1179,7 +1241,7 @@
       else if(has(/fb|facebook/)) out.push('FB');
       if(has(/tiktok|tt/)) out.push('TikTok');
       if(has(/linkedin/)) out.push('LinkedIn');
-      if(has(/website|web/)) out.push('Website');
+      if(has(/website|web/)) out.push('Website Article');
       list.forEach(function(p){ if(!/ig|instagram|reel|story|fb|facebook|tiktok|tt|linkedin|website|web/i.test(p)) out.push(p); });
       const seen={}; const uniq=out.filter(function(x){ if(seen[x])return false; seen[x]=1; return true; });
       return uniq.length? uniq.map(function(x){ return '<span class="chip plat">'+esc(x)+'</span>'; }).join('') : '<span class="muted">—</span>';
@@ -1206,7 +1268,7 @@
       else if(has(/fb|facebook/)) out.push(['FB', ig]);
       if(has(/tiktok|tt/)) out.push(['TikTok', tt]);
       if(has(/linkedin/)) out.push(['LinkedIn', base]);
-      if(has(/website|web/)) out.push(['Website', base]);
+      if(has(/website|web/)) out.push(['Website Article', base]);
       if(!out.length) out.push(['Publish', base]);
       return out.map(function(p){ return '<div class="pdate"><span class="chip plat">'+esc(p[0])+'</span> <span class="pd">'+esc(niceDate(p[1]))+'</span></div>'; }).join('');
     }
