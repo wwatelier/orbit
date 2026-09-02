@@ -615,6 +615,7 @@ function renderWeek(){
         const c = toneFor(r);
         return '<div class="ditem"><span class="pill '+c.tone+'">'+esc(c.label)+'</span>'
           + '<span class="did">'+esc(r.pieceId)+'</span>'
+          + clientPlat(r.platform)
           + '<span class="dt">'+esc(r.title)+'</span></div>';
       }).join("");
     }
