@@ -244,9 +244,22 @@
       #invDoc, #repDoc { position:absolute; left:0; top:0; width:100%; border:none; box-shadow:none; }
       .navbtn,.controls,.head,.sidebar{ display:none !important; }
     }
+
+    /* language toggle (added; overlay only, no layout shift) */
+    .langtoggle { position:fixed; top:14px; right:16px; z-index:45; display:inline-flex;
+      background:var(--panel); border:1px solid var(--line); border-radius:9px; overflow:hidden;
+      box-shadow:0 1px 6px rgba(90,125,110,.10); }
+    .langtoggle button { border:none; background:transparent; color:var(--ink-soft); font:inherit;
+      font-size:12px; font-weight:600; padding:6px 11px; cursor:pointer; border-radius:0; line-height:1.2; }
+    .langtoggle button.on { background:var(--brand); color:#fff; }
+    .langtoggle button:not(.on):hover { background:var(--brand-soft); color:var(--ink); }
+    @media (max-width:820px){ .langtoggle { top:auto; bottom:14px; right:14px;
+      box-shadow:0 2px 10px rgba(42,47,44,.18); } }
+    @media print { .langtoggle { display:none !important; } }
   </style>
 </head>
 <body>
+  <div id="langToggle" class="langtoggle" role="group" aria-label="Language"><button id="langEN" type="button" class="on">EN</button><button id="langTH" type="button">TH</button></div>
 
   <div class="signwrap" id="signScreen">
     <div class="signcard">
@@ -719,7 +732,7 @@
         b.disabled=true; obSet('Creating '+name+'…','muted');
         const data=await call('onboardClient', payload);
         b.disabled=false;
-        if(!data.ok){ obSet('Failed: '+data.error, 'err'); return; }
+        if(!data.ok){ obSet(TT('Failed: ')+data.error, 'err'); return; }
         obSet(name+' created. Opening Client View…','ok');
         // Clear the form, refresh meta so the new client appears in every dropdown, then jump to the link.
         ['obName','obHandles','obFounders','obNotes','obQuota','obBaseDesc','obBaseTHB','obBaseSGD','obAddDesc','obAddTHB','obAddSGD']
@@ -752,8 +765,8 @@
         let done=0, failed=[];
         for(const t of targets){ const res=await savePiece(t, changes); if(res.ok) done++; else failed.push(t['Piece ID']+': '+res.error); }
         s.disabled=false;
-        if(failed.length){ $('deMsg').className='pstatus err'; $('deMsg').textContent='Saved '+done+', failed — '+failed.join(' · ')+'. Try again.'; }
-        else { $('deMsg').className='pstatus ok'; $('deMsg').textContent='Saved '+done+' piece(s).'; setTimeout(closeDateEditor,600); }
+        if(failed.length){ $('deMsg').className='pstatus err'; $('deMsg').textContent=TT('Saved ')+done+TT(', failed — ')+failed.join(' · ')+TT('. Try again.'); }
+        else { $('deMsg').className='pstatus ok'; $('deMsg').textContent=TT('Saved ')+done+TT(' piece(s).'); setTimeout(closeDateEditor,600); }
         renderTodayPosts(); renderPipe(); renderToday();
       };
     })();
@@ -778,7 +791,7 @@
         const res=await assignOne(btn.dataset.save, Number(btn.dataset.row), dateEl.value, catchEl.checked);
         if(res.ok) done++; else fail++; }
       renderAssign(); renderPipe(); renderToday();
-      setAssign('Saved '+done+(fail?(' · '+fail+' skipped (fix and retry)'):'')+'.', fail?'err':'ok');
+      setAssign(TT('Saved ')+done+(fail?(' · '+fail+TT(' skipped (fix and retry)')):'')+'.', fail?'err':'ok');
     };
     // ── Add one piece (reuses the Block A importer with a single row) ──
     const BLOCK_A_HEADER='Piece ID\tClient\tFormat\tPlatform\tTitle\tPublish Date\tReady By\tStage\tFounder\tCopy Link';
@@ -905,14 +918,14 @@
         sel.onchange=async function(){ sel.disabled=true; msg.className='pstatus muted tpmsg'; msg.textContent='Saving…';
           const res=await savePiece(r,{ 'Stage':sel.value });
           sel.disabled=false;
-          if(!res.ok){ msg.className='pstatus err tpmsg'; msg.textContent='Failed: '+res.error+' — try again.'; return; }
+          if(!res.ok){ msg.className='pstatus err tpmsg'; msg.textContent=TT('Failed: ')+res.error+TT(' — try again.'); return; }
           msg.className='pstatus ok tpmsg'; msg.textContent='Saved.'; renderTodayPosts(); renderPipe(); renderToday();
         };
         card.querySelector('.tpsel').appendChild(sel);
         card.querySelector('.tpdate').onclick=function(){ openDateEditor(r); };
         wrap.appendChild(card);
       });
-      $('tpCount').textContent=rows.length+' post(s) today'+(urgent?(' · '+urgent+' not ready'):'');
+      $('tpCount').textContent=rows.length+TT(' post(s) today')+(urgent?(' · '+urgent+TT(' not ready')):'');
     }
 
     // Batch = pieces sharing the client + the batch number embedded in the Piece ID (e.g. C12.1 -> 12).
@@ -947,8 +960,8 @@
         for(const t of targets){ const res=await savePiece(t,{ 'Platform':picked.join(', ') });
           if(res.ok) done++; else failed.push(t['Piece ID']); }
         s.disabled=false;
-        if(failed.length){ $('peMsg').className='pstatus err'; $('peMsg').textContent='Saved '+done+', failed: '+failed.join(', ')+' — try again.'; }
-        else { $('peMsg').className='pstatus ok'; $('peMsg').textContent='Saved '+done+' piece(s).'; setTimeout(closePlatformEditor,600); }
+        if(failed.length){ $('peMsg').className='pstatus err'; $('peMsg').textContent=TT('Saved ')+done+TT(', failed: ')+failed.join(', ')+TT(' — try again.'); }
+        else { $('peMsg').className='pstatus ok'; $('peMsg').textContent=TT('Saved ')+done+TT(' piece(s).'); setTimeout(closePlatformEditor,600); }
         renderPipe(); renderToday(); renderTodayPosts();
       };
     })();
@@ -1166,7 +1179,7 @@
       $('save').disabled=true; $('validate').disabled=true; setImp('Saving…','muted');
       const data=await call('importBatch',{tsv:tsv}); $('validate').disabled=false;
       if(!data.ok){ setImp(data.error,'err'); return; }
-      setImp('Saved '+data.result.total+' row(s).','ok'); renderReport(data.result);
+      setImp(TT('Saved ')+data.result.total+TT(' row(s).'),'ok'); renderReport(data.result);
       $('tsv').value=''; lastValidatedTsv=null; loadRows();
     };
     function renderReport(r){
@@ -1648,6 +1661,109 @@ sched,
     function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
     function loadPrefs(){ try{ return JSON.parse(localStorage.getItem('orbitPrefs')||'{}'); }catch(e){ return {}; } }
     function savePrefs(){ try{ localStorage.setItem('orbitPrefs', JSON.stringify(PREFS)); }catch(e){} }
+
+    /* ── i18n overlay: EN is native/default; TH applied on demand ── */
+    (function(){
+      var TH = {"Content operations for WealthWise Atelier.": "ระบบจัดการงานคอนเทนต์ของ WealthWise Atelier", "Waiting for sign-in…": "กำลังรอการเข้าสู่ระบบ…", "Today": "วันนี้", "Pipeline": "ไปป์ไลน์", "Assign Dates": "กำหนดวันโพสต์", "Import": "นำเข้า", "Prompts & Handoffs": "พรอมป์ & ส่งต่องาน", "Invoices": "ใบแจ้งหนี้", "Onboard Client": "เพิ่มลูกค้าใหม่", "Client View": "มุมมองลูกค้า", "Activity Log": "บันทึกกิจกรรม", "Sign out": "ออกจากระบบ", "Today's posts": "โพสต์วันนี้", "Going live today. Not ready yet shows red. Change status or dates right here — it saves to the master.": "ที่จะโพสต์วันนี้ อันที่ยังไม่พร้อมจะขึ้นสีแดง แก้สถานะหรือวันได้ตรงนี้เลย ระบบจะบันทึกลงมาสเตอร์ให้", "Today's work": "งานวันนี้", "Pieces that need a hand — behind schedule, waiting on the client, or posting soon.": "ชิ้นงานที่ต้องดูแล ทั้งที่ล่าช้า รอลูกค้า หรือใกล้ถึงกำหนดโพสต์", "View as": "ดูในมุมมอง", "All": "ทั้งหมด", "Graphic Designer": "กราฟิกดีไซเนอร์", "Video Editor": "ตัดต่อวิดีโอ", "Piece ID": "รหัสชิ้นงาน", "Client": "ลูกค้า", "Format": "รูปแบบ", "Stage": "ขั้นตอน", "On Track": "ตามกำหนด", "Posting dates": "วันที่โพสต์", "Every piece across the production ladder. Click any row to update it.": "ทุกชิ้นงานในทุกขั้นตอนการผลิต คลิกที่แถวไหนก็ได้เพื่อแก้ไข", "View": "มุมมอง", "Table": "ตาราง", "Board": "บอร์ด", "Refresh": "รีเฟรช", "★ Viral only": "★ เฉพาะไวรัล", "Platform": "แพลตฟอร์ม", "Date": "วันที่", "Copy": "คอปปี้", "Assign Publish Dates": "กำหนดวันเผยแพร่", "Pieces waiting for a posting date. Suggested dates follow each client's posting days and skip any day already taken — tick same-day to double up on purpose.": "ชิ้นงานที่รอกำหนดวันโพสต์ วันที่แนะนำจะอิงตามวันโพสต์ของลูกค้าแต่ละราย และข้ามวันที่มีคิวอยู่แล้ว ติ๊ก same-day ถ้าต้องการโพสต์ซ้อนวันเดียวกัน", "Posting style": "สไตล์การโพสต์", "Alternate formats (reel → carousel → reel)": "สลับรูปแบบ (reel → carousel → reel)", "Any format (same allowed)": "รูปแบบใดก็ได้ (ซ้ำกันได้)", "Save all suggested": "บันทึกที่แนะนำทั้งหมด", "Auto-rearrange whole board": "จัดเรียงทั้งบอร์ดอัตโนมัติ", "Title": "ชื่อเรื่อง", "Suggested / chosen date": "วันที่แนะนำ / ที่เลือก", "Same-day": "วันเดียวกัน", "Import a batch": "นำเข้าทั้งชุด", "Paste Block A with its header row. Validate first — Save turns on only when nothing is blocking.": "วาง Block A พร้อมแถวหัวตาราง กด Validate ก่อน ปุ่ม Save จะเปิดใช้งานเมื่อไม่มีข้อผิดพลาดค้างอยู่", "Add one piece": "เพิ่มทีละชิ้น", "Add piece": "เพิ่มชิ้นงาน", "Paste a batch": "วางทั้งชุด", "Validate": "ตรวจสอบ", "Save to Sheet": "บันทึกลงชีต", "Ready-to-copy text built from the live schedule. Pick a client, pick what you need.": "ข้อความพร้อมก็อปปี้ สร้างจากตารางงานล่าสุด เลือกลูกค้าและสิ่งที่ต้องการ", "Batch no.": "ชุดที่", "Scheduling prompt": "พรอมป์จัดตาราง", "Client reminder": "ข้อความเตือนลูกค้า", "Missing links": "ลิงก์ที่ขาด", "Generate": "สร้าง", "Copy to clipboard": "ก็อปปี้ไปคลิปบอร์ด", "Generate a client invoice from the stored fees. Mark it paid to turn it into a receipt.": "สร้างใบแจ้งหนี้ของลูกค้าจากค่าบริการที่บันทึกไว้ กดชำระแล้วเพื่อเปลี่ยนเป็นใบเสร็จ", "Currency": "สกุลเงิน", "Payment": "การชำระเงิน", "Version 1": "เวอร์ชัน 1", "Version 2": "เวอร์ชัน 2", "Refresh list": "รีเฟรชรายการ", "Base description": "รายละเอียดหลัก", "Base ฿": "หลัก ฿", "Base S$": "หลัก S$", "Add-on description (leave blank if none)": "รายละเอียดเสริม (เว้นว่างถ้าไม่มี)", "Add-on ฿": "เสริม ฿", "Add-on S$": "เสริม S$", "Preview": "ดูตัวอย่าง", "Save & record invoice": "บันทึก & ลงใบแจ้งหนี้", "Invoice No": "เลขที่ใบแจ้งหนี้", "Total": "ยอดรวม", "Status": "สถานะ", "Issued": "วันที่ออก", "Paid": "ชำระแล้ว", "Onboard a client": "เพิ่มลูกค้าใหม่", "Fill this once and the client is set up everywhere: profile, posting rhythm, billing, dropdowns, and their private calendar link.": "กรอกครั้งเดียว ระบบจะตั้งค่าลูกค้าให้ครบทุกที่ ทั้งโปรไฟล์ จังหวะการโพสต์ การเรียกเก็บเงิน ตัวเลือกต่างๆ และลิงก์ปฏิทินส่วนตัวของลูกค้า", "The basics": "ข้อมูลพื้นฐาน", "Client name": "ชื่อลูกค้า", "Must match exactly what you'll use in Piece IDs and imports.": "ต้องตรงกับที่ใช้ในรหัสชิ้นงานและการนำเข้าทุกประการ", "Social handles": "บัญชีโซเชียล", "Founder(s)": "ผู้ก่อตั้ง", "Who on the client side must act. Blank uses the client name.": "ฝั่งลูกค้าที่ต้องเป็นคนดำเนินการ เว้นว่างจะใช้ชื่อลูกค้า", "Notes": "หมายเหตุ", "Content rhythm": "จังหวะคอนเทนต์", "Pieces per batch (quota)": "จำนวนชิ้นต่อชุด (โควตา)", "Batch cadence": "รอบของชุดงาน", "Posting days": "วันที่โพสต์", "Days this client posts. Used to suggest dates and avoid double-booking.": "วันที่ลูกค้ารายนี้โพสต์ ใช้แนะนำวันและเลี่ยงการจองซ้อน", "Their Instagram is linked to Facebook": "Instagram ของลูกค้าเชื่อมกับ Facebook", "Tick if posting to IG also posts to FB — the calendar then shows \"IG & FB\" as one action.": "ติ๊กถ้าโพสต์ IG แล้วขึ้น FB ด้วย ปฏิทินจะแสดง \"IG & FB\" เป็นงานเดียว", "Billing": "การเรียกเก็บเงิน", "Package description": "รายละเอียดแพ็กเกจ", "Billing cycle": "รอบการเรียกเก็บ", "Base fee (THB)": "ค่าบริการหลัก (THB)", "Base fee (SGD)": "ค่าบริการหลัก (SGD)", "Add-on description": "รายละเอียดส่วนเสริม", "Primary currency": "สกุลเงินหลัก", "Add-on fee (THB)": "ค่าบริการเสริม (THB)", "Add-on fee (SGD)": "ค่าบริการเสริม (SGD)", "Create client": "สร้างลูกค้า", "Each client's private read-only calendar. Copy the link, open it, or share it — the client sees only their own pieces, and there's nothing for them to edit.": "ปฏิทินส่วนตัวแบบอ่านอย่างเดียวของลูกค้าแต่ละราย ก็อปปี้ลิงก์ เปิด หรือแชร์ได้ ลูกค้าจะเห็นเฉพาะงานของตัวเองและแก้ไขอะไรไม่ได้", "Calendar link": "ลิงก์ปฏิทิน", "Every change made through the dashboard, newest first.": "ทุกการเปลี่ยนแปลงผ่านแดชบอร์ด เรียงจากใหม่สุด", "When": "เมื่อ", "Who": "โดย", "Piece": "ชิ้นงาน", "Field": "ฟิลด์", "From": "จาก", "To": "เป็น", "Blocked": "ติดปัญหา", "★ Viral (mark once published)": "★ ไวรัล (ทำเครื่องหมายเมื่อโพสต์แล้ว)", "Copy link (Notion)": "ลิงก์คอปปี้ (Notion)", "Footage & photos needed": "ฟุตเทจ & รูปที่ต้องใช้", "Nothing requested yet.": "ยังไม่มีการขอ", "Add": "เพิ่ม", "Save": "บันทึก", "Close": "ปิด", "Platforms": "แพลตฟอร์ม", "Apply to the whole batch": "ใช้กับทั้งชุด", "Save platforms": "บันทึกแพลตฟอร์ม", "Cancel": "ยกเลิก", "Main publish date": "วันเผยแพร่หลัก", "IG date": "วันที่ IG", "(blank = same as main)": "(เว้นว่าง = ตามวันหลัก)", "TikTok date": "วันที่ TikTok", "Apply main date to all platforms": "ใช้วันหลักกับทุกแพลตฟอร์ม", "(clears IG/TikTok overrides)": "(ล้างค่าเฉพาะของ IG/TikTok)", "Save dates": "บันทึกวันที่", "Piece ID (e.g. C12.1)": "รหัสชิ้นงาน (เช่น C12.1)", "Platform (e.g. IG, TikTok)": "แพลตฟอร์ม (เช่น IG, TikTok)", "e.g. 3": "เช่น 3", "Generated text appears here…": "ข้อความที่สร้างจะแสดงที่นี่…", "e.g. Ice": "เช่น Ice", "Anything the team should know": "สิ่งที่ทีมควรรู้", "Ice  ·  comma-separate if several": "Ice  ·  คั่นด้วยจุลภาคถ้ามีหลายคน", "Monthly content package": "แพ็กเกจคอนเทนต์รายเดือน", "Optional": "ไม่บังคับ", "How many": "จำนวนเท่าไร", "Note (exactly what's needed)": "หมายเหตุ (ระบุสิ่งที่ต้องใช้ให้ชัด)", "IG post URL (https://instagram.com/…)": "ลิงก์โพสต์ IG (https://instagram.com/…)", "TikTok post URL (https://tiktok.com/…)": "ลิงก์โพสต์ TikTok (https://tiktok.com/…)", "Signing you in…": "กำลังเข้าสู่ระบบ…", "Checking with Orbit…": "กำลังตรวจสอบกับ Orbit…", "Signed out. Sign in again above.": "ออกจากระบบแล้ว เข้าสู่ระบบอีกครั้งด้านบน", "Main date is a Sunday — pick another day.": "วันหลักตรงกับวันอาทิตย์ กรุณาเลือกวันอื่น", "Saving…": "กำลังบันทึก…", "Saved.": "บันทึกแล้ว", "Loading…": "กำลังโหลด…", "0 posts today": "0 โพสต์วันนี้", "Nothing scheduled to publish today.": "ไม่มีงานที่กำหนดโพสต์วันนี้", "No pieces yet. Import a batch to get started.": "ยังไม่มีชิ้นงาน นำเข้าทั้งชุดเพื่อเริ่มต้น", "Nothing in the active pipeline.": "ไม่มีงานในไปป์ไลน์ที่ทำอยู่", "Nothing needs attention right now.": "ยังไม่มีงานที่ต้องดูแลตอนนี้", "No activity yet.": "ยังไม่มีกิจกรรม", "Nothing here.": "ไม่มีข้อมูล", "No open requests.": "ไม่มีคำขอค้างอยู่", "Nothing pasted yet.": "ยังไม่ได้วางข้อมูล", "Validating…": "กำลังตรวจสอบ…", "Ready to save.": "พร้อมบันทึก", "Fix the blocking errors, then validate again.": "แก้ข้อผิดพลาดที่ค้างอยู่ แล้วตรวจสอบอีกครั้ง", "Text changed — validate again.": "ข้อความเปลี่ยนไป ตรวจสอบอีกครั้ง", "Nothing to generate for this client.": "ไม่มีข้อมูลให้สร้างสำหรับลูกค้ารายนี้", "Please sign in to continue.": "กรุณาเข้าสู่ระบบเพื่อดำเนินการต่อ", "Your session expired. Please sign in again.": "เซสชันหมดอายุ กรุณาเข้าสู่ระบบอีกครั้ง", "Please sign in again.": "กรุณาเข้าสู่ระบบอีกครั้ง", "Client name is required.": "ต้องระบุชื่อลูกค้า", "Pick at least one posting day.": "เลือกวันโพสต์อย่างน้อยหนึ่งวัน", "Piece ID is required.": "ต้องระบุรหัสชิ้นงาน", "Leave IG or TikTok blank to use the main publish date.": "เว้น IG หรือ TikTok ว่างไว้เพื่อใช้วันเผยแพร่หลัก", "URGENT": "ด่วน", "Edit dates": "แก้วันที่", "Received": "รับแล้ว", "Mark paid": "ทำเครื่องหมายชำระแล้ว", "Saved ": "บันทึกแล้ว ", " piece(s).": " ชิ้น", ", failed — ": ", ล้มเหลว: ", ", failed: ": ", ล้มเหลว: ", ". Try again.": " ลองอีกครั้ง", " — try again.": " ลองอีกครั้ง", "Failed: ": "ล้มเหลว: ", " post(s) today": " โพสต์วันนี้", " not ready": " ยังไม่พร้อม", " skipped (fix and retry)": " ที่ข้ามไป (แก้แล้วลองใหม่)", " row(s).": " แถว"};
+      var SKIP_IDS = {invDocWrap:1, hoOut:1, report:1, invPreviewWrap:1};
+      var tracked = [];      // {node, raw}
+      var phTracked = [];    // {el, raw}
+      var muted = false, obs = null;
+      var LANG = 'en';
+      try { LANG = localStorage.getItem('orbitLang') || 'en'; } catch(e){}
+
+      window.TT = function(s){ return (LANG==='th' && TH[s]!=null) ? TH[s] : s; };
+
+      function skipEl(el){
+        while(el && el.nodeType===1){
+          var t = el.tagName;
+          if(t==='SCRIPT'||t==='STYLE'||t==='TEXTAREA') return true;
+          if(el.id && SKIP_IDS[el.id]) return true;
+          el = el.parentNode;
+        }
+        return false;
+      }
+      function parts(raw){
+        var m = raw.match(/^(\s*)([\s\S]*?)(\s*)$/);
+        return m ? [m[1], m[2], m[3]] : ['', raw, ''];
+      }
+      function trNode(node){
+        var raw = node.nodeValue; if(!raw) return;
+        var p = parts(raw), core = p[1];
+        if(!core || TH[core]==null) return;
+        if(skipEl(node.parentNode)) return;
+        tracked.push({node:node, raw:raw});
+        node.nodeValue = p[0] + TH[core] + p[2];
+      }
+      function trPh(el){
+        if(skipEl(el)) return;
+        var v = el.getAttribute('placeholder'); if(v==null) return;
+        var core = v.replace(/^\s+|\s+$/g,''); if(core==='' || TH[core]==null) return;
+        phTracked.push({el:el, raw:v});
+        el.setAttribute('placeholder', v.replace(core, TH[core]));
+      }
+      function walk(root){
+        if(!root) return;
+        if(root.nodeType===3){ trNode(root); return; }
+        if(root.nodeType!==1) return;
+        var t = root.tagName;
+        if(t==='SCRIPT'||t==='STYLE'||t==='TEXTAREA') return;
+        if(root.id && SKIP_IDS[root.id]) return;
+        var tw = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null, false), n;
+        var list = [];
+        while((n = tw.nextNode())) list.push(n);
+        list.forEach(trNode);
+        if(root.getAttribute && root.getAttribute('placeholder')!=null) trPh(root);
+        if(root.querySelectorAll){
+          Array.prototype.forEach.call(root.querySelectorAll('[placeholder]'), trPh);
+        }
+      }
+      function applyTH(){ muted=true; try{ walk(document.body); } finally { muted=false; } }
+      function revertEN(){
+        muted=true;
+        try{
+          tracked.forEach(function(o){ try{ if(o.node.parentNode) o.node.nodeValue=o.raw; }catch(e){} });
+          phTracked.forEach(function(o){ try{ o.el.setAttribute('placeholder', o.raw); }catch(e){} });
+        } finally { tracked=[]; phTracked=[]; muted=false; }
+      }
+      function startObs(){
+        if(obs || !window.MutationObserver) return;
+        obs = new MutationObserver(function(muts){
+          if(muted || LANG!=='th') return;
+          muted=true;
+          try{
+            muts.forEach(function(m){
+              if(m.type==='childList'){
+                Array.prototype.forEach.call(m.addedNodes, function(nd){ walk(nd); });
+              } else if(m.type==='characterData'){
+                trNode(m.target);
+              }
+            });
+          } finally { muted=false; }
+        });
+        obs.observe(document.body, {childList:true, subtree:true, characterData:true});
+      }
+      function stopObs(){ if(obs){ obs.disconnect(); obs=null; } }
+
+      function setLang(l){
+        LANG = (l==='th') ? 'th' : 'en';
+        try{ localStorage.setItem('orbitLang', LANG); }catch(e){}
+        document.documentElement.setAttribute('lang', LANG);
+        var en=document.getElementById('langEN'), th=document.getElementById('langTH');
+        if(en) en.classList.toggle('on', LANG==='en');
+        if(th) th.classList.toggle('on', LANG==='th');
+        if(LANG==='th'){ applyTH(); startObs(); }
+        else { stopObs(); revertEN(); }
+      }
+      window.orbitSetLang = setLang;
+
+      document.addEventListener('DOMContentLoaded', function(){
+        var en=document.getElementById('langEN'), th=document.getElementById('langTH');
+        if(en) en.addEventListener('click', function(){ setLang('en'); });
+        if(th) th.addEventListener('click', function(){ setLang('th'); });
+        setLang(LANG);   // default 'en' is a no-op; restores saved 'th' if set
+      });
+    })();
   </script>
 </body>
 </html>
