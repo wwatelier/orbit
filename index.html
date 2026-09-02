@@ -537,6 +537,7 @@
       <h3 id="pTitle"></h3>
       <div class="pid" id="pMeta"></div>
       <div class="field"><label>Stage</label><select id="pStage"></select></div>
+      <div class="field"><label>Publish date</label><input type="date" id="pDate" style="font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px"></div>
       <div class="field"><label><input type="checkbox" id="pBlocked"> Blocked</label></div>
       <div class="field"><label><input type="checkbox" id="pViral"> ★ Viral (mark once published)</label>
         <div id="pViralLinks" class="hidden" style="margin-top:8px;display:grid;gap:8px">
@@ -1172,6 +1173,7 @@
       $('pTitle').textContent=r['Title']||r['Piece ID'];
       $('pMeta').textContent=r['Piece ID']+' · '+r['Client']+' · '+r['Format']+(r['PlatformList'].length?' · '+r['PlatformList'].join(', '):'');
       $('pStage').value=r['Stage']||'1 Copywriting';
+      $('pDate').value=r['Publish Date']||'';
       $('pBlocked').checked=r['Blocked']==='TRUE';
       $('pCopyLink').value=r['Copy Link']||'';
       $('pViral').checked=r['Viral']==='TRUE';
@@ -1192,6 +1194,11 @@
       if($('pViral').checked!==(current['Viral']==='TRUE')) changes['Viral']=$('pViral').checked;
       if(($('pViralIG').value||'')!==(current['Viral IG Link']||'')) changes['Viral IG Link']=$('pViralIG').value;
       if(($('pViralTT').value||'')!==(current['Viral TT Link']||'')) changes['Viral TT Link']=$('pViralTT').value;
+      const newDate=($('pDate').value||'').trim(), curDate=(current['Publish Date']||'').trim();
+      if(newDate!==curDate){
+        if(newDate){ const dd=new Date(newDate+'T00:00:00'); if(dd.getDay()===0){ setPStatus('Publish date is a Sunday — pick another day.','err'); return; } }
+        changes['Publish Date']=newDate; changes['Ready By']=newDate?minus14(newDate):'';
+      }
       if(!Object.keys(changes).length){ setPStatus('No changes.','muted'); return; }
       $('pSave').disabled=true; setPStatus('Saving…','muted');
       const data=await call('updatePiece',{ row:current.row, pieceId:current['Piece ID'], changes:changes });
