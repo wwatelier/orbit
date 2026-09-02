@@ -1003,7 +1003,8 @@
           c.innerHTML='<div class="bt">'+esc(r['Title']||r['Piece ID'])+reqMark(r)+viralMark(r)+'</div>'+
             '<div class="bm">'+esc(r['Piece ID'])+' '+clientChip(r['Client'])+' '+fmtChip(r['Format'])+'</div>'+
             '<div class="bplat">'+platLabel(r['PlatformList'],r['Client'])+'</div>'+
-            '<div>'+onTrack(r['On Track'])+' · <span class="muted">'+esc(r['Publish Date'])+'</span></div>';
+            '<div>'+onTrack(r['On Track'])+' · <span class="muted">'+esc(r['Publish Date'])+'</span></div>'+
+            '<div class="bcopy" style="margin-top:6px">'+copyLink(r['Copy Link'])+'</div>';
           col.appendChild(c);
         });
         bv.appendChild(col);
@@ -1303,7 +1304,7 @@
       else if(v.indexOf('🔴')===0||/Behind|Blocked/.test(v)) c='t-red';
       return '<span class="'+c+'">'+esc(v)+'</span>';
     }
-    function copyLink(u){ return u ? '<a class="lnk" href="'+esc(u)+'" target="_blank" rel="noopener" title="Open copy page">Open Copy</a>' : '<span class="muted" title="No copy page yet">—</span>'; }
+    function copyLink(u){ return u ? '<a class="lnk" href="'+esc(u)+'" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="Open copy page">Open Copy</a>' : '<span class="muted" title="No copy page yet">—</span>'; }
 
     let lastValidatedTsv=null;
     $('tsv').addEventListener('input', function(){ $('save').disabled=true; lastValidatedTsv=null; });
