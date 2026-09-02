@@ -614,15 +614,15 @@
 
     const STAGES = ['🚩 Required Client Input','1 Copywriting','2 Copywriting Ready for Review','3 Copywriting Approved',
       '4 Waiting for Voiceover / Video','5 Voiceover / Video Received','6 In Production','7 Content Ready for Review','8 Content Approved',
-      '9 Ready to Publish','10 Published','On Hold','◼️ Unselected','🔁 Rolled Over'];
+      '9 Ready to Publish','10 Published','⏸️ On Hold','◼️ Unselected','🔁 Rolled Over'];
     const STAGE_COLOUR = {
       '🚩 Required Client Input':'st-flag','1 Copywriting':'st-1','2 Copywriting Ready for Review':'st-2',
       '3 Copywriting Approved':'st-3','4 Waiting for Voiceover / Video':'st-4','5 Voiceover / Video Received':'st-5',
       '6 In Production':'st-6','7 Content Ready for Review':'st-7','8 Content Approved':'st-8',
-      '9 Ready to Publish':'st-9','10 Published':'st-10','On Hold':'st-off','◼️ Unselected':'st-off','🔁 Rolled Over':'st-roll'};
-    const BOARD_HIDE = ['10 Published','On Hold','◼️ Unselected'];
+      '9 Ready to Publish':'st-9','10 Published':'st-10','On Hold':'st-off','⏸️ On Hold':'st-off','◼️ Unselected':'st-off','🔁 Rolled Over':'st-roll'};
+    const BOARD_HIDE = ['10 Published','On Hold','⏸️ On Hold','◼️ Unselected'];
     // Parked = set aside, off the active board, shown in the table only via "see more".
-    const PARKED = ['On Hold','◼️ Unselected'];
+    const PARKED = ['On Hold','⏸️ On Hold','◼️ Unselected'];
 
     const PREFS = loadPrefs();
     let idToken = null, allRows = [], current = null, pendingRefresh = null, keepaliveStarted = false, myEmail = '';
@@ -631,7 +631,7 @@
     const $ = function (id){ return document.getElementById(id); };
 
     // ── Global saving-progress overlay (shows on every write; real % for batches) ──
-    const WRITE_ACT = { updatePiece:1, importBatch:1, generateInvoice:1, markPaid:1, onboardClient:1, addRequest:1, markReceived:1 };
+    const WRITE_ACT = { updatePiece:1, updatePieces:1, importBatch:1, generateInvoice:1, markPaid:1, onboardClient:1, addRequest:1, markReceived:1 };
     let PROG_SUPPRESS = false;
     const Progress = (function(){
       let box, bar, pctEl, msgEl, timer=null, val=0;
@@ -863,14 +863,13 @@
           changes['Ready By']=minus14(main); }
         const targets=$('deBatch').checked ? batchMates(r) : [r];
         s.disabled=true; $('deMsg').className='pstatus muted'; $('deMsg').textContent='Saving…';
-        let done=0, failed=[];
-        Progress.begin('Saving…', targets.length); PROG_SUPPRESS=true;
-        try{ for(const t of targets){ const res=await savePiece(t, changes); if(res.ok) done++; else failed.push(t['Piece ID']+': '+res.error); Progress.step(done+failed.length, targets.length); } }
-        finally{ PROG_SUPPRESS=false; }
-        Progress.end(!failed.length, 'Saved.');
+        const updates=targets.map(function(t){ return {row:t.row, pieceId:t['Piece ID'], changes:changes}; });
+        const res=await savePieces(updates);
         s.disabled=false;
-        if(failed.length){ $('deMsg').className='pstatus err'; $('deMsg').textContent=TT('Saved ')+done+TT(', failed — ')+failed.join(' · ')+TT('. Try again.'); }
-        else { $('deMsg').className='pstatus ok'; $('deMsg').textContent=TT('Saved ')+done+TT(' piece(s).'); setTimeout(closeDateEditor,600); }
+        const failed=(res.errors||[]).map(function(e){ return e.pieceId+': '+e.error; });
+        if(!res.ok){ $('deMsg').className='pstatus err'; $('deMsg').textContent=res.error; }
+        else if(failed.length){ $('deMsg').className='pstatus err'; $('deMsg').textContent=TT('Saved ')+res.rows.length+TT(', failed — ')+failed.join(' · ')+TT('. Try again.'); }
+        else { $('deMsg').className='pstatus ok'; $('deMsg').textContent=TT('Saved ')+res.rows.length+TT(' piece(s).'); setTimeout(closeDateEditor,600); }
         renderTodayPosts(); renderPipe(); renderToday();
       };
     })();
@@ -889,17 +888,19 @@
     $('assignStyle').onchange=function(){ PREFS.assignStyle=$('assignStyle').value; savePrefs(); renderAssign(); };
     $('assignStyle').value = PREFS.assignStyle||'alternate';
     $('assignRefresh').onclick=function(){ loadRows().then(function(){ renderAssign(); }); };
-    $('assignSaveAll').onclick=async function(){      const trs=Array.from($('assignBody').querySelectorAll('tr')); let done=0, fail=0; setAssign('Saving…','muted');
-      const rows=trs.filter(function(tr){ return tr.querySelector('button[data-save]'); }); let idx=0;
-      Progress.begin('Saving…', rows.length); PROG_SUPPRESS=true;
-      try{ for(const tr of rows){ const btn=tr.querySelector('button[data-save]');
-        const dateEl=tr.querySelector('input[type=date]'); const catchEl=tr.querySelector('input[type=checkbox]');
-        const res=await assignOne(btn.dataset.save, Number(btn.dataset.row), dateEl.value, catchEl.checked);
-        if(res.ok) done++; else fail++; Progress.step(++idx, rows.length); } }
-      finally{ PROG_SUPPRESS=false; }
-      Progress.end(!fail, 'Saved.');
+    $('assignSaveAll').onclick=async function(){      const trs=Array.from($('assignBody').querySelectorAll('tr')); setAssign('Saving…','muted');
+      const rows=trs.filter(function(tr){ return tr.querySelector('button[data-save]'); });
+      const updates=[]; let skipped=0; const used={};
+      for(const tr of rows){ const btn=tr.querySelector('button[data-save]');
+        const rowNo=Number(btn.dataset.row); const dateEl=tr.querySelector('input[type=date]'); const catchEl=tr.querySelector('input[type=checkbox]');
+        const ymd=dateEl.value; const rr=allRows.filter(function(x){ return x.row===rowNo; })[0];
+        if(!assignCheck(rr, ymd, catchEl.checked, used)){ skipped++; continue; }
+        updates.push({row:rowNo, pieceId:btn.dataset.save, changes:{ 'Publish Date':ymd, 'Ready By':minus14(ymd) }});
+      }
+      const res=await savePieces(updates);
       renderAssign(); renderPipe(); renderToday();
-      setAssign(TT('Saved ')+done+(fail?(' · '+fail+TT(' skipped (fix and retry)')):'')+'.', fail?'err':'ok');
+      const fail=(res.ok?(res.errors||[]).length:updates.length)+skipped;
+      setAssign(TT('Saved ')+(res.ok?res.rows.length:0)+(fail?(' · '+fail+TT(' skipped (fix and retry)')):'')+'.', fail?'err':'ok');
     };
     // ── Add one piece (reuses the Block A importer with a single row) ──
     const BLOCK_A_HEADER='Piece ID\tClient\tFormat\tPlatform\tTitle\tPublish Date\tReady By\tStage\tFounder\tCopy Link';
@@ -933,20 +934,16 @@
         allRows.forEach(function(r){ const s=r['Stage']||'';
           if(/^10 Published/.test(s) || PARKED.indexOf(s)!==-1) return;
           (byClient[r['Client']]=byClient[r['Client']]||[]).push(r); });
-        let done=0, fail=0;
         const jobs=[];
         for(const cl of Object.keys(byClient)){
           const pieces=byClient[cl].slice().sort(function(a,b){ return (a['Publish Date']||'zzz').localeCompare(b['Publish Date']||'zzz'); });
           const sugg=suggestDatesForClient(cl, pieces, style);
-          for(const p of pieces){ const ymd=sugg[p['Piece ID']]; if(ymd) jobs.push({p:p, ymd:ymd}); }
+          for(const p of pieces){ const ymd=sugg[p['Piece ID']]; if(ymd) jobs.push({row:p.row, pieceId:p['Piece ID'], changes:{ 'Publish Date':ymd, 'Ready By':minus14(ymd) }}); }
         }
-        let idx=0;
-        Progress.begin('Saving…', jobs.length); PROG_SUPPRESS=true;
-        try{ for(const j of jobs){ const res=await assignOne(j.p['Piece ID'], j.p.row, j.ymd, true); if(res.ok) done++; else fail++; Progress.step(++idx, jobs.length); } }
-        finally{ PROG_SUPPRESS=false; }
-        Progress.end(!fail, 'Saved.');
+        const res=await savePieces(jobs);
+        const fail=(res.ok?(res.errors||[]).length:jobs.length);
         b.disabled=false; renderAssign(); renderPipe(); renderToday();
-        setAssign('Rearranged '+done+' piece(s)'+(fail?(' · '+fail+' skipped'):'')+'.', fail?'err':'ok');
+        setAssign('Rearranged '+(res.ok?res.rows.length:0)+' piece(s)'+(fail?(' · '+fail+' skipped'):'')+'.', fail?'err':'ok');
       };
     })();
 
@@ -1072,15 +1069,14 @@
         const picked=Array.from($('peBoxes').querySelectorAll('input:checked')).map(function(i){ return i.value; });
         const targets=$('peAll').checked ? batchMates(r) : [r];
         s.disabled=true; $('peMsg').className='pstatus muted'; $('peMsg').textContent='Saving…';
-        let done=0, failed=[];
-        Progress.begin('Saving…', targets.length); PROG_SUPPRESS=true;
-        try{ for(const t of targets){ const res=await savePiece(t,{ 'Platform':picked.join(', ') });
-          if(res.ok) done++; else failed.push(t['Piece ID']); Progress.step(done+failed.length, targets.length); } }
-        finally{ PROG_SUPPRESS=false; }
-        Progress.end(!failed.length, 'Saved.');
+        const val=picked.join(', ');
+        const updates=targets.map(function(t){ return {row:t.row, pieceId:t['Piece ID'], changes:{ 'Platform':val }}; });
+        const res=await savePieces(updates);
         s.disabled=false;
-        if(failed.length){ $('peMsg').className='pstatus err'; $('peMsg').textContent=TT('Saved ')+done+TT(', failed: ')+failed.join(', ')+TT(' — try again.'); }
-        else { $('peMsg').className='pstatus ok'; $('peMsg').textContent=TT('Saved ')+done+TT(' piece(s).'); setTimeout(closePlatformEditor,600); }
+        const failed=(res.errors||[]).map(function(e){ return e.pieceId; });
+        if(!res.ok){ $('peMsg').className='pstatus err'; $('peMsg').textContent=res.error; }
+        else if(failed.length){ $('peMsg').className='pstatus err'; $('peMsg').textContent=TT('Saved ')+res.rows.length+TT(', failed: ')+failed.join(', ')+TT(' — try again.'); }
+        else { $('peMsg').className='pstatus ok'; $('peMsg').textContent=TT('Saved ')+res.rows.length+TT(' piece(s).'); setTimeout(closePlatformEditor,600); }
         renderPipe(); renderToday(); renderTodayPosts();
       };
     })();
@@ -1093,6 +1089,26 @@
       if(idx>=0) allRows[idx]=fresh;
       if(current && current.row===fresh.row) current=fresh;
       return {ok:true,row:fresh};
+    }
+    // Bulk save: one round-trip for many rows. updates = [{row, pieceId, changes}].
+    async function savePieces(updates){
+      if(!updates.length) return {ok:true, rows:[], errors:[]};
+      const data=await call('updatePieces',{ updates:updates });
+      if(!data.ok) return {ok:false, error:data.error||'save failed', rows:[], errors:[]};
+      (data.result.rows||[]).forEach(function(fresh){ const idx=allRows.findIndex(function(x){ return x.row===fresh.row; });
+        if(idx>=0) allRows[idx]=fresh; if(current && current.row===fresh.row) current=fresh; });
+      return {ok:true, rows:data.result.rows||[], errors:data.result.errors||[]};
+    }
+    // Client-side date validation (mirrors assignOne) + intra-batch double-booking guard.
+    function assignCheck(r, ymd, allowSame, used){
+      if(!r || !ymd) return false;
+      const d=new Date(ymd+'T00:00:00'); if(isNaN(d)||d.getDay()===0) return false;
+      const cl=r['Client']||'';
+      const takenExisting=allRows.some(function(x){ return x.row!==r.row && x['Client']===cl && x['Publish Date']===ymd; });
+      const takenBatch=used[cl] && used[cl][ymd];
+      if((takenExisting || takenBatch) && !allowSame) return false;
+      used[cl]=used[cl]||{}; used[cl][ymd]=(used[cl][ymd]||0)+1;
+      return true;
     }
     function openDateEditor(r){
       $('deTitle').textContent=r['Piece ID']+' · '+(r['Title']||'');
@@ -1183,7 +1199,7 @@
       const host=$('parkedArea'); if(!host) return;
       const groups={
         pub:{ label:'Published Work', items:rows.filter(function(r){ return /^10 Published/.test(r['Stage']||''); }) },
-        hold:{ label:'On Hold',       items:rows.filter(function(r){ return (r['Stage']||'')==='On Hold'; }) },
+        hold:{ label:'⏸️ On Hold',       items:rows.filter(function(r){ var st=r['Stage']||''; return st==='On Hold'||st==='⏸️ On Hold'; }) },
         uns:{ label:'Unselected',     items:rows.filter(function(r){ return /Unselected/.test(r['Stage']||''); }) }
       };
       Object.keys(groups).forEach(function(k){
@@ -1743,7 +1759,7 @@ sched,
           '<td style="text-align:center"><input type="checkbox" title="Allow a day that already has a piece"></td>'+
           '<td><div class="assignact"><button class="small" data-save="'+esc(r['Piece ID'])+'" data-row="'+r.row+'">Save</button>'+
             '<div class="markgrp"><button class="mini" data-mark="10 Published">Published</button>'+
-            '<button class="mini" data-mark="On Hold">On Hold</button>'+
+            '<button class="mini" data-mark="⏸️ On Hold">On Hold</button>'+
             '<button class="mini" data-mark="◼️ Unselected">Unselected</button></div></div></td>';
         tb.appendChild(tr);
         tr.querySelectorAll('button[data-mark]').forEach(function(mb){

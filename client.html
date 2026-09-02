@@ -497,7 +497,7 @@ function render(data){
   document.getElementById("app").classList.remove("hidden");
 }
 
-function isParkedRow(r){ const s=String(r.stage||""); return classify(s).group==="closed" || s.trim()==="On Hold" || /closed/i.test(s); }
+function isParkedRow(r){ const s=String(r.stage||""); const t=s.trim(); return classify(s).group==="closed" || t==="On Hold" || t==="⏸️ On Hold" || /closed/i.test(s); }
 function isViral(r){ return r.viral===true || String(r.viral).toUpperCase()==="TRUE"; }
 const FMT_TONE={ 'Carousel':'#dbeafe|#1e40af','VO reel':'#ede9fe|#5b21b6','On-camera reel':'#ffedd5|#9a3412','Sit-down video':'#dcfce7|#166534','POV b-roll':'#fce7f3|#9d174d' };
 function fmtChip(f){ const t=(FMT_TONE[f]||'#eef0ee|#5a635a').split('|'); return f? '<span class="tchip" style="background:'+t[0]+';color:'+t[1]+'">'+esc(f)+'</span>':''; }
@@ -713,10 +713,10 @@ function renderCalendar(){
 function renderParked(){
   const host=document.getElementById("parked-area"); if(!host) return;
   const isUns=r=>/Unselected/i.test(r.stage||"");
-  const isHold=r=>String(r.stage||"").trim()==="On Hold";
+  const isHold=r=>{const t=String(r.stage||"").trim();return t==="On Hold"||t==="⏸️ On Hold";};
   const groups={
     pub:{ label:"Published Work", items:STATE.rows.filter(r=>isPublished(r)&&!isUns(r)&&!isHold(r)) },
-    hold:{ label:"On Hold",       items:STATE.rows.filter(isHold) },
+    hold:{ label:"⏸️ On Hold",       items:STATE.rows.filter(isHold) },
     uns:{ label:"Unselected",     items:STATE.rows.filter(r=>isUns(r)||classify(r.stage).group==="closed") }
   };
   Object.keys(groups).forEach(k=>groups[k].items.sort((a,b)=>(parseDate(b.publishDate)||-8e15)-(parseDate(a.publishDate)||-8e15)));
