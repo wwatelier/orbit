@@ -515,10 +515,15 @@ function isViral(r){ return r.viral===true || String(r.viral).toUpperCase()==="T
 const FMT_TONE={ 'Carousel':'#dbeafe|#1e40af','VO reel':'#ede9fe|#5b21b6','On-camera reel':'#ffedd5|#9a3412','Sit-down video':'#dcfce7|#166534','POV b-roll':'#fce7f3|#9d174d' };
 function fmtChip(f){ const t=(FMT_TONE[f]||'#eef0ee|#5a635a').split('|'); return f? '<span class="tchip" style="background:'+t[0]+';color:'+t[1]+'">'+esc(f)+'</span>':''; }
 function niceDate(ymd){ const d=parseDate(ymd); return d?fmtShort(d):"\u2014"; }
-function collabTag(r){ var tracked=(r.client||STATE.client||'').trim(), pf=(r.postFrom||'').trim();
-  if(!pf || pf===tracked) return '';
-  if(STATE.client===pf) return '<span class="collabtag" title="Your content, cross-posted to '+esc(tracked)+'">collab on '+esc(tracked)+'</span>';
-  return '<span class="collabtag" title="Posted from '+esc(pf)+' account">posted by '+esc(pf)+'</span>'; }
+function collabTag(r){
+  var client=(r.client||'').trim(), pf=(r.postFrom||'').trim(), partner=(r.partner||'').trim();
+  if(partner===client) partner='';
+  var accounts=[]; [client,pf,partner].forEach(function(a){ a=(a||'').trim(); if(a && accounts.indexOf(a)<0) accounts.push(a); });
+  if(accounts.length<2) return '';
+  var poster=pf||client, viewer=(STATE.client||'').trim();
+  var others=accounts.filter(function(a){ return a!==viewer; });
+  if(viewer===poster) return '<span class="collabtag" title="Collab \u2014 you post this; it also shows on '+esc(others.join(', '))+'">collab with '+esc(others.join(', '))+'</span>';
+  return '<span class="collabtag" title="Collab \u2014 posted from '+esc(poster)+'">collab \u00b7 posted by '+esc(poster)+'</span>'; }
 function platDates(r){
   const base=r.publishDate||"", ig=r.igDate||base, tt=r.ttDate||base;
   const list=String(r.platform||"").split(",").map(s=>s.trim()).filter(Boolean);

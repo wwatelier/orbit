@@ -588,7 +588,8 @@
       <h3 id="pTitle"></h3>
       <div class="pid" id="pMeta"></div>
       <div class="field"><label>Title</label><input type="text" id="pTitleEdit" style="font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;width:100%"></div>
-      <div class="field"><label>Post from (collab)</label><select id="pPostFrom" style="font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;width:100%"></select><div class="muted" style="font-size:12px;margin-top:4px">Own client = normal. A different account = collab: also shows on that account\'s calendar, marked posted by them.</div></div>
+      <div class="field"><label>Post from</label><select id="pPostFrom" style="font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;width:100%"></select><div class="muted" style="font-size:12px;margin-top:4px">The account that actually posts it (its quota). A different account than the client = collab: it also shows on that account\'s calendar.</div></div>
+      <div class="field"><label>Collab with (partner)</label><select id="pCollab" style="font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;width:100%"></select><div class="muted" style="font-size:12px;margin-top:4px">Another account this post is a collab with. It also shows on that account\'s calendar. Leave as \u201cNone\u201d for a normal solo post.</div></div>
       <div class="field"><label>Stage</label><select id="pStage"></select></div>
       <div class="field"><label>Publish date</label><input type="date" id="pDate" style="font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px"></div>
       <div class="field"><label>Reschedule</label><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
@@ -1082,7 +1083,7 @@
         col.innerHTML='<div class="bh">'+stagePill(stage)+'<span class="n">'+inStage.length+'</span></div>';
         inStage.forEach(function(r){
           const c=document.createElement('div'); c.className='bcard'; c.onclick=function(){ openPanel(r); };
-          c.innerHTML='<div class="bt">'+esc(r['Title']||r['Piece ID'])+reqMark(r)+viralMark(r)+'</div>'+
+          c.innerHTML='<div class="bt">'+esc(r['Title']||r['Piece ID'])+reqMark(r)+viralMark(r)+collabTag(r)+'</div>'+
             '<div class="bm">'+esc(r['Piece ID'])+' '+clientChip(r['Client'])+' '+fmtChip(r['Format'])+'</div>'+
             '<div class="bplat">'+platLabel(r['PlatformList'],r['Client'])+'</div>'+
             '<div>'+onTrack(r['On Track'])+' · <span class="muted">'+esc(r['Publish Date'])+'</span></div>'+
@@ -1221,7 +1222,7 @@
       if(!rows.length) tb.innerHTML='<tr><td colspan="8"><div class="empty">Nothing needs attention right now.</div></td></tr>';
       rows.forEach(function(r){
         const tr=document.createElement('tr'); tr.className='clickable'; tr.onclick=function(){ openPanel(r); };
-        tr.innerHTML='<td>'+esc(r['Piece ID'])+'<div class="rowtitle">'+esc(r['Title']||'')+'</div></td><td>'+clientChip(r['Client'])+'</td><td>'+fmtChip(r['Format'])+'</td>'+
+        tr.innerHTML='<td>'+esc(r['Piece ID'])+collabTag(r)+'<div class="rowtitle">'+esc(r['Title']||'')+'</div></td><td>'+clientChip(r['Client'])+'</td><td>'+fmtChip(r['Format'])+'</td>'+
           '<td>'+platLabel(r['PlatformList'],r['Client'])+'</td>'+
           '<td>'+stagePill(r['Stage'])+'</td>'+
           '<td>'+onTrack(r['On Track'])+'</td><td class="cellbtn datecell">'+platDates(r)+'</td><td>'+copyLink(r['Copy Link'])+'</td>';
@@ -1268,6 +1269,13 @@
         var opts=['<option value="">'+esc(r['Client'])+' (own \u2014 not a collab)</option>'];
         ((META&&META.clients)||[]).forEach(function(cl){ if(cl!==r['Client']) opts.push('<option value="'+esc(cl)+'">'+esc(cl)+'</option>'); });
         sel.innerHTML=opts.join(''); sel.value=(cur&&cur!==r['Client'])?cur:''; })();
+      (function(){ var sel=$('pCollab'); if(!sel) return;
+        var partner=knownClient_(r['Founder']);
+        if(!partner){ var p=personCode_(r['Piece ID']); if(p && p.indexOf('+')>=0) partner=personName_(p.split('+')[1]); }
+        if(partner===r['Client']) partner='';
+        var opts=['<option value="">None (solo post)</option>'];
+        ((META&&META.clients)||[]).forEach(function(cl){ if(cl!==r['Client']) opts.push('<option value="'+esc(cl)+'">'+esc(cl)+'</option>'); });
+        sel.innerHTML=opts.join(''); sel.value=partner||''; })();
       (function(){ const sw=$('pSwap'); if(!sw) return;
         const cands=allRows.filter(function(x){ return x.row!==r.row && x['Client']===r['Client'] && (x['Format']||'')===(r['Format']||'') && /^9 /.test(x['Stage']||'') && x['Publish Date']; });
         sw.innerHTML='<option value="">Swap with… (ready, same format)</option>'+cands.map(function(x){ return '<option value="'+x.row+'">'+esc(x['Piece ID'])+' \u00b7 '+esc(niceDate(x['Publish Date']))+'</option>'; }).join(''); })();
@@ -1314,6 +1322,11 @@
       if(($('pViralTT').value||'')!==(current['Viral TT Link']||'')) changes['Viral TT Link']=$('pViralTT').value;
       if(($('pTitleEdit').value||'')!==(current['Title']||'')) changes['Title']=$('pTitleEdit').value.trim();
       if((($('pPostFrom')&&$('pPostFrom').value)||'')!==((current['Post From']||'').trim())) changes['Post From']=($('pPostFrom')?$('pPostFrom').value:'');
+      (function(){ var sel=$('pCollab'); if(!sel) return; var want=sel.value||'';
+        var have=knownClient_(current['Founder']);
+        if(!have){ var p=personCode_(current['Piece ID']); if(p && p.indexOf('+')>=0) have=personName_(p.split('+')[1]); }
+        if(have===current['Client']) have='';
+        if(want!==(have||'')) changes['Founder']=want; })();
       const origPlat=PLAT_OPTIONS.filter(function(p){ return (current['PlatformList']||[]).some(function(t){ return PLAT_MATCH[p] && PLAT_MATCH[p].test(t); }); }).join(', ');
       const pickedPlat=Array.from($('pPlat').querySelectorAll('input:checked')).map(function(i){ return i.value; }).join(', ');
       if(pickedPlat!==origPlat) changes['Platform']=pickedPlat;
@@ -1412,13 +1425,21 @@
     function personCode_(id){ var m=String(id||'').match(/^[A-Za-z]+-([A-Za-z]+(?:\+[A-Za-z]+)?)-\d+\.\d+/); return m?m[1].toUpperCase():null; }
     var PERSON_NAME_ = {SRU:'SRU',ICE:'Ice',DIA:'Dianna',MEL:'Melissa',LYN:'Lynn',PWI:'Plan With Ice'};
     function personName_(c){ return PERSON_NAME_[c]||c; }
-    function collabInfo(r){ var client=r['Client']||'', pf=(r['Post From']||'').trim();
-      if(pf && pf!==client) return {type:'collab', from:pf, on:client};
-      var p=personCode_(r['Piece ID']); if(p && p.indexOf('+')>=0){ var pp=p.split('+'); return {type:'feat', featured:personName_(pp[1])}; }
-      return null; }
+    function knownClient_(n){ n=(n||'').trim(); if(!n) return ''; var cs=(META&&META.clients)||[]; return cs.indexOf(n)>=0?n:''; }
+    // A collab = a piece touching 2+ accounts: its Client, its Post From (poster), and its collab partner
+    // (the Founder cell when that names another client, else the "+B" in the Piece ID). No tag otherwise.
+    function collabInfo(r){
+      var client=(r['Client']||'').trim(), pf=(r['Post From']||'').trim();
+      if(!pf){ var pc=personCode_(r['Piece ID']); if(pc){ var owner=pc.indexOf('+')>=0?pc.split('+')[0]:pc; var nm=personName_(owner); if(nm!==client && knownClient_(nm)) pf=nm; } }
+      var partner=knownClient_(r['Founder']);
+      if(!partner){ var p=personCode_(r['Piece ID']); if(p && p.indexOf('+')>=0) partner=personName_(p.split('+')[1]); }
+      if(partner===client) partner='';
+      var accounts=[]; [client,pf,partner].forEach(function(a){ a=(a||'').trim(); if(a && accounts.indexOf(a)<0) accounts.push(a); });
+      if(accounts.length<2) return null;
+      var poster=pf||client, others=accounts.filter(function(a){ return a!==poster; });
+      return { poster:poster, others:others }; }
     function collabTag(r){ var c=collabInfo(r); if(!c) return '';
-      if(c.type==='feat') return '<span class="collabtag feat" title="Post featuring '+esc(c.featured)+' \u2014 owner quota, no cost to the founder">\u2605 feat. '+esc(c.featured)+'</span>';
-      return '<span class="collabtag" title="Posts from '+esc(c.from)+', counts against their quota">'+esc(c.from)+' \u2192 '+esc(c.on)+'</span>'; }
+      return '<span class="collabtag" title="Post from '+esc(c.poster)+' \u00b7 collab with '+esc(c.others.join(', '))+' (shows on their calendar too)">post from '+esc(c.poster)+' \u00b7 collab with '+esc(c.others.join(' + '))+'</span>'; }
     function niceDate(ymd){ if(!ymd) return '—'; const d=new Date(ymd+'T00:00:00'); if(isNaN(d)) return ymd;
       const D=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], M=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
       return D[d.getDay()]+' '+d.getDate()+' '+M[d.getMonth()]; }
@@ -1589,9 +1610,10 @@ sched,
 'ORBIT OUTPUT RULES:',
 '1. Assign posting dates on a 4-week cycle counted from this batch’s first piece. Mon–Sat only — never a Sunday. Continue on from the last scheduled date above so posting stays consistent with no gaps or clashes. Stagger different pillars/series so they don’t clump. Set Ready By about 14 days before each posting date.',
 '2. Assign Piece IDs using ' + client + '’s prefix scheme and batch number ' + batch + ' typed into the ID (e.g. C' + (batch==='[BATCH NUMBER]'?'12':batch) + '.1). Do not invent a scheme. If an ID would collide or you’re unsure, stop and flag it — never guess an ID.',
-'3. Titles: ' + (bilingual ? 'bilingual "Thai / English".' : 'English.'),
-'4. CREATE a Notion copy page for each piece in ' + client + '’s Notion space, and put its URL in the Copy Link column. Ask me for the parent page/folder to create them under if you don’t already know it. Do NOT leave Copy Link blank — the whole point is that you return the links so the team doesn’t fill them by hand.',
-'5. Output the batch as Block A EXACTLY: a TSV table with the header row',
+'3. Collabs: if a piece is a collaboration with another WWA account, put that account’s name in the Founder column (e.g. Dianna) — it then also shows on that account’s own calendar. Reflect it in the Piece ID as PERSON = poster+partner (e.g. OC-' + client + '+DIA-' + (batch==='[BATCH NUMBER]'?'12':batch) + '.1 means ' + client + ' posts, Dianna collabs). If a different account is the one actually posting, make THAT account the ID PERSON instead (e.g. VO-DIA-… posts from Dianna). A normal solo post leaves Founder blank and uses ' + client + ' as the ID PERSON.',
+'4. Titles: ' + (bilingual ? 'bilingual "Thai / English".' : 'English.'),
+'5. CREATE a Notion copy page for each piece in ' + client + '’s Notion space, and put its URL in the Copy Link column. Ask me for the parent page/folder to create them under if you don’t already know it. Do NOT leave Copy Link blank — the whole point is that you return the links so the team doesn’t fill them by hand.',
+'6. Output the batch as Block A EXACTLY: a TSV table with the header row',
 '   Piece ID\tClient\tFormat\tPlatform\tTitle\tPublish Date\tReady By\tStage\tFounder\tCopy Link',
 '   one row per piece, nothing else wrapped around the table. New pieces are Stage "1 Copywriting".',
 '',
