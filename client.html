@@ -335,7 +335,9 @@ window.__orbitBoot = (function(){
   .pdate.pd-posted .pd, .pdate.pd-posted .pdtag { color:#3f8f66; }
   .pdate.pd-today .pd, .pdate.pd-today .pdtag { color:#c07a2b; font-weight:600; }
   .pdate.pd-sched .pd { color:var(--text-soft); }
-  .pdtag { margin-left:6px; font-size:9px; text-transform:uppercase; letter-spacing:.04em; opacity:.9; }
+  .pdate { font-size:11px; line-height:1.5; margin-bottom:1px; white-space:nowrap; }
+  .ppl { display:inline-block; min-width:52px; color:var(--text-soft); font-size:10px; }
+  .pdtag { margin-left:5px; font-size:8px; text-transform:uppercase; letter-spacing:.03em; opacity:.85; }
 </style>
 </head>
 <body>
@@ -523,13 +525,12 @@ function platDates(r){
   if(has(/website|web/)) out.push(["Website", base]);
   if(!out.length) out.push(["Publish", base]);
   const _ti=isoOf(today0());
-  return out.map(p=>{
-    const _pi=p[1]?isoOf(parseDate(p[1])):"";
-    let cls="pd-sched", tag="Scheduled";
-    if(!_pi){ cls=""; tag=""; }
-    else if(_pi<_ti){ cls="pd-posted"; tag="Posted"; }
-    else if(_pi===_ti){ cls="pd-today"; tag="Today"; }
-    return '<div class="pdate '+cls+'"><span class="chip">'+esc(p[0])+'</span> <span class="pd">'+esc(niceDate(p[1]))+'</span>'+(tag?'<span class="pdtag">'+tag+'</span>':'')+'</div>';
+  function _stat(dt){ const pi=dt?isoOf(parseDate(dt)):""; if(!pi) return ["",""]; if(pi<_ti) return ["pd-posted","Posted"]; if(pi===_ti) return ["pd-today","Today"]; return ["pd-sched",""]; }
+  const uniq=[...new Set(out.map(p=>p[1]))];
+  if(uniq.length<=1){ const dt=out[0]?out[0][1]:""; const s=_stat(dt);
+    return '<div class="pdate '+s[0]+'"><span class="pd">'+esc(niceDate(dt))+'</span>'+(s[1]?'<span class="pdtag">'+s[1]+'</span>':'')+'</div>'; }
+  return out.map(p=>{ const s=_stat(p[1]);
+    return '<div class="pdate '+s[0]+'"><span class="ppl">'+esc(p[0])+'</span><span class="pd">'+esc(niceDate(p[1]))+'</span>'+(s[1]?'<span class="pdtag">'+s[1]+'</span>':'')+'</div>';
   }).join("");
 }
 function clientPlat(platform){
