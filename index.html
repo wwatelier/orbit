@@ -298,14 +298,16 @@
     .saveprog.ok .sp-track, .saveprog.ok .sp-pct,
     .saveprog.err .sp-track, .saveprog.err .sp-pct { display:none; }
     .batchprog { display:flex; flex-direction:column; }
-    .bp-row { padding:15px 2px; border-bottom:1px solid var(--line-soft); }
+    .bp-row { padding:11px 2px; border-bottom:1px solid var(--line-soft); }
     .bp-row:last-child { border-bottom:none; }
-    .bp-head { display:flex; justify-content:space-between; align-items:baseline; font-size:15px; margin-bottom:9px; }
+    .bp-head { display:flex; justify-content:space-between; align-items:baseline; font-size:13px; margin-bottom:7px; }
     .bp-name { color:var(--ink); font-weight:600; }
-    .bp-num { color:var(--ink-soft); font-size:13px; font-variant-numeric:tabular-nums; }
-    .bp-track { height:8px; background:var(--line); border-radius:99px; overflow:hidden; max-width:640px; }
-    .bp-fill { height:100%; width:0; background:var(--brand); border-radius:99px; transition:width .3s ease; }
-    .bp-fill.full { background:#4e8f6b; }
+    .bp-batch { width:44px; font:inherit; font-weight:600; color:var(--ink); border:1px solid var(--line); border-radius:6px; padding:1px 4px; margin-left:2px; background:#fff; }
+    .bp-batch:focus { outline:none; border-color:var(--brand); }
+    .bp-num { color:var(--ink-soft); font-size:12px; font-variant-numeric:tabular-nums; }
+    .bp-boxes { display:flex; flex-wrap:wrap; gap:4px; }
+    .bp-box { width:13px; height:13px; border-radius:3px; background:var(--line); }
+    .bp-box.on { background:var(--brand); }
     /* per-platform posted/scheduled */
     .pdate.pd-posted .pd, .pdate.pd-posted .pdtag { color:#4e8f6b; }
     .pdate.pd-today .pd, .pdate.pd-today .pdtag { color:#c07a2b; font-weight:600; }
@@ -1424,20 +1426,22 @@
       return '<span class="'+c+'">'+esc(v)+'</span>';
     }
     function getBatch(r){ var b=parseFloat(r['Batch']); if(!isNaN(b)) return b; var m=String(r['Piece ID']||'').match(/(\d+)\.\d+/); return m?parseFloat(m[1]):null; }
+    function maxBatch(cl){ let m=null; allRows.forEach(function(r){ if(r['Client']===cl){ const b=getBatch(r); if(b!==null&&(m===null||b>m)) m=b; } }); return m; }
+    function batchOverride(cl){ try{ const v=localStorage.getItem('orbitBatch:'+cl); return v!=null?parseInt(v,10):null; }catch(e){ return null; } }
+    function setBatchOverride(cl,n){ try{ localStorage.setItem('orbitBatch:'+cl,String(n)); }catch(e){} }
     function renderBatchProgress(){
       const host=$('batchProg'); if(!host) return;
       const clients=(META && META.clients)||[], quota=(META && META.quota)||{};
       const parts=[];
       clients.forEach(function(cl){
         const q = Number(quota[cl])||0; if(!q) return;
-        const done=allRows.filter(function(r){ const s=r['Stage']||''; return r['Client']===cl && /^(9 |10 )/.test(s); }).length;
-        const batchNum = done>0 ? Math.floor((done-1)/q)+1 : 1;
-        const within = done - (batchNum-1)*q;   // 0..q, resets to a new batch each time it fills
-        const pct = Math.round(within/q*100);
-        parts.push('<div class="bp-row"><div class="bp-head"><span class="bp-name">'+esc(cl)+' \u00b7 Batch '+batchNum+'</span><span class="bp-num">'+within+'/'+q+'</span></div>'+
-          '<div class="bp-track"><div class="bp-fill'+(within>=q?' full':'')+'" style="width:'+pct+'%"></div></div></div>');
+        const ov=batchOverride(cl); const cur = ov!=null ? ov : (maxBatch(cl)||1);
+        const within=allRows.filter(function(r){ return r['Client']===cl && getBatch(r)===cur && /^(9 |10 )/.test(r['Stage']||''); }).length;
+        let boxes=''; for(let i=0;i<q;i++){ boxes+='<span class="bp-box'+(i<within?' on':'')+'"></span>'; }
+        parts.push('<div class="bp-row"><div class="bp-head"><span class="bp-name">'+esc(cl)+' \u00b7 Batch <input type="number" class="bp-batch" data-client="'+esc(cl)+'" value="'+cur+'" min="1" title="Current batch (editable)"></span><span class="bp-num">'+within+'/'+q+'</span></div><div class="bp-boxes">'+boxes+'</div></div>');
       });
       host.innerHTML = parts.length ? parts.join('') : '<div class="empty">Set a quota per client to see batch progress.</div>';
+      Array.prototype.forEach.call(host.querySelectorAll('.bp-batch'), function(inp){ inp.onchange=function(){ setBatchOverride(inp.dataset.client, parseInt(inp.value,10)||1); renderBatchProgress(); }; });
     }
     function copyLink(u){ return u ? '<a class="lnk" href="'+esc(u)+'" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="Open copy page">Open Copy</a>' : '<span class="muted" title="No copy page yet">—</span>'; }
 
