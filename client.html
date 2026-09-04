@@ -614,7 +614,7 @@ function renderWeek(){
   const host = document.getElementById("week");
   if(!items.length){ host.innerHTML='<div class="empty">Nothing scheduled this week.</div>'; return; }
   host.innerHTML = '<div class="tablewrap"><table class="ptable weektable"><thead><tr>'
-    + '<th>Date</th><th>ID</th><th>Format</th><th>Platform</th><th>Title</th><th>Copy</th></tr></thead><tbody>'
+    + '<th>Date</th><th>ID</th><th>Format</th><th>Platform</th><th>Title</th><th>Status</th><th>Copy</th></tr></thead><tbody>'
     + items.map(o=>{
         const r=o.r;
         const link = r.copyLink?'<a href="'+esc(r.copyLink)+'" target="_blank" rel="noopener">Open Copy</a>':'\u2014';
@@ -625,6 +625,7 @@ function renderWeek(){
           + '<td>'+fmtChip(r.format)+'</td>'
           + '<td>'+clientPlat(r.platform)+'</td>'
           + '<td>'+esc(r.title||'')+'</td>'
+          + '<td>'+pillFor(r)+'</td>'
           + '<td>'+link+'</td></tr>';
       }).join("")
     + '</tbody></table></div>';
