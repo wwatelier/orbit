@@ -527,8 +527,8 @@ function platDates(r){
   const _ti=isoOf(today0());
   function _stat(dt){ const pi=dt?isoOf(parseDate(dt)):""; if(!pi) return ["",""]; if(pi<_ti) return ["pd-posted","Posted"]; if(pi===_ti) return ["pd-today","Today"]; return ["pd-sched",""]; }
   const uniq=[...new Set(out.map(p=>p[1]))];
-  if(uniq.length<=1){ const dt=out[0]?out[0][1]:""; const s=_stat(dt);
-    return '<div class="pdate '+s[0]+'"><span class="pd">'+esc(niceDate(dt))+'</span>'+(s[1]?'<span class="pdtag">'+s[1]+'</span>':'')+'</div>'; }
+  if(uniq.length<=1){ const dt=out[0]?out[0][1]:""; const s=_stat(dt); const plats=out.map(p=>p[0]).join(", ");
+    return '<div class="pdate '+s[0]+'"><span class="ppl">'+esc(plats)+'</span><span class="pd">'+esc(niceDate(dt))+'</span>'+(s[1]?'<span class="pdtag">'+s[1]+'</span>':'')+'</div>'; }
   return out.map(p=>{ const s=_stat(p[1]);
     return '<div class="pdate '+s[0]+'"><span class="ppl">'+esc(p[0])+'</span><span class="pd">'+esc(niceDate(p[1]))+'</span>'+(s[1]?'<span class="pdtag">'+s[1]+'</span>':'')+'</div>';
   }).join("");
@@ -558,10 +558,9 @@ function renderTodayPosts(){
   document.getElementById("today-count").textContent=items.length||"";
   sec.classList.remove("hidden");
   if(!items.length){ body.innerHTML='<div class="empty">Nothing posting today.</div>'; return; }
-  body.innerHTML='<div class="tablewrap"><table class="ptable"><thead><tr><th>ID</th><th>Format</th><th>Platform</th><th>Title</th><th>Posting</th><th>Status</th><th>Copy</th></tr></thead><tbody>'+items.map(r=>{
+  body.innerHTML='<div class="tablewrap"><table class="ptable"><thead><tr><th>ID</th><th>Format</th><th>Title</th><th>Posting</th><th>Status</th><th>Copy</th></tr></thead><tbody>'+items.map(r=>{
     const link=r.copyLink?'<a href="'+esc(r.copyLink)+'" target="_blank" rel="noopener">Open Copy</a>':'\u2014';
     return '<tr><td>'+esc(r.pieceId)+viralStar(r)+'</td><td>'+fmtChip(r.format)+'</td>'
-      +'<td>'+clientPlat(r.platform)+'</td>'
       +'<td>'+esc(r.title||'')+'</td>'
       +'<td>'+platDates(r)+'</td>'
       +'<td>'+pillFor(r)+'</td>'
@@ -627,7 +626,7 @@ function renderWeek(){
   const host = document.getElementById("week");
   if(!items.length){ host.innerHTML='<div class="empty">Nothing scheduled this week.</div>'; return; }
   host.innerHTML = '<div class="tablewrap"><table class="ptable weektable"><thead><tr>'
-    + '<th>Date</th><th>ID</th><th>Format</th><th>Platform</th><th>Title</th><th>Status</th><th>Copy</th></tr></thead><tbody>'
+    + '<th>Date</th><th>ID</th><th>Format</th><th>Title</th><th>Status</th><th>Copy</th></tr></thead><tbody>'
     + items.map(o=>{
         const r=o.r;
         const link = r.copyLink?'<a href="'+esc(r.copyLink)+'" target="_blank" rel="noopener">Open Copy</a>':'\u2014';
@@ -636,7 +635,6 @@ function renderWeek(){
           + '<td class="wdate">'+esc(dcell)+'</td>'
           + '<td>'+esc(r.pieceId)+viralStar(r)+'</td>'
           + '<td>'+fmtChip(r.format)+'</td>'
-          + '<td>'+clientPlat(r.platform)+'</td>'
           + '<td>'+esc(r.title||'')+'</td>'
           + '<td>'+pillFor(r)+'</td>'
           + '<td>'+link+'</td></tr>';
