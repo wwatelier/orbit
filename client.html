@@ -338,6 +338,7 @@ window.__orbitBoot = (function(){
   .pdate { font-size:11px; line-height:1.5; margin-bottom:1px; white-space:nowrap; }
   .ppl { display:inline-block; min-width:52px; color:var(--text-soft); font-size:10px; }
   .pdtag { margin-left:5px; font-size:8px; text-transform:uppercase; letter-spacing:.03em; opacity:.85; }
+  .collabtag { display:inline-block; margin-left:6px; font-size:10px; padding:1px 7px; border-radius:99px; background:#eaf0f6; color:#3a5a7a; vertical-align:middle; font-weight:500; }
 </style>
 </head>
 <body>
@@ -514,6 +515,10 @@ function isViral(r){ return r.viral===true || String(r.viral).toUpperCase()==="T
 const FMT_TONE={ 'Carousel':'#dbeafe|#1e40af','VO reel':'#ede9fe|#5b21b6','On-camera reel':'#ffedd5|#9a3412','Sit-down video':'#dcfce7|#166534','POV b-roll':'#fce7f3|#9d174d' };
 function fmtChip(f){ const t=(FMT_TONE[f]||'#eef0ee|#5a635a').split('|'); return f? '<span class="tchip" style="background:'+t[0]+';color:'+t[1]+'">'+esc(f)+'</span>':''; }
 function niceDate(ymd){ const d=parseDate(ymd); return d?fmtShort(d):"\u2014"; }
+function collabTag(r){ var tracked=(r.client||STATE.client||'').trim(), pf=(r.postFrom||'').trim();
+  if(!pf || pf===tracked) return '';
+  if(STATE.client===pf) return '<span class="collabtag" title="Your content, cross-posted to '+esc(tracked)+'">collab on '+esc(tracked)+'</span>';
+  return '<span class="collabtag" title="Posted from '+esc(pf)+' account">posted by '+esc(pf)+'</span>'; }
 function platDates(r){
   const base=r.publishDate||"", ig=r.igDate||base, tt=r.ttDate||base;
   const list=String(r.platform||"").split(",").map(s=>s.trim()).filter(Boolean);
@@ -560,7 +565,7 @@ function renderTodayPosts(){
   if(!items.length){ body.innerHTML='<div class="empty">Nothing posting today.</div>'; return; }
   body.innerHTML='<div class="tablewrap"><table class="ptable"><thead><tr><th>ID</th><th>Format</th><th>Title</th><th>Posting</th><th>Status</th><th>Copy</th></tr></thead><tbody>'+items.map(r=>{
     const link=r.copyLink?'<a href="'+esc(r.copyLink)+'" target="_blank" rel="noopener">Open Copy</a>':'\u2014';
-    return '<tr><td>'+esc(r.pieceId)+viralStar(r)+'</td><td>'+fmtChip(r.format)+'</td>'
+    return '<tr><td>'+esc(r.pieceId)+viralStar(r)+collabTag(r)+'</td><td>'+fmtChip(r.format)+'</td>'
       +'<td>'+esc(r.title||'')+'</td>'
       +'<td>'+platDates(r)+'</td>'
       +'<td>'+pillFor(r)+'</td>'
@@ -633,7 +638,7 @@ function renderWeek(){
         const dcell = DOW[o.d.getDay()]+' '+o.d.getDate()+' '+MON[o.d.getMonth()];
         return '<tr'+(o.iso===todayIso?' class="wtoday"':'')+'>'
           + '<td class="wdate">'+esc(dcell)+'</td>'
-          + '<td>'+esc(r.pieceId)+viralStar(r)+'</td>'
+          + '<td>'+esc(r.pieceId)+viralStar(r)+collabTag(r)+'</td>'
           + '<td>'+fmtChip(r.format)+'</td>'
           + '<td>'+esc(r.title||'')+'</td>'
           + '<td>'+pillFor(r)+'</td>'

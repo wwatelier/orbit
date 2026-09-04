@@ -297,16 +297,17 @@
     .saveprog.ok .sp-msg::before { content:"\2713  "; }
     .saveprog.ok .sp-track, .saveprog.ok .sp-pct,
     .saveprog.err .sp-track, .saveprog.err .sp-pct { display:none; }
-    .batchprog { display:flex; flex-direction:column; max-width:480px; }
-    .bp-row { padding:14px 0; border-bottom:1px solid rgba(55,53,47,0.09); }
+    .surface.bpcard { max-width:660px; padding:14px 30px; }
+    .batchprog { display:flex; flex-direction:column; }
+    .bp-row { padding:16px 0; border-bottom:1px solid rgba(55,53,47,0.09); }
     .bp-row:last-child { border-bottom:none; }
-    .bp-head { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px; }
+    .bp-head { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:12px; }
     .bp-name { color:#37352f; font-weight:500; font-size:14px; }
     .bp-bt { color:#9b9a97; font-weight:400; }
     .bp-num { color:#9b9a97; font-size:13px; font-variant-numeric:tabular-nums; }
-    .bp-gear { border:none; background:none; cursor:pointer; color:#c4c4c2; font-size:13px; line-height:1; margin-left:8px; padding:0 2px; }
+    .bp-gear { border:none; background:none; cursor:pointer; color:#c4c4c2; font-size:13px; line-height:1; margin-left:10px; padding:0 2px; }
     .bp-gear:hover { color:#787774; }
-    .bp-boxes { display:flex; flex-wrap:wrap; gap:4px; }
+    .bp-boxes { display:flex; flex-wrap:wrap; gap:5px; }
     .bp-box { width:12px; height:12px; border-radius:3px; background:#e9e9e7; }
     .bp-box.on { background:var(--brand); }
     .bp-adv { margin-top:13px; display:flex; flex-wrap:wrap; gap:16px; }
@@ -322,6 +323,8 @@
     .pdate.pd-over .pd, .pdate.pd-over .pdtag { color:#c0392b; }
     .pdate.pd-sched .pd { color:var(--ink-soft); }
     .pdtag { margin-left:6px; font-size:9px; text-transform:uppercase; letter-spacing:.04em; opacity:.9; }
+    .collabtag { display:inline-block; margin-left:6px; font-size:10px; padding:1px 7px; border-radius:99px; background:#eaf0f6; color:#3a5a7a; vertical-align:middle; font-weight:500; }
+    .collabtag.feat { background:#f5efe6; color:#8a6d3b; }
   </style>
 </head>
 <body>
@@ -376,7 +379,7 @@
 
       <section class="hidden" id="tab-batch">
         <div class="head"><div><h2>Batch Progress</h2><p class="sub">Ready-to-post or published vs the agreed quota. Resets to a new batch each time a client reaches their number.</p></div></div>
-        <div class="surface"><div class="batchprog" id="batchProg"></div></div>
+        <div class="surface bpcard"><div class="batchprog" id="batchProg"></div></div>
       </section>
       <section class="hidden" id="tab-pipeline">
         <div class="head"><div><h2>Pipeline</h2><p class="sub">Every piece across the production ladder. Click any row to update it.</p></div></div>
@@ -585,6 +588,7 @@
       <h3 id="pTitle"></h3>
       <div class="pid" id="pMeta"></div>
       <div class="field"><label>Title</label><input type="text" id="pTitleEdit" style="font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;width:100%"></div>
+      <div class="field"><label>Post from (collab)</label><select id="pPostFrom" style="font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;width:100%"></select><div class="muted" style="font-size:12px;margin-top:4px">Own client = normal. A different account = collab: also shows on that account\'s calendar, marked posted by them.</div></div>
       <div class="field"><label>Stage</label><select id="pStage"></select></div>
       <div class="field"><label>Publish date</label><input type="date" id="pDate" style="font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px"></div>
       <div class="field"><label>Reschedule</label><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
@@ -1058,7 +1062,7 @@
       if(!rows.length) tb.innerHTML='<tr><td colspan="8"><div class="empty">No pieces yet. Import a batch to get started.</div></td></tr>';
       function rowTr(r){
         const tr=document.createElement('tr'); tr.className='clickable'; tr.onclick=function(){ openPanel(r); };
-        tr.innerHTML='<td>'+esc(r['Piece ID'])+reqMark(r)+viralMark(r)+'<div class="rowtitle">'+esc(r['Title']||'')+'</div></td><td>'+clientChip(r['Client'])+'</td><td>'+fmtChip(r['Format'])+'</td>'+
+        tr.innerHTML='<td>'+esc(r['Piece ID'])+reqMark(r)+viralMark(r)+collabTag(r)+'<div class="rowtitle">'+esc(r['Title']||'')+'</div></td><td>'+clientChip(r['Client'])+'</td><td>'+fmtChip(r['Format'])+'</td>'+
           '<td class="cellbtn platcell">'+platLabel(r['PlatformList'],r['Client'])+'</td><td>'+stagePill(r['Stage'])+'</td>'+
           '<td>'+onTrack(r['On Track'])+'</td><td class="cellbtn datecell">'+platDates(r)+'</td><td>'+copyLink(r['Copy Link'])+'</td>';
         const a=tr.querySelector('a.lnk'); if(a) a.onclick=function(e){ e.stopPropagation(); };
@@ -1103,7 +1107,7 @@
       rows.forEach(function(r){
         const notReady=!isReadyStage(r['Stage']); if(notReady) urgent++;
         const tr=document.createElement('tr'); if(notReady) tr.className='notready';
-        tr.innerHTML='<td>'+esc(r['Piece ID'])+viralMark(r)+(notReady?'<span class="urg">URGENT</span>':'')+'</td>'+
+        tr.innerHTML='<td>'+esc(r['Piece ID'])+viralMark(r)+collabTag(r)+(notReady?'<span class="urg">URGENT</span>':'')+'</td>'+
           '<td>'+clientChip(r['Client'])+'</td><td>'+fmtChip(r['Format'])+'</td>'+
           '<td class="cellbtn platcell">'+platLabel(r['PlatformList'],r['Client'])+'</td>'+
           '<td>'+esc(r['Title']||'')+'</td>'+
@@ -1256,10 +1260,14 @@
     function openPanel(r){
       current=r;
       $('pTitle').textContent=r['Title']||r['Piece ID'];
-      $('pMeta').textContent=r['Piece ID']+' · '+r['Client']+' · '+r['Format']+(r['PlatformList'].length?' · '+r['PlatformList'].join(', '):'');
+      $('pMeta').innerHTML=esc(r['Piece ID']+' · '+r['Client']+' · '+r['Format']+(r['PlatformList'].length?' · '+r['PlatformList'].join(', '):''))+collabTag(r);
       $('pStage').value=r['Stage']||'1 Copywriting';
       $('pDate').value=r['Publish Date']||'';
       $('pTitleEdit').value=r['Title']||'';
+      (function(){ var sel=$('pPostFrom'); if(!sel) return; var cur=(r['Post From']||'').trim();
+        var opts=['<option value="">'+esc(r['Client'])+' (own \u2014 not a collab)</option>'];
+        ((META&&META.clients)||[]).forEach(function(cl){ if(cl!==r['Client']) opts.push('<option value="'+esc(cl)+'">'+esc(cl)+'</option>'); });
+        sel.innerHTML=opts.join(''); sel.value=(cur&&cur!==r['Client'])?cur:''; })();
       (function(){ const sw=$('pSwap'); if(!sw) return;
         const cands=allRows.filter(function(x){ return x.row!==r.row && x['Client']===r['Client'] && (x['Format']||'')===(r['Format']||'') && /^9 /.test(x['Stage']||'') && x['Publish Date']; });
         sw.innerHTML='<option value="">Swap with… (ready, same format)</option>'+cands.map(function(x){ return '<option value="'+x.row+'">'+esc(x['Piece ID'])+' \u00b7 '+esc(niceDate(x['Publish Date']))+'</option>'; }).join(''); })();
@@ -1305,6 +1313,7 @@
       if(($('pViralIG').value||'')!==(current['Viral IG Link']||'')) changes['Viral IG Link']=$('pViralIG').value;
       if(($('pViralTT').value||'')!==(current['Viral TT Link']||'')) changes['Viral TT Link']=$('pViralTT').value;
       if(($('pTitleEdit').value||'')!==(current['Title']||'')) changes['Title']=$('pTitleEdit').value.trim();
+      if((($('pPostFrom')&&$('pPostFrom').value)||'')!==((current['Post From']||'').trim())) changes['Post From']=($('pPostFrom')?$('pPostFrom').value:'');
       const origPlat=PLAT_OPTIONS.filter(function(p){ return (current['PlatformList']||[]).some(function(t){ return PLAT_MATCH[p] && PLAT_MATCH[p].test(t); }); }).join(', ');
       const pickedPlat=Array.from($('pPlat').querySelectorAll('input:checked')).map(function(i){ return i.value; }).join(', ');
       if(pickedPlat!==origPlat) changes['Platform']=pickedPlat;
@@ -1400,6 +1409,16 @@
     function toneChip(v, map){ const t=(map[v]||'#eef0ee|#5a635a').split('|'); return v? '<span class="tchip" style="background:'+t[0]+';color:'+t[1]+'">'+esc(v)+'</span>':'<span class="muted">—</span>'; }
     function fmtChip(f){ return toneChip(f, FMT_TONE); }
     function clientChip(c){ return toneChip(c, CLIENT_TONE); }
+    function personCode_(id){ var m=String(id||'').match(/^[A-Za-z]+-([A-Za-z]+(?:\+[A-Za-z]+)?)-\d+\.\d+/); return m?m[1].toUpperCase():null; }
+    var PERSON_NAME_ = {SRU:'SRU',ICE:'Ice',DIA:'Dianna',MEL:'Melissa',LYN:'Lynn',PWI:'Plan With Ice'};
+    function personName_(c){ return PERSON_NAME_[c]||c; }
+    function collabInfo(r){ var client=r['Client']||'', pf=(r['Post From']||'').trim();
+      if(pf && pf!==client) return {type:'collab', from:pf, on:client};
+      var p=personCode_(r['Piece ID']); if(p && p.indexOf('+')>=0){ var pp=p.split('+'); return {type:'feat', featured:personName_(pp[1])}; }
+      return null; }
+    function collabTag(r){ var c=collabInfo(r); if(!c) return '';
+      if(c.type==='feat') return '<span class="collabtag feat" title="Post featuring '+esc(c.featured)+' \u2014 owner quota, no cost to the founder">\u2605 feat. '+esc(c.featured)+'</span>';
+      return '<span class="collabtag" title="Posts from '+esc(c.from)+', counts against their quota">'+esc(c.from)+' \u2192 '+esc(c.on)+'</span>'; }
     function niceDate(ymd){ if(!ymd) return '—'; const d=new Date(ymd+'T00:00:00'); if(isNaN(d)) return ymd;
       const D=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], M=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
       return D[d.getDay()]+' '+d.getDate()+' '+M[d.getMonth()]; }
@@ -1433,7 +1452,7 @@
       else if(v.indexOf('🔴')===0||/Behind|Blocked/.test(v)) c='t-red';
       return '<span class="'+c+'">'+esc(v)+'</span>';
     }
-    function getBatch(r){ var b=parseFloat(r['Batch']); if(!isNaN(b)) return b; var m=String(r['Piece ID']||'').match(/(\d+)\.\d+/); return m?parseFloat(m[1]):null; }
+    function getBatch(r){ var b=parseFloat(r['Batch']); if(!isNaN(b)&&b>=1&&b<=99) return b; var m=String(r['Piece ID']||'').match(/(\d+)\.\d+/); var n=m?parseFloat(m[1]):null; return (n!=null&&n>=1&&n<=99)?n:null; }
     function maxBatch(cl){ let m=null; allRows.forEach(function(r){ if(r['Client']===cl){ const b=getBatch(r); if(b!==null&&(m===null||b>m)) m=b; } }); return m; }
     function batchOverride(cl){ try{ const v=localStorage.getItem('orbitBatch:'+cl); return v!=null?parseInt(v,10):null; }catch(e){ return null; } }
     function setBatchOverride(cl,n){ try{ localStorage.setItem('orbitBatch:'+cl,String(n)); }catch(e){} }
