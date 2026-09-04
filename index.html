@@ -31,6 +31,7 @@
     .navbtn:hover { background:#e5e9e2; color:var(--ink); }
     .navbtn.active { background:var(--sidebar-active); border-color:var(--sidebar-line); color:var(--sidebar-active-ink); font-weight:600; box-shadow:0 1px 4px rgba(90,125,110,.07); }
     .navbtn .ic { width:18px; text-align:center; opacity:.75; }
+    .mobtabs { display:none; }
     .sidefoot { margin-top:auto; padding:12px 4px 2px; border-top:1px solid var(--sidebar-line); }
     .sidefoot .who { font-size:11px; color:var(--ink-soft); line-height:1.5; word-break:break-all; margin-bottom:9px; }
     .sidefoot button { width:100%; background:#e5e9e2; border:none; color:var(--sidebar-ink); padding:8px; border-radius:8px; cursor:pointer; font:inherit; font-size:12px; }
@@ -55,7 +56,114 @@
     .seg button { border:none; border-radius:0; background:#fff; padding:8px 15px; }
     .seg button.on { background:var(--brand); color:#fff; }
     .count { color:var(--ink-soft); font-size:13px; }
-    .hidden { display:none; }
+    .hidden { display:none !important; }
+    .viral { color:#d9a400; font-weight:700; }
+    .chip.plat { background:#e7efe9; color:#3f5a49; }
+    .obh { font-size:13px; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-soft); margin:22px 0 10px; }
+    .obh:first-child { margin-top:0; }
+    .obgrid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    .ob { display:block; font-size:12px; color:var(--ink-soft); }
+    .ob input[type=text], .ob input[type=number], .ob select { display:block; width:100%; margin-top:5px; font:inherit; padding:9px 10px; border:1px solid var(--line); border-radius:8px; }
+    .ob input[type=checkbox] { margin-right:7px; }
+    .ob .hint { display:block; margin-top:5px; font-size:11px; color:var(--ink-soft); opacity:.85; }
+    .req { color:#c0554f; }
+    .daybox { display:flex; flex-wrap:wrap; gap:7px; margin-top:6px; }
+    .daychip { display:flex; align-items:center; gap:6px; padding:7px 11px; border:1px solid var(--line); border-radius:8px; font-size:12px; cursor:pointer; background:#fff; }
+    tr.justmade td { background:#eaf5ec; }
+    .tchip { display:inline-block; padding:2px 9px; border-radius:6px; font-size:12px; font-weight:500; letter-spacing:.01em; }
+    .hero { background:linear-gradient(180deg,#f7f9f6,#fff); border:1px solid var(--line); border-radius:14px; padding:22px 24px; }
+    .hero-date { font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft); margin-bottom:4px; }
+    .hero-h { margin:0 0 2px; font-size:24px; }
+    .tpcards { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:12px; margin:16px 0 8px; }
+    .tpcard { border:1px solid var(--line); border-radius:12px; padding:14px; background:#fff; }
+    .tpcard.urgent { border-color:#e39b9b; background:#fdf6f6; }
+    .tphead { display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin-bottom:8px; }
+    .tptitle { font-weight:600; line-height:1.35; margin-bottom:2px; }
+    .tpid { font-size:11px; color:var(--ink-soft); margin-bottom:8px; }
+    .tpdates { display:flex; flex-direction:column; gap:4px; margin-bottom:10px; }
+    .pdate { font-size:12px; }
+    .pdate .pd { color:var(--ink-soft); }
+    .tprow { display:flex; gap:8px; align-items:center; }
+    .tpmsg { min-height:14px; margin-top:6px; font-size:11px; }
+    .tpstage { font:inherit; font-size:12px; padding:5px 7px; border:1px solid var(--line); border-radius:8px; background:#fff; max-width:170px; }
+    .parked { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:14px; align-items:start; }
+    .pcol { border:1px solid var(--line); border-radius:12px; background:#fff; overflow:hidden; }
+    .pcol.open { grid-column:1/-1; }
+    .phead { width:100%; text-align:left; background:#faf9f6; border:none; border-bottom:1px solid transparent; font:inherit; font-weight:600;
+      padding:12px 14px; cursor:pointer; display:flex; align-items:center; gap:8px; }
+    .pcol.open .phead { border-bottom-color:var(--line); }
+    .phead .pn { background:#e9ece7; color:var(--ink-soft); border-radius:20px; padding:1px 9px; font-size:11px; font-weight:600; }
+    .phead .pcar { margin-left:auto; color:var(--ink-soft); }
+    .plist { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:2px; }
+    .pitem { padding:10px 14px; border-bottom:1px solid var(--line); cursor:pointer; }
+    .pitem:hover { background:#faf9f6; }
+    .pi-t { font-size:13px; line-height:1.35; }
+    .pi-m { font-size:11px; color:var(--ink-soft); margin-top:3px; }
+    .ppage { display:flex; align-items:center; justify-content:center; gap:12px; padding:10px; font-size:12px; }
+    .modal { position:fixed; inset:0; background:rgba(30,36,30,.34); display:flex; align-items:center; justify-content:center; z-index:60; }
+    .modalcard { background:#fff; border-radius:14px; padding:22px 24px; width:min(94vw,420px); box-shadow:0 20px 50px rgba(0,0,0,.2); }
+    .delab { display:block; font-size:12px; color:var(--ink-soft); margin-bottom:12px; }
+    .delab input { display:block; width:100%; margin-top:5px; font:inherit; padding:8px 9px; border:1px solid var(--line); border-radius:8px; }
+    .delab input[type=checkbox] { display:inline-block; width:auto; margin:0 6px 0 0; }
+    .peboxes { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .pebox { font-size:13px; display:flex; align-items:center; gap:7px; padding:7px 9px; border:1px solid var(--line); border-radius:8px; cursor:pointer; }
+    .cellbtn { cursor:pointer; }
+    .cellbtn:hover { background:#f3f6f2; outline:1px solid var(--line); }
+    .ptable { width:100%; border-collapse:collapse; font-size:13px; }
+    .ptable th { text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-soft); padding:8px 12px; border-bottom:1px solid var(--line); }
+    .ptable td { padding:9px 12px; border-bottom:1px solid var(--line); }
+    .ptable tr:hover td { background:#faf9f6; }
+    .ptable tr.notready td { background:#fdf6f6; }
+    .ptable tr.notready:hover td { background:#fbeeee; }
+    .rowtitle { font-size:11px; color:var(--ink-soft); font-weight:400; max-width:300px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-top:2px; }
+    .bplat { margin:4px 0 2px; }
+    .linkbtn { background:none; border:none; color:var(--ink-soft); font:inherit; cursor:pointer; padding:6px 2px; }
+    .linkbtn:hover { color:var(--ink); }
+    tr.seemore td { background:#faf9f6; border-top:1px dashed var(--line); }
+    tr.parked-row td { background:#fbfbf9; color:var(--ink-soft); }
+    tr.urgent td { background:#fdecec; }
+    .urg { display:inline-block; margin-left:6px; padding:1px 7px; border-radius:6px; background:#d64545; color:#fff; font-size:10px; font-weight:700; letter-spacing:.03em; }
+    .tpstage { font:inherit; padding:5px 7px; border:1px solid var(--line); border-radius:8px; background:#fff; }
+    .addgrid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; align-items:center; }
+    .addgrid input, .addgrid select { font:inherit; padding:8px 9px; border:1px solid var(--line); border-radius:8px; }
+    .addgrid #acTitle { grid-column:span 2; }
+    .addgrid #acAdd { grid-column:span 2; }
+    @media (max-width:820px){
+      .shell { grid-template-columns:1fr !important; }
+      .sidebar { display:none !important; }
+      .main { padding:16px 14px calc(70px + env(safe-area-inset-bottom)) !important; }
+      .mobtabs { display:flex; position:fixed; bottom:0; left:0; right:0; height:58px; z-index:40;
+        background:var(--panel); border-top:1px solid var(--line); box-shadow:0 -2px 12px rgba(42,47,44,.08);
+        overflow-x:auto; -webkit-overflow-scrolling:touch; padding-bottom:env(safe-area-inset-bottom); }
+      .mobtab { flex:1 0 auto; min-width:62px; display:flex; flex-direction:column; align-items:center;
+        justify-content:center; gap:3px; border:none; background:none; color:var(--ink-soft);
+        font:inherit; font-size:10px; cursor:pointer; padding:6px 10px; white-space:nowrap; }
+      .mobtab .mic { font-size:19px; line-height:1; opacity:.8; }
+      .mobtab.active { color:var(--brand); }
+      .mobtab.active .mic { opacity:1; }
+      .tablewrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+      .board { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+      .addgrid { grid-template-columns:1fr 1fr; }
+      .addgrid #acTitle, .addgrid #acAdd { grid-column:span 2; }
+      .controls { flex-wrap:wrap; }
+      .parked { grid-template-columns:1fr; }
+      .tpcards { grid-template-columns:1fr; }
+      .panel { width:min(96vw,560px); }
+      .hero { padding:18px 16px; }
+      .hero-h { font-size:20px; }
+      .ptable { min-width:640px; }
+      .modalcard { width:min(94vw,420px); max-height:88vh; overflow-y:auto; }
+      .peboxes { grid-template-columns:1fr; }
+      .obgrid { grid-template-columns:1fr; }
+      .obgrid .ob[style*='span 2'] { grid-column:auto; }
+      .pebox { min-height:44px; }
+      .ppage { flex-wrap:wrap; }
+      .ppage button, .small { min-height:40px; }
+      .phead { min-height:48px; }
+      .tpstage { max-width:100%; width:100%; }
+      select, input, button { font-size:16px; }   /* stops iOS zooming on focus */
+      a, button { -webkit-tap-highlight-color:rgba(63,90,73,.15); }
+    }
     .ok  { color:#3a6b52; background:#e9f2ec; border:1px solid #bcd8c8; padding:11px 13px; border-radius:10px; }
     .err { color:#9a453b; background:#f8ebe9; border:1px solid #ecc5c0; padding:11px 13px; border-radius:10px; }
     .muted { color:var(--ink-soft); }
@@ -72,7 +180,9 @@
 
     .pill { display:inline-block; padding:3px 11px; border-radius:999px; font-size:12px; font-weight:600; line-height:1.4; white-space:nowrap; }
     .chip { display:inline-block; padding:2px 8px; margin:1px 3px 1px 0; border-radius:7px; font-size:11px; background:#eef1ec; color:#5b625b; font-weight:500; }
-    .lnk { text-decoration:none; font-size:16px; }
+    .lnk { text-decoration:none; font-size:12px; color:var(--ink-soft); }
+    .lnk:visited { color:var(--ink-soft); }
+    .lnk:hover { color:var(--brand); text-decoration:underline; }
     .lnk.disabled { opacity:.28; }
 
     .board { display:flex; gap:14px; overflow-x:auto; -webkit-overflow-scrolling:touch; padding-bottom:10px; align-items:flex-start; }
@@ -146,6 +256,70 @@
       #invDoc, #repDoc { position:absolute; left:0; top:0; width:100%; border:none; box-shadow:none; }
       .navbtn,.controls,.head,.sidebar{ display:none !important; }
     }
+
+    /* language toggle (added; anchored top-right of content, no layout shift) */
+    .main { position:relative; }
+    .langtoggle { position:absolute; top:26px; right:32px; z-index:20; display:inline-flex;
+      background:var(--panel); border:1px solid var(--line); border-radius:9px; overflow:hidden; }
+    .langtoggle button { border:none; background:transparent; color:var(--ink-soft); font:inherit;
+      font-size:12px; font-weight:600; padding:6px 11px; cursor:pointer; border-radius:0; line-height:1.2; }
+    .langtoggle button.on { background:var(--brand); color:#fff; }
+    .langtoggle button:not(.on):hover { background:var(--brand-soft); color:var(--ink); }
+    @media (max-width:820px){ .langtoggle { top:16px; right:14px; } }
+    @media print { .langtoggle { display:none !important; } }
+
+    /* WWA logo in sidebar (sized like Studyo's logo-img) */
+    .brandlogo { display:block; width:150px; height:auto; margin-top:10px; border-radius:8px; }
+    /* Assign Dates: per-row stage marking */
+    .assignact { display:flex; flex-direction:column; gap:6px; align-items:flex-start; }
+    .markgrp { display:flex; gap:4px; }
+    .markgrp .mini { font-size:11px; padding:4px 8px; border:1px solid var(--line); border-radius:7px;
+      background:#fff; color:var(--ink-soft); cursor:pointer; white-space:nowrap; font:inherit; font-size:11px; }
+    .markgrp .mini:hover { background:var(--brand-soft); color:var(--ink); border-color:var(--brand-line); }
+    .markgrp .mini:disabled { opacity:.5; cursor:default; }
+    /* saving-progress overlay */
+    .saveprog { position:fixed; inset:0; display:none; align-items:center; justify-content:center;
+      background:rgba(30,36,30,.28); z-index:80; }
+    .saveprog.show { display:flex; }
+    .sp-card { background:#fff; border:1px solid var(--line); border-radius:14px; padding:20px 22px;
+      width:min(90vw,320px); box-shadow:0 8px 30px rgba(42,47,44,.2); text-align:center; }
+    .sp-msg { font-size:14px; font-weight:600; color:var(--ink); margin-bottom:14px; }
+    .sp-track { height:8px; background:var(--line-soft); border-radius:99px; overflow:hidden; }
+    .sp-bar { height:100%; width:0; background:var(--brand); border-radius:99px; transition:width .18s ease; }
+    .sp-pct { margin-top:10px; font-size:12px; color:var(--ink-soft); font-variant-numeric:tabular-nums; }
+    .saveprog.err .sp-bar { background:#c0392b; }
+    .saveprog.err .sp-msg { color:#c0392b; }
+    .sp-ok { display:none; margin-top:16px; font:inherit; font-size:13px; font-weight:600; color:#fff;
+      background:var(--brand); border:none; border-radius:8px; padding:8px 24px; cursor:pointer; }
+    .saveprog.ok .sp-ok, .saveprog.err .sp-ok { display:inline-block; }
+    .saveprog.err .sp-ok { background:#c0392b; }
+    .saveprog.ok .sp-msg { color:var(--brand); }
+    .saveprog.ok .sp-msg::before { content:"\2713  "; }
+    .saveprog.ok .sp-track, .saveprog.ok .sp-pct,
+    .saveprog.err .sp-track, .saveprog.err .sp-pct { display:none; }
+    .batchprog { display:flex; flex-direction:column; }
+    .bp-row { padding:14px 0; border-bottom:1px solid rgba(55,53,47,0.09); }
+    .bp-row:last-child { border-bottom:none; }
+    .bp-head { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px; }
+    .bp-name { color:#37352f; font-weight:500; font-size:14px; }
+    .bp-bt { color:#9b9a97; font-weight:400; }
+    .bp-num { color:#9b9a97; font-size:13px; font-variant-numeric:tabular-nums; }
+    .bp-gear { border:none; background:none; cursor:pointer; color:#c4c4c2; font-size:13px; line-height:1; margin-left:8px; padding:0 2px; }
+    .bp-gear:hover { color:#787774; }
+    .bp-boxes { display:flex; flex-wrap:wrap; gap:4px; }
+    .bp-box { width:12px; height:12px; border-radius:3px; background:#e9e9e7; }
+    .bp-box.on { background:var(--brand); }
+    .bp-adv { margin-top:13px; display:flex; flex-wrap:wrap; gap:16px; }
+    .bp-adv.hidden { display:none; }
+    .bp-adv label { display:flex; flex-direction:column; gap:4px; font-size:11px; color:#9b9a97; }
+    .bp-adv input { width:96px; font:inherit; font-size:13px; color:#37352f; border:1px solid rgba(55,53,47,0.16); border-radius:5px; padding:4px 7px; background:#fff; }
+    .bp-adv input:focus { outline:none; border-color:var(--brand); }
+    /* per-platform posted/scheduled */
+    .pdate.pd-posted .pd, .pdate.pd-posted .pdtag { color:#4e8f6b; }
+    .pdate.pd-today .pd, .pdate.pd-today .pdtag { color:#c07a2b; font-weight:600; }
+    .pdate.pd-over .pd, .pdate.pd-over .pdtag { color:#c0392b; }
+    .pdate.pd-sched .pd { color:var(--ink-soft); }
+    .pdtag { margin-left:6px; font-size:9px; text-transform:uppercase; letter-spacing:.04em; opacity:.9; }
   </style>
 </head>
 <body>
@@ -160,32 +334,48 @@
   </div>
 
   <div class="shell hidden" id="app">
+    <nav id="mobtabs" class="mobtabs" aria-label="Sections"></nav>
     <nav class="sidebar">
-      <div class="brand">Orbit<small>WealthWise Atelier</small></div>
-      <button class="navbtn" data-tab="today"><span class="ic">◎</span> Today's Work</button>
+      <div class="brand">Orbit<img class="brandlogo" src="data:image/png;base64,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" alt="WealthWise Atelier"></div>
+      <button class="navbtn" data-tab="today"><span class="ic">◎</span> Today</button>
+      <button class="navbtn" data-tab="batch"><span class="ic">▰</span> Batch Progress</button>
       <button class="navbtn" data-tab="pipeline"><span class="ic">▤</span> Pipeline</button>
       <button class="navbtn" data-tab="assign"><span class="ic">◷</span> Assign Dates</button>
       <button class="navbtn" data-tab="import"><span class="ic">＋</span> Import</button>
       <button class="navbtn" data-tab="handoff"><span class="ic">✎</span> Prompts &amp; Handoffs</button>
       <button class="navbtn" data-tab="invoices"><span class="ic">฿</span> Invoices</button>
+      <button class="navbtn" data-tab="onboard"><span class="ic">✛</span> Onboard Client</button>
       <button class="navbtn" data-tab="clientview"><span class="ic">↗</span> Client View</button>
       <button class="navbtn" data-tab="log"><span class="ic">≡</span> Activity Log</button>
       <div class="sidefoot"><div class="who" id="whoamiMin"></div><button id="signout">Sign out</button></div>
     </nav>
 
     <main class="main">
+      <div id="langToggle" class="langtoggle" role="group" aria-label="Language"><button id="langEN" type="button" class="on">EN</button><button id="langTH" type="button">TH</button></div>
       <section class="hidden" id="tab-today">
-        <div class="head"><div><h2>Today's Work</h2><p class="sub">Pieces that need a hand — behind schedule, waiting on the client, or posting soon.</p></div><span class="count" id="todayCount"></span></div>
+        <div class="hero">
+          <div class="hero-date" id="heroDate"></div>
+          <h2 class="hero-h">Today's posts</h2>
+          <p class="sub">Going live today. Not ready yet shows red. Change status or dates right here — it saves to the master.</p>
+          <div class="tablewrap" style="margin-top:16px"><table class="ptable"><thead><tr><th>Piece ID</th><th>Client</th><th>Format</th><th>Platform</th><th>Title</th><th>Posting dates</th><th>Stage</th><th></th></tr></thead><tbody id="tpBody"></tbody></table></div>
+          <span class="count" id="tpCount"></span>
+        </div>
+
+        <div class="head" style="margin-top:26px"><div><h3 style="margin:0">Today's work</h3><p class="sub">Pieces that need a hand — behind schedule, waiting on the client, or posting soon.</p></div><span class="count" id="todayCount"></span></div>
         <div class="controls">
           <label class="inline">View as
             <select id="todayRole"><option value="all">All</option><option value="designer">Graphic Designer</option><option value="editor">Video Editor</option></select>
           </label>
         </div>
         <div class="surface" style="margin-top:16px"><div class="tablewrap">
-          <table><thead><tr><th>Piece ID</th><th>Client</th><th>Format</th><th>Stage</th><th>Next Step</th><th>Chase Who</th><th>On Track</th><th>Publish</th></tr></thead><tbody id="todayBody"></tbody></table>
+          <table><thead><tr><th>Piece ID</th><th>Client</th><th>Format</th><th>Platform</th><th>Stage</th><th>On Track</th><th>Posting dates</th><th>Copy</th></tr></thead><tbody id="todayBody"></tbody></table>
         </div></div>
       </section>
 
+      <section class="hidden" id="tab-batch">
+        <div class="head"><div><h2>Batch Progress</h2><p class="sub">Ready-to-post or published vs the agreed quota. Resets to a new batch each time a client reaches their number.</p></div></div>
+        <div class="surface"><div class="batchprog" id="batchProg"></div></div>
+      </section>
       <section class="hidden" id="tab-pipeline">
         <div class="head"><div><h2>Pipeline</h2><p class="sub">Every piece across the production ladder. Click any row to update it.</p></div></div>
         <div class="controls">
@@ -194,15 +384,17 @@
           </label>
           <label class="inline">View <span class="seg"><button id="viewTable" class="on">Table</button><button id="viewBoard">Board</button></span></label>
           <button id="refresh" class="small">Refresh</button>
+          <label class="inline"><input type="checkbox" id="viralOnly"> ★ Viral only</label>
           <span class="count" id="pipeCount"></span>
           <label class="inline viewas">View as
             <select id="roleView"><option value="all">All</option><option value="designer">Graphic Designer</option><option value="editor">Video Editor</option></select>
           </label>
         </div>
         <div class="surface" id="tableView"><div class="tablewrap">
-          <table><thead><tr><th>Piece ID</th><th>Client</th><th>Format</th><th>Platform</th><th>Stage</th><th>Next Step</th><th>Chase Who</th><th>On Track</th><th>Publish</th><th>Copy</th></tr></thead><tbody id="pipeBody"></tbody></table>
+          <table><thead><tr><th>Piece ID</th><th>Client</th><th>Format</th><th>Platform</th><th>Stage</th><th>On Track</th><th>Date</th><th>Copy</th></tr></thead><tbody id="pipeBody"></tbody></table>
         </div></div>
         <div id="boardView" class="board hidden"></div>
+        <div id="parkedArea" class="parked"></div>
       </section>
 
       <section class="hidden" id="tab-assign">
@@ -216,6 +408,7 @@
           </label>
           <button id="assignRefresh" class="small">Refresh</button>
           <button class="primary" id="assignSaveAll">Save all suggested</button>
+          <button id="rearrangeAll" class="small">Auto-rearrange whole board</button>
           <span class="pstatus muted" id="assignStatus"></span>
         </div>
         <div class="surface"><div class="tablewrap">
@@ -226,6 +419,21 @@
       <section class="hidden" id="tab-import">
         <div class="head"><div><h2>Import a batch</h2><p class="sub">Paste Block A with its header row. Validate first — Save turns on only when nothing is blocking.</p></div></div>
         <div class="surface" style="padding:20px;margin-top:16px">
+          <h3 style="margin:0 0 12px;font-size:15px">Add one piece</h3>
+          <div class="addgrid">
+            <input type="text" id="acId" placeholder="Piece ID (e.g. C12.1)">
+            <select id="acClient"><option>Ice</option><option>Lynn</option><option>Melissa</option><option>SRU</option><option>Dianna</option></select>
+            <select id="acFormat"><option>Carousel</option><option>VO reel</option><option>On-camera reel</option><option>Sit-down video</option><option>POV b-roll</option></select>
+            <input type="text" id="acPlatform" placeholder="Platform (e.g. IG, TikTok)">
+            <input type="text" id="acTitle" placeholder="Title">
+            <input type="date" id="acDate">
+            <select id="acStage"></select>
+            <button class="primary" id="acAdd">Add piece</button>
+          </div>
+          <span class="pstatus muted" id="acStatus"></span>
+        </div>
+        <div class="surface" style="padding:20px;margin-top:16px">
+          <h3 style="margin:0 0 12px;font-size:15px">Paste a batch</h3>
           <textarea id="tsv" placeholder="Piece ID&#9;Client&#9;Format&#9;Platform&#9;Title&#9;Publish Date&#9;Ready By&#9;Stage&#9;Founder&#9;Copy Link"></textarea>
           <div class="controls" style="margin-bottom:0"><button class="primary" id="validate">Validate</button><button class="primary" id="save" disabled>Save to Sheet</button><span class="pstatus muted" id="impStatus"></span></div>
           <div class="report" id="report"></div>
@@ -244,10 +452,10 @@
         </div>
         <div class="seg" style="margin-bottom:16px">
           <button id="hoKindSchedule" class="on">Scheduling prompt</button>
-          <button id="hoKindImport">Import batch (with dates)</button>
           <button id="hoKindReminder">Client reminder</button>
           <button id="hoKindLinks">Missing links</button>
         </div>
+        <p class="sub" id="hoHelp" style="margin:-8px 0 16px"></p>
         <div class="surface" style="padding:18px">
           <div class="controls" style="margin:0 0 12px">
             <button class="primary" id="hoGenerate">Generate</button>
@@ -295,6 +503,64 @@
         </div></div>
       </section>
 
+      <section class="hidden" id="tab-onboard">
+        <div class="head"><div><h2>Onboard a client</h2><p class="sub">Fill this once and the client is set up everywhere: profile, posting rhythm, billing, dropdowns, and their private calendar link.</p></div></div>
+
+        <div class="surface" style="padding:22px;margin-top:16px">
+          <h3 class="obh">The basics</h3>
+          <div class="obgrid">
+            <label class="ob">Client name <span class="req">*</span>
+              <input type="text" id="obName" placeholder="e.g. Ice">
+              <span class="hint">Must match exactly what you'll use in Piece IDs and imports.</span></label>
+            <label class="ob">Social handles
+              <input type="text" id="obHandles" placeholder="@planwithice"></label>
+            <label class="ob">Founder(s)
+              <input type="text" id="obFounders" placeholder="Ice  ·  comma-separate if several">
+              <span class="hint">Who on the client side must act. Blank uses the client name.</span></label>
+            <label class="ob">Notes
+              <input type="text" id="obNotes" placeholder="Anything the team should know"></label>
+          </div>
+
+          <h3 class="obh">Content rhythm</h3>
+          <div class="obgrid">
+            <label class="ob">Pieces per batch (quota)
+              <input type="number" id="obQuota" min="1" placeholder="24"></label>
+            <label class="ob">Batch cadence
+              <input type="text" id="obCadence" value="4-week"></label>
+            <label class="ob" style="grid-column:span 2">Posting days
+              <span class="daybox" id="obDays"></span>
+              <span class="hint">Days this client posts. Used to suggest dates and avoid double-booking.</span></label>
+            <label class="ob" style="grid-column:span 2"><input type="checkbox" id="obIgFb"> Their Instagram is linked to Facebook
+              <span class="hint">Tick if posting to IG also posts to FB — the calendar then shows "IG &amp; FB" as one action.</span></label>
+          </div>
+
+          <h3 class="obh">Billing</h3>
+          <div class="obgrid">
+            <label class="ob">Package description
+              <input type="text" id="obBaseDesc" placeholder="Monthly content package"></label>
+            <label class="ob">Billing cycle
+              <select id="obCycle"><option>Monthly</option><option>Quarterly</option><option>Per batch</option></select></label>
+            <label class="ob">Base fee (THB)
+              <input type="number" id="obBaseTHB" min="0" placeholder="0"></label>
+            <label class="ob">Base fee (SGD)
+              <input type="number" id="obBaseSGD" min="0" placeholder="0"></label>
+            <label class="ob">Add-on description
+              <input type="text" id="obAddDesc" placeholder="Optional"></label>
+            <label class="ob">Primary currency
+              <select id="obCurrency"><option>THB</option><option>SGD</option></select></label>
+            <label class="ob">Add-on fee (THB)
+              <input type="number" id="obAddTHB" min="0" placeholder="0"></label>
+            <label class="ob">Add-on fee (SGD)
+              <input type="number" id="obAddSGD" min="0" placeholder="0"></label>
+          </div>
+
+          <div class="controls" style="margin:18px 0 0">
+            <button class="primary" id="obCreate">Create client</button>
+            <span class="pstatus muted" id="obStatus"></span>
+          </div>
+        </div>
+      </section>
+
       <section class="hidden" id="tab-clientview">
         <div class="head"><div><h2>Client View</h2><p class="sub">Each client's private read-only calendar. Copy the link, open it, or share it — the client sees only their own pieces, and there's nothing for them to edit.</p></div></div>
         <div class="surface" style="margin-top:16px"><div class="tablewrap">
@@ -304,7 +570,7 @@
       </section>
 
       <section class="hidden" id="tab-log">
-        <div class="head"><div><h2>Activity Log</h2><p class="sub">Every change made through the dashboard, newest first.</p></div><button class="small" id="logRefresh">Refresh</button></div>
+        <div class="head"><div><h2>Activity Log</h2><p class="sub">Every change made through the dashboard, newest first.</p></div><button class="small" id="logRefresh" style="margin-right:80px">Refresh</button></div>
         <div class="surface" style="margin-top:16px"><div class="tablewrap">
           <table><thead><tr><th>When</th><th>Who</th><th>Piece</th><th>Field</th><th>From</th><th>To</th></tr></thead><tbody id="logBody"></tbody></table>
         </div></div>
@@ -316,9 +582,22 @@
     <div class="panel">
       <h3 id="pTitle"></h3>
       <div class="pid" id="pMeta"></div>
+      <div class="field"><label>Title</label><input type="text" id="pTitleEdit" style="font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;width:100%"></div>
       <div class="field"><label>Stage</label><select id="pStage"></select></div>
+      <div class="field"><label>Publish date</label><input type="date" id="pDate" style="font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px"></div>
+      <div class="field"><label>Reschedule</label><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <select id="pSwap" style="font:inherit;padding:7px 9px;border:1px solid var(--line);border-radius:8px;max-width:230px"></select>
+        <button class="small" id="pSwapBtn" type="button">Swap dates</button>
+        <button class="small" id="pPushBtn" type="button">Push from here</button></div></div>
+      <div class="field"><label>Platforms</label><div id="pPlat" class="peboxes"></div></div>
       <div class="field"><label><input type="checkbox" id="pBlocked"> Blocked</label></div>
-      <div class="field"><label>Copy link (Notion)</label><input type="text" id="pCopyLink" placeholder="https://notion.so/…"></div>
+      <div class="field"><label><input type="checkbox" id="pViral"> ★ Viral (mark once published)</label>
+        <div id="pViralLinks" class="hidden" style="margin-top:8px;display:grid;gap:8px">
+          <input type="text" id="pViralIG" placeholder="IG post URL (https://instagram.com/…)">
+          <input type="text" id="pViralTT" placeholder="TikTok post URL (https://tiktok.com/…)">
+        </div>
+      </div>
+      <div class="field"><label>Copy link</label><input type="text" id="pCopyLink" placeholder="Notion or Google Doc URL"></div>
       <div class="field"><label>Footage &amp; photos needed</label>
         <div class="reqbox">
           <div id="pReqList" class="muted" style="font-size:13px">Nothing requested yet.</div>
@@ -335,39 +614,161 @@
     </div>
   </div>
 
+  <div id="platEditor" class="modal hidden">
+    <div class="modalcard">
+      <h3 style="margin:0 0 4px">Platforms</h3>
+      <div class="muted" id="peTitle" style="font-size:12px;margin-bottom:14px"></div>
+      <div id="peBoxes" class="peboxes"></div>
+      <label class="delab" style="margin-top:10px"><input type="checkbox" id="peAll"> Apply to the whole batch <span class="muted" id="peBatchInfo"></span></label>
+      <div class="pstatus muted" id="peMsg"></div>
+      <div class="controls" style="margin:14px 0 0"><button class="primary" id="peSave">Save platforms</button><button class="small" id="peCancel">Cancel</button></div>
+    </div>
+  </div>
+
+  <div id="dateEditor" class="modal hidden">
+    <div class="modalcard">
+      <h3 style="margin:0 0 4px">Posting dates</h3>
+      <div class="muted" id="deTitle" style="font-size:12px;margin-bottom:14px"></div>
+      <label class="delab">Main publish date <input type="date" id="dePublish"></label>
+      <label class="delab">IG date <span class="muted">(blank = same as main)</span> <input type="date" id="deIG"></label>
+      <label class="delab">TikTok date <span class="muted">(blank = same as main)</span> <input type="date" id="deTT"></label>
+      <label class="delab"><input type="checkbox" id="deAllPlat" checked> Apply main date to all platforms <span class="muted">(clears IG/TikTok overrides)</span></label>
+      <label class="delab"><input type="checkbox" id="deBatch"> Apply to the whole batch <span class="muted" id="deBatchInfo"></span></label>
+      <div class="pstatus muted" id="deMsg"></div>
+      <div class="controls" style="margin:14px 0 0"><button class="primary" id="deSave">Save dates</button><button class="small" id="deCancel">Cancel</button></div>
+    </div>
+  </div>
+
   <script>
     const CLIENT_ID = '543895724243-cbielh8h6qnqau5nh5p8jp7j4cplfge1.apps.googleusercontent.com';
     const EXEC_URL  = 'https://script.google.com/macros/s/AKfycbz4IrRMhmoOSZSVIB5CacHmMW6T7TFjEDDT-31Ke0C0sZAYy2uBdzMiBCXwG__IV33mwQ/exec';
 
+    // Early parallel boot: fire the three read calls the instant this script runs, reusing the
+    // already-saved ID token, so the Apps Script cold start overlaps GIS init and the first paint.
+    window.__orbitBoot = (function(){
+      try {
+        var t = localStorage.getItem('orbitTok');
+        if (!t || (tokenExp(t) - Date.now() < 60000)) return null;   // no usable token: normal sign-in handles it
+        function fire(action){
+          return fetch(EXEC_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+            body: JSON.stringify({ idToken:t, action:action, payload:{} }) })
+            .then(function(r){ return r.json(); }).catch(function(){ return null; });
+        }
+        return { token:t, whoami:fire('whoami'), getMeta:fire('getMeta'), listRows:fire('listRows') };
+      } catch(e){ return null; }
+    })();
+    // Consume a booted response once, only if it was fired for the token we're now using.
+    function bootTake(action){
+      var b = window.__orbitBoot;
+      if (!b || b.token !== idToken || !b[action]) return null;
+      var p = b[action]; b[action] = null; return p;
+    }
+    async function callBooted(action){
+      var p = bootTake(action);
+      if (p) { var d = await p; if (d && d.ok) return d; }   // booted hit; on miss fall through to the robust call()
+      return call(action);
+    }
+
     const STAGES = ['🚩 Required Client Input','1 Copywriting','2 Copywriting Ready for Review','3 Copywriting Approved',
       '4 Waiting for Voiceover / Video','5 Voiceover / Video Received','6 In Production','7 Content Ready for Review','8 Content Approved',
-      '9 Ready to Publish','10 Published','◼️ Unselected','🔁 Rolled Over'];
+      '9 Ready to Publish','10 Published','⏸️ On Hold','◼️ Unselected','🔁 Rolled Over'];
     const STAGE_COLOUR = {
       '🚩 Required Client Input':'st-flag','1 Copywriting':'st-1','2 Copywriting Ready for Review':'st-2',
       '3 Copywriting Approved':'st-3','4 Waiting for Voiceover / Video':'st-4','5 Voiceover / Video Received':'st-5',
       '6 In Production':'st-6','7 Content Ready for Review':'st-7','8 Content Approved':'st-8',
-      '9 Ready to Publish':'st-9','10 Published':'st-10','◼️ Unselected':'st-off','🔁 Rolled Over':'st-roll'};
-    const BOARD_HIDE = ['10 Published','◼️ Unselected'];
+      '9 Ready to Publish':'st-9','10 Published':'st-10','On Hold':'st-off','⏸️ On Hold':'st-off','◼️ Unselected':'st-off','🔁 Rolled Over':'st-roll'};
+    const BOARD_HIDE = ['10 Published','On Hold','⏸️ On Hold','◼️ Unselected'];
+    // Parked = set aside, off the active board, shown in the table only via "see more".
+    const PARKED = ['On Hold','⏸️ On Hold','◼️ Unselected'];
 
     const PREFS = loadPrefs();
-    let idToken = null, allRows = [], current = null, pendingRefresh = null, keepaliveStarted = false;
+    let idToken = null, allRows = [], current = null, pendingRefresh = null, keepaliveStarted = false, myEmail = '';
     let reqTypes = ['working-in-action','daily activities','HD scenic','specific'];
     let reqKinds = ['B-Rolls','Pictures'], curReqs = [];
     const $ = function (id){ return document.getElementById(id); };
 
+    // ── Global saving-progress overlay (shows on every write; real % for batches) ──
+    const WRITE_ACT = { updatePiece:1, updatePieces:1, importBatch:1, generateInvoice:1, markPaid:1, onboardClient:1, addRequest:1, markReceived:1 };
+    let PROG_SUPPRESS = false;
+    const Progress = (function(){
+      let box, bar, pctEl, msgEl, okBtn, timer=null, dtimer=null, val=0;
+      function build(){
+        if(box) return;
+        box=document.createElement('div'); box.className='saveprog';
+        box.innerHTML='<div class="sp-card"><div class="sp-msg">Saving…</div>'+
+          '<div class="sp-track"><div class="sp-bar"></div></div><div class="sp-pct">0%</div>'+
+          '<button type="button" class="sp-ok">OK</button></div>';
+        document.body.appendChild(box);
+        bar=box.querySelector('.sp-bar'); pctEl=box.querySelector('.sp-pct'); msgEl=box.querySelector('.sp-msg');
+        okBtn=box.querySelector('.sp-ok'); okBtn.onclick=close;
+      }
+      function set(p){ val=Math.max(0,Math.min(100,Math.round(p))); bar.style.width=val+'%'; pctEl.textContent=val+'%'; }
+      function stop(){ if(timer){ clearInterval(timer); timer=null; } }
+      function close(){ if(dtimer){ clearTimeout(dtimer); dtimer=null; } if(box) box.classList.remove('show'); }
+      function begin(msg, total){
+        build(); if(dtimer){ clearTimeout(dtimer); dtimer=null; }
+        msgEl.textContent=msg||'Saving…'; box.classList.remove('ok','err'); box.classList.add('show'); set(0); stop();
+        if(!total || total<=1){                       // single request: animate toward 90% while it's in flight
+          timer=setInterval(function(){ if(val<90) set(val + Math.max(1,(90-val)*0.14)); }, 90);
+        }
+      }
+      function step(done, total){ stop(); set(total? (done/total*100) : 100); }
+      function end(ok, msg){
+        build(); stop(); set(100); msgEl.textContent = msg || (ok?'Saved.':'Save failed');
+        box.classList.add(ok?'ok':'err');            // shows the ✓ and the OK button
+        if(dtimer) clearTimeout(dtimer);
+        dtimer=setTimeout(close, ok?2600:6000);       // stays clearly visible; OK dismisses immediately
+      }
+      return { begin:begin, step:step, end:end };
+    })();
+
     window.onload = function () {
-      google.accounts.id.initialize({ client_id:CLIENT_ID, callback:onCredential, auto_select:true });
+      google.accounts.id.initialize({ client_id:CLIENT_ID, callback:onCredential, auto_select:true, itp_support:true });
       google.accounts.id.renderButton($('signin'), { theme:'outline', size:'large', text:'signin_with' });
-      google.accounts.id.prompt();
+      $('signin').style.display='none';
+      $('whoami').className='muted'; $('whoami').textContent='Signing you in…';
+
+      // 1) Reuse the stored token if it hasn't expired — this is what makes a refresh keep you signed in.
+      const saved = loadToken();
+      if (saved) { idToken = saved; startSession(); return; }
+
+      // 2) No usable token: ask Google to re-issue one silently.
+      trySilentSignIn();
     };
 
+    function revealSignIn(msg){
+      $('signin').style.display='';
+      $('whoami').className='muted';
+      $('whoami').textContent = msg || 'Please sign in to continue.';
+    }
+    function trySilentSignIn(){
+      try { google.accounts.id.prompt(); } catch(e){}
+      setTimeout(function(){ if(!idToken) revealSignIn(); }, 5000);
+    }
+    // Token store — ID tokens are valid ~1h; keep it so a page refresh doesn't force a new sign-in.
+    function tokenExp(t){ try { return (JSON.parse(atob(t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))).exp||0)*1000; } catch(e){ return 0; } }
+    function saveToken(t){ try { localStorage.setItem('orbitTok', t); } catch(e){} }
+    function loadToken(){
+      try { const t=localStorage.getItem('orbitTok'); if(!t) return null;
+        // 60s safety margin so we never send a token that expires mid-request.
+        if (tokenExp(t) - Date.now() < 60000) { localStorage.removeItem('orbitTok'); return null; }
+        return t;
+      } catch(e){ return null; }
+    }
+    function clearToken(){ try { localStorage.removeItem('orbitTok'); } catch(e){} }
+
     async function call(action, payload){
+      const showProg = WRITE_ACT[action] && !PROG_SUPPRESS;
+      if(showProg) Progress.begin('Saving…');
       let data = await rawCall(action, payload);
       // If the token expired mid-session, silently fetch a fresh one and retry once.
       if (data && data.ok === false && /token|authoris|authoriz|expired|aud/i.test(data.error||'')) {
         await refreshToken();
+        if (idToken) saveToken(idToken);
         data = await rawCall(action, payload);
+        if (data && data.ok === false && /token|authoris|authoriz|expired|aud/i.test(data.error||'') && action!=='whoami') sessionLost();
       }
+      if(showProg) Progress.end(!!(data && data.ok), (data && data.ok) ? 'Saved.' : 'Save failed');
       return data;
     }
     async function rawCall(action, payload){
@@ -381,45 +782,181 @@
         try {
           pendingRefresh = resolve;
           google.accounts.id.prompt();          // silent; callback onCredential updates idToken
-          setTimeout(function(){ if(pendingRefresh){ pendingRefresh=null; resolve(); } }, 4000);
+          setTimeout(function(){ if(pendingRefresh){ pendingRefresh=null; resolve(); } }, 5000);
         } catch(e){ resolve(); }
       });
+    }
+    // If a call still fails after a silent renewal, the session is genuinely gone — ask for a real sign-in.
+    function sessionLost(){
+      clearToken(); idToken=null; clearSnapshot();
+      $('app').classList.add('hidden'); $('signScreen').classList.remove('hidden');
+      revealSignIn('Your session expired. Please sign in again.');
     }
 
     async function onCredential(resp){
       idToken = resp.credential;
-      if (pendingRefresh) { const r = pendingRefresh; pendingRefresh = null; r(); }   // resolve silent refresh
+      saveToken(idToken);
+      if (pendingRefresh) { const r = pendingRefresh; pendingRefresh = null; r(); return; }   // silent refresh only
+      startSession();
+    }
+
+    async function startSession(){
       if (!keepaliveStarted) { keepaliveStarted = true;
-        // Renew the token every ~45 min (Google tokens last ~60). Keeps long-idle sessions alive.
-        setInterval(function(){ try { google.accounts.id.prompt(); } catch(e){} }, 45*60*1000);
+        // Renew a few minutes before the token actually expires, so long sessions never drop.
+        setInterval(function(){
+          const left = tokenExp(idToken||'') - Date.now();
+          if (left < 6*60*1000) { try { google.accounts.id.prompt(); } catch(e){} }
+        }, 4*60*1000);
+        // Coming back to the tab after sleep: re-check immediately rather than waiting for the timer.
+        document.addEventListener('visibilitychange', function(){
+          if(document.visibilityState==='visible' && idToken && tokenExp(idToken)-Date.now() < 6*60*1000){
+            try { google.accounts.id.prompt(); } catch(e){}
+          }
+        });
       }
-      $('whoami').className='muted'; $('whoami').textContent='Checking with Orbit…';
-      const data = await call('whoami');
-      if(!data.ok){ $('whoami').className='err'; $('whoami').textContent=data.error||'Sign-in rejected.'; return; }
+      const painted = window.__orbitBoot ? paintFromCache() : false;
+      if(!painted){ $('whoami').className='muted'; $('whoami').textContent='Checking with Orbit…'; }
+      const data = await callBooted('whoami');
+      if(!data || !data.ok){
+        clearToken(); idToken=null; clearSnapshot();
+        if(painted){ $('app').classList.add('hidden'); $('signScreen').classList.remove('hidden'); }
+        $('whoami').className='err'; $('whoami').textContent=(data&&data.error)||'Sign-in rejected.';
+        revealSignIn((data&&data.error)||'Please sign in again.');
+        return;
+      }
+      myEmail = data.result.email;
       $('signScreen').classList.add('hidden'); $('app').classList.remove('hidden');
       $('whoamiMin').textContent = data.result.email;
-      buildStageSelect(); buildReqTypes();
-      showTab(PREFS.tab||'today'); applyPipePrefs();
+      if(!painted){ buildStageSelect(); buildReqTypes(); showTab(PREFS.tab||'today'); applyPipePrefs(); }
       await loadRows();
     }
+    // Instant first paint from the last saved view, so a returning operator never waits on a blank screen.
+    function paintFromCache(){
+      try {
+        var raw = localStorage.getItem('orbitSnap'); if(!raw) return false;
+        var snap = JSON.parse(raw); if(!snap || !snap.rows) return false;
+        META = snap.meta || META;          // leave metaLoaded false so the refresh still re-fetches meta
+        allRows = snap.rows || [];
+        if(snap.email){ myEmail = snap.email; $('whoamiMin').textContent = snap.email; }
+        $('signScreen').classList.add('hidden'); $('app').classList.remove('hidden');
+        buildStageSelect(); buildReqTypes();
+        showTab(PREFS.tab||'today'); applyPipePrefs();
+        renderPipe(); renderToday(); renderTodayPosts(); renderBatchProgress();
+        return true;
+      } catch(e){ return false; }
+    }
+    function saveSnapshot(){
+      try { localStorage.setItem('orbitSnap', JSON.stringify({ email:myEmail, meta:META, rows:allRows, ts:Date.now() })); } catch(e){}
+    }
+    function clearSnapshot(){ try { localStorage.removeItem('orbitSnap'); localStorage.removeItem('orbitLog'); } catch(e){} }
     $('signout').onclick = function(){
-      google.accounts.id.disableAutoSelect(); idToken=null;
+      google.accounts.id.disableAutoSelect(); idToken=null; clearToken(); clearSnapshot();
       $('app').classList.add('hidden'); $('signScreen').classList.remove('hidden');
+      $('signin').style.display='';
       $('whoami').className='muted'; $('whoami').textContent='Signed out. Sign in again above.';
     };
 
     document.querySelectorAll('.navbtn[data-tab]').forEach(function(b){ b.onclick=function(){ showTab(b.dataset.tab); }; });
+    buildMobTabs();
+    function buildMobTabs(){
+      const host=document.getElementById('mobtabs'); if(!host || host.childElementCount) return;
+      document.querySelectorAll('.navbtn[data-tab]').forEach(function(b){
+        const tab=b.dataset.tab, ic=b.querySelector('.ic'), icon=ic?ic.textContent:'';
+        const label=b.textContent.replace(icon,'').trim();
+        const mt=document.createElement('button'); mt.className='mobtab'+(b.classList.contains('active')?' active':''); mt.dataset.tab=tab;
+        mt.innerHTML='<span class="mic">'+icon+'</span><span class="mlabel">'+label+'</span>';
+        mt.onclick=function(){ showTab(tab); };
+        host.appendChild(mt);
+      });
+    }
     function showTab(name){
       PREFS.tab=name; savePrefs();
       document.querySelectorAll('.navbtn[data-tab]').forEach(function(b){ b.classList.toggle('active', b.dataset.tab===name); });
-      ['today','pipeline','assign','import','handoff','invoices','clientview','log'].forEach(function(t){ $('tab-'+t).classList.toggle('hidden', t!==name); });
+      document.querySelectorAll('.mobtab[data-tab]').forEach(function(b){ b.classList.toggle('active', b.dataset.tab===name); });
+      ['today','batch','pipeline','assign','import','handoff','invoices','onboard','clientview','log'].forEach(function(t){ $('tab-'+t).classList.toggle('hidden', t!==name); });
+      // META (client links, billing, posting days) is already loaded and cached — render from it now,
+      // and refresh it silently in the background instead of blocking each tab open on a getMeta round-trip.
+      const metaReady = !!(META && META.clients);
+      const refreshMeta = function(after){ loadMeta().then(function(){ if(after) after(); }); };
       if(name==='log') loadLog();
-      if(name==='assign'){ loadMeta().then(function(){ renderAssign(); }); }
-      if(name==='invoices'){ loadMeta().then(function(){ fillFromBilling(); loadInvoices(); }); }
-      if(name==='clientview'){ loadMeta().then(function(){ renderClientLinks(); }); }
+      if(name==='batch') renderBatchProgress();
+      if(name==='today'){ if(metaReady){ renderTodayPosts(); refreshMeta(renderTodayPosts); } else loadMeta().then(renderTodayPosts); }
+      if(name==='assign'){ if(metaReady){ renderAssign(); refreshMeta(renderAssign); } else loadMeta().then(renderAssign); }
+      if(name==='invoices'){ if(metaReady){ fillFromBilling(); loadInvoices(); refreshMeta(fillFromBilling); } else loadMeta().then(function(){ fillFromBilling(); loadInvoices(); }); }
+      if(name==='onboard'){ buildDayBox(); }
+      if(name==='clientview'){
+        if(metaReady){ renderClientLinks(); refreshMeta(renderClientLinks); }
+        else { const tb=$('clientLinksBody'); if(tb) tb.innerHTML='<tr><td colspan="3"><div class="empty">Loading client links…</div></td></tr>'; loadMeta().then(renderClientLinks); }
+      }
     }
 
+    // ── Onboard a client ──
+    const OB_DAYS=['Mon','Tue','Wed','Thu','Fri','Sat'];
+    function buildDayBox(){
+      const box=$('obDays'); if(!box||box.dataset.built) return; box.dataset.built='1';
+      box.innerHTML=OB_DAYS.map(function(d){
+        return '<label class="daychip"><input type="checkbox" value="'+d+'" checked> '+d+'</label>'; }).join('');
+    }
+    function obSet(m,c){ $('obStatus').className='pstatus '+(c||'muted'); $('obStatus').textContent=m; }
+    (function(){
+      var b=document.getElementById('obCreate'); if(!b) return;
+      b.onclick=async function(){
+        const name=($('obName').value||'').trim();
+        if(!name){ obSet('Client name is required.','err'); $('obName').focus(); return; }
+        const days=Array.from($('obDays').querySelectorAll('input:checked')).map(function(i){ return i.value; });
+        if(!days.length){ obSet('Pick at least one posting day.','err'); return; }
+        const payload={ client:name,
+          handles:($('obHandles').value||'').trim(), founders:($('obFounders').value||'').trim(),
+          notes:($('obNotes').value||'').trim(), quota:($('obQuota').value||''),
+          cadence:($('obCadence').value||'4-week').trim(), postingDays:days.join(','),
+          igFb:$('obIgFb').checked,
+          baseDesc:($('obBaseDesc').value||'').trim(), baseTHB:($('obBaseTHB').value||0), baseSGD:($('obBaseSGD').value||0),
+          addDesc:($('obAddDesc').value||'').trim(), addTHB:($('obAddTHB').value||0), addSGD:($('obAddSGD').value||0),
+          currency:$('obCurrency').value, cycle:$('obCycle').value };
+        b.disabled=true; obSet('Creating '+name+'…','muted');
+        const data=await call('onboardClient', payload);
+        b.disabled=false;
+        if(!data.ok){ obSet(TT('Failed: ')+data.error, 'err'); return; }
+        obSet(name+' created. Opening Client View…','ok');
+        // Clear the form, refresh meta so the new client appears in every dropdown, then jump to the link.
+        ['obName','obHandles','obFounders','obNotes','obQuota','obBaseDesc','obBaseTHB','obBaseSGD','obAddDesc','obAddTHB','obAddSGD']
+          .forEach(function(id){ if($(id)) $(id).value=''; });
+        $('obIgFb').checked=false;
+        metaLoaded=false; await loadMeta(); metaLoaded=true;
+        NEW_CLIENT=data.result.client;
+        showTab('clientview');
+      };
+    })();
+    let NEW_CLIENT='';
+
     $('refresh').onclick = loadRows;
+    (function(){
+      var s=document.getElementById('deSave'), c=document.getElementById('deCancel');
+      if(c) c.onclick=closeDateEditor;
+      if(s) s.onclick=async function(){
+        const rowNo=Number($('dateEditor').dataset.row); const r=allRows.filter(function(x){ return x.row===rowNo; })[0];
+        if(!r){ closeDateEditor(); return; }
+        const main=$('dePublish').value||'';
+        const allPlat=$('deAllPlat').checked;
+        const changes={ 'Publish Date':main,
+          'IG Date': allPlat ? '' : ($('deIG').value||''),
+          'TikTok Date': allPlat ? '' : ($('deTT').value||'') };
+        if(main){ const d=new Date(main+'T00:00:00');
+          if(d.getDay()===0){ $('deMsg').className='pstatus err'; $('deMsg').textContent='Main date is a Sunday — pick another day.'; return; }
+          changes['Ready By']=minus14(main); }
+        const targets=$('deBatch').checked ? batchMates(r) : [r];
+        s.disabled=true; $('deMsg').className='pstatus muted'; $('deMsg').textContent='Saving…';
+        const updates=targets.map(function(t){ return {row:t.row, pieceId:t['Piece ID'], changes:changes}; });
+        const res=await savePieces(updates);
+        s.disabled=false;
+        const failed=(res.errors||[]).map(function(e){ return e.pieceId+': '+e.error; });
+        if(!res.ok){ $('deMsg').className='pstatus err'; $('deMsg').textContent=res.error; }
+        else if(failed.length){ $('deMsg').className='pstatus err'; $('deMsg').textContent=TT('Saved ')+res.rows.length+TT(', failed — ')+failed.join(' · ')+TT('. Try again.'); }
+        else { $('deMsg').className='pstatus ok'; $('deMsg').textContent=TT('Saved ')+res.rows.length+TT(' piece(s).'); setTimeout(closeDateEditor,600); }
+        renderTodayPosts(); renderPipe(); renderToday();
+      };
+    })();
+    $('viralOnly').onchange = function(){ PREFS.viralOnly=$('viralOnly').checked; savePrefs(); renderPipe(); };
     $('logRefresh').onclick = loadLog;
     $('clientFilter').onchange = function(){ PREFS.client=$('clientFilter').value; savePrefs(); renderPipe(); renderToday(); };
     $('viewTable').onclick=function(){ setView('table'); };
@@ -434,46 +971,102 @@
     $('assignStyle').onchange=function(){ PREFS.assignStyle=$('assignStyle').value; savePrefs(); renderAssign(); };
     $('assignStyle').value = PREFS.assignStyle||'alternate';
     $('assignRefresh').onclick=function(){ loadRows().then(function(){ renderAssign(); }); };
-    $('assignSaveAll').onclick=async function(){
-      const trs=Array.from($('assignBody').querySelectorAll('tr')); let done=0, fail=0; setAssign('Saving…','muted');
-      for(const tr of trs){ const btn=tr.querySelector('button[data-save]'); if(!btn) continue;
-        const dateEl=tr.querySelector('input[type=date]'); const catchEl=tr.querySelector('input[type=checkbox]');
-        const res=await assignOne(btn.dataset.save, Number(btn.dataset.row), dateEl.value, catchEl.checked);
-        if(res.ok) done++; else fail++; }
+    $('assignSaveAll').onclick=async function(){      const trs=Array.from($('assignBody').querySelectorAll('tr')); setAssign('Saving…','muted');
+      const rows=trs.filter(function(tr){ return tr.querySelector('button[data-save]'); });
+      const updates=[]; let skipped=0; const used={};
+      for(const tr of rows){ const btn=tr.querySelector('button[data-save]');
+        const rowNo=Number(btn.dataset.row); const dateEl=tr.querySelector('input[type=date]'); const catchEl=tr.querySelector('input[type=checkbox]');
+        const ymd=dateEl.value; const rr=allRows.filter(function(x){ return x.row===rowNo; })[0];
+        if(!assignCheck(rr, ymd, catchEl.checked, used)){ skipped++; continue; }
+        updates.push({row:rowNo, pieceId:btn.dataset.save, changes:{ 'Publish Date':ymd, 'Ready By':minus14(ymd) }});
+      }
+      const res=await savePieces(updates);
       renderAssign(); renderPipe(); renderToday();
-      setAssign('Saved '+done+(fail?(' · '+fail+' skipped (fix and retry)'):'')+'.', fail?'err':'ok');
+      const fail=(res.ok?(res.errors||[]).length:updates.length)+skipped;
+      setAssign(TT('Saved ')+(res.ok?res.rows.length:0)+(fail?(' · '+fail+TT(' skipped (fix and retry)')):'')+'.', fail?'err':'ok');
     };
+    // ── Add one piece (reuses the Block A importer with a single row) ──
+    const BLOCK_A_HEADER='Piece ID\tClient\tFormat\tPlatform\tTitle\tPublish Date\tReady By\tStage\tFounder\tCopy Link';
+    function acStatus(m,c){ if($('acStatus')){ $('acStatus').className='pstatus '+(c||'muted'); $('acStatus').textContent=m; } }
+    document.addEventListener('DOMContentLoaded',function(){ if($('acStage')) $('acStage').innerHTML=STAGES.map(function(s){return '<option>'+esc(s)+'</option>';}).join(''); });
+    (function(){ var b=document.getElementById('acAdd'); if(!b) return;
+      b.onclick=async function(){
+        const id=($('acId').value||'').trim(); if(!id){ acStatus('Piece ID is required.','err'); return; }
+        const date=($('acDate').value||'').trim(); const ready=date?minus14(date):'';
+        const row=[id,$('acClient').value,$('acFormat').value,($('acPlatform').value||'').trim(),($('acTitle').value||'').trim(),date,ready,$('acStage').value,'',''];
+        const tsv=BLOCK_A_HEADER+'\n'+row.join('\t');
+        b.disabled=true; acStatus('Adding…','muted');
+        const v=await call('validateBatch',{tsv:tsv});
+        if(!v.ok){ b.disabled=false; acStatus(v.error,'err'); return; }
+        const blocked=(v.result.rows||[]).some(function(r){ return r.errors&&r.errors.length; });
+        if(blocked){ b.disabled=false; acStatus((v.result.rows[0].errors||['Blocked'])[0],'err'); return; }
+        const d=await call('importBatch',{tsv:tsv}); b.disabled=false;
+        if(!d.ok){ acStatus(d.error,'err'); return; }
+        acStatus('Added '+id+'.','ok'); $('acId').value='';$('acTitle').value='';$('acPlatform').value='';$('acDate').value='';
+        loadRows();
+      };
+    })();
+
+    // ── Auto-rearrange: re-space every unpublished, non-parked piece across each client's posting days ──
+    (function(){ var b=document.getElementById('rearrangeAll'); if(!b) return;
+      b.onclick=async function(){
+        if(!confirm('Re-suggest and save posting dates for all unpublished pieces? Published pieces are never touched.')) return;
+        b.disabled=true; setAssign('Rearranging…','muted');
+        const style=PREFS.assignStyle||'alternate';
+        const byClient={};
+        allRows.forEach(function(r){ const s=r['Stage']||'';
+          if(/^10 Published/.test(s) || PARKED.indexOf(s)!==-1) return;
+          (byClient[r['Client']]=byClient[r['Client']]||[]).push(r); });
+        const jobs=[];
+        for(const cl of Object.keys(byClient)){
+          const pieces=byClient[cl].slice().sort(function(a,b){ return (a['Publish Date']||'zzz').localeCompare(b['Publish Date']||'zzz'); });
+          const sugg=suggestDatesForClient(cl, pieces, style);
+          for(const p of pieces){ const ymd=sugg[p['Piece ID']]; if(ymd) jobs.push({row:p.row, pieceId:p['Piece ID'], changes:{ 'Publish Date':ymd, 'Ready By':minus14(ymd) }}); }
+        }
+        const res=await savePieces(jobs);
+        const fail=(res.ok?(res.errors||[]).length:jobs.length);
+        b.disabled=false; renderAssign(); renderPipe(); renderToday();
+        setAssign('Rearranged '+(res.ok?res.rows.length:0)+' piece(s)'+(fail?(' · '+fail+' skipped'):'')+'.', fail?'err':'ok');
+      };
+    })();
+
     function setView(v){ PREFS.view=v; savePrefs();
       $('viewTable').classList.toggle('on',v==='table'); $('viewBoard').classList.toggle('on',v==='board');
       $('tableView').classList.toggle('hidden',v!=='table'); $('boardView').classList.toggle('hidden',v!=='board'); }
 
     async function loadRows(){
-      $('pipeCount').textContent='Loading…';
-      const data = await call('listRows');
-      if(!data.ok){ $('pipeCount').textContent=data.error; return; }
-      allRows = data.result.rows||[]; renderPipe(); renderToday();
+      if(!allRows.length) $('pipeCount').textContent='Loading…';
+      if(!metaLoaded){ await loadMeta(); metaLoaded=true; }
+      const data = await callBooted('listRows');
+      if(!data || !data.ok){ if(!allRows.length) $('pipeCount').textContent=(data&&data.error)||'Load failed'; return; }
+      allRows = data.result.rows||[]; renderPipe(); renderToday(); renderTodayPosts(); renderBatchProgress();
+      saveSnapshot();
     }
     function isVideoFormat(fmt){ return /reel|video|voiceover|on-?camera|sit-?down|pov/i.test(fmt||''); }
     function roleMatches(fmt, role){ if(role==='designer') return !isVideoFormat(fmt); if(role==='editor') return isVideoFormat(fmt); return true; }
     function filtered(){
       const want=PREFS.client||''; const role=normRole(PREFS.role);
-      return allRows.filter(function(r){ return (!want||r['Client']===want) && roleMatches(r['Format'],role); })
+      return allRows.filter(function(r){ return (!want||r['Client']===want) && roleMatches(r['Format'],role) && (!PREFS.viralOnly || r['Viral']==='TRUE'); })
         .sort(function(a,b){ return (a['Publish Date']||'').localeCompare(b['Publish Date']||''); });
     }
 
     function renderPipe(){
       const rows=filtered(); const tb=$('pipeBody'); tb.innerHTML='';
-      if(!rows.length) tb.innerHTML='<tr><td colspan="10"><div class="empty">No pieces yet. Import a batch to get started.</div></td></tr>';
-      rows.forEach(function(r){
+      const active=rows.filter(function(r){ return PARKED.indexOf(r['Stage'])===-1 && !/^10 Published/.test(r['Stage']||''); });
+      if(!rows.length) tb.innerHTML='<tr><td colspan="8"><div class="empty">No pieces yet. Import a batch to get started.</div></td></tr>';
+      function rowTr(r){
         const tr=document.createElement('tr'); tr.className='clickable'; tr.onclick=function(){ openPanel(r); };
-        tr.innerHTML='<td>'+esc(r['Piece ID'])+reqMark(r)+'</td><td>'+esc(r['Client'])+'</td><td>'+esc(r['Format'])+'</td>'+
-          '<td>'+chips(r['PlatformList'])+'</td><td>'+stagePill(r['Stage'])+'</td>'+
-          '<td>'+esc(r['Next Step'])+'</td><td>'+esc(r['Chase Who'])+'</td>'+
-          '<td>'+onTrack(r['On Track'])+'</td><td>'+esc(r['Publish Date'])+'</td><td>'+copyLink(r['Copy Link'])+'</td>';
+        tr.innerHTML='<td>'+esc(r['Piece ID'])+reqMark(r)+viralMark(r)+'<div class="rowtitle">'+esc(r['Title']||'')+'</div></td><td>'+clientChip(r['Client'])+'</td><td>'+fmtChip(r['Format'])+'</td>'+
+          '<td class="cellbtn platcell">'+platLabel(r['PlatformList'],r['Client'])+'</td><td>'+stagePill(r['Stage'])+'</td>'+
+          '<td>'+onTrack(r['On Track'])+'</td><td class="cellbtn datecell">'+platDates(r)+'</td><td>'+copyLink(r['Copy Link'])+'</td>';
         const a=tr.querySelector('a.lnk'); if(a) a.onclick=function(e){ e.stopPropagation(); };
-        tb.appendChild(tr);
-      });
-      $('pipeCount').textContent=rows.length+' piece(s)';
+        tr.querySelector('.platcell').onclick=function(e){ e.stopPropagation(); openPlatformEditor(r); };
+        tr.querySelector('.datecell').onclick=function(e){ e.stopPropagation(); openDateEditor(r); };
+        return tr;
+      }
+      active.forEach(function(r){ tb.appendChild(rowTr(r)); });
+      renderParked(rows);
+      $('pipeCount').textContent=active.length+' active';
 
       const bv=$('boardView'); bv.innerHTML='';
       STAGES.filter(function(s){ return BOARD_HIDE.indexOf(s)===-1; }).forEach(function(stage){
@@ -483,15 +1076,132 @@
         col.innerHTML='<div class="bh">'+stagePill(stage)+'<span class="n">'+inStage.length+'</span></div>';
         inStage.forEach(function(r){
           const c=document.createElement('div'); c.className='bcard'; c.onclick=function(){ openPanel(r); };
-          c.innerHTML='<div class="bt">'+esc(r['Title']||r['Piece ID'])+reqMark(r)+'</div>'+
-            '<div class="bm">'+esc(r['Piece ID'])+' · '+esc(r['Format'])+'</div>'+
-            '<div>'+onTrack(r['On Track'])+' · <span class="muted">'+esc(r['Publish Date'])+'</span></div>';
+          c.innerHTML='<div class="bt">'+esc(r['Title']||r['Piece ID'])+reqMark(r)+viralMark(r)+'</div>'+
+            '<div class="bm">'+esc(r['Piece ID'])+' '+clientChip(r['Client'])+' '+fmtChip(r['Format'])+'</div>'+
+            '<div class="bplat">'+platLabel(r['PlatformList'],r['Client'])+'</div>'+
+            '<div>'+onTrack(r['On Track'])+' · <span class="muted">'+esc(r['Publish Date'])+'</span></div>'+
+            '<div class="bcopy" style="margin-top:6px">'+copyLink(r['Copy Link'])+'</div>';
           col.appendChild(c);
         });
         bv.appendChild(col);
       });
       if(!bv.children.length) bv.innerHTML='<div class="empty">Nothing in the active pipeline.</div>';
     }
+
+    function renderTodayPosts(){
+      const iso=todayISO();
+      const hd=$('heroDate'); if(hd) hd.textContent=niceDate(iso)+' · '+new Date().getFullYear();
+      const tb=$('tpBody'); if(!tb) return; tb.innerHTML='';
+      const rows=allRows.filter(function(r){
+        const base=r['Publish Date']||'';
+        return base===iso || (r['IG Date']||'')===iso || (r['TikTok Date']||'')===iso;
+      }).sort(function(a,b){ return (a['Client']||'').localeCompare(b['Client']||''); });
+      if(!rows.length){ tb.innerHTML='<tr><td colspan="8"><div class="empty">Nothing scheduled to publish today.</div></td></tr>'; $('tpCount').textContent='0 posts today'; return; }
+      let urgent=0;
+      rows.forEach(function(r){
+        const notReady=!isReadyStage(r['Stage']); if(notReady) urgent++;
+        const tr=document.createElement('tr'); if(notReady) tr.className='notready';
+        tr.innerHTML='<td>'+esc(r['Piece ID'])+viralMark(r)+(notReady?'<span class="urg">URGENT</span>':'')+'</td>'+
+          '<td>'+clientChip(r['Client'])+'</td><td>'+fmtChip(r['Format'])+'</td>'+
+          '<td class="cellbtn platcell">'+platLabel(r['PlatformList'],r['Client'])+'</td>'+
+          '<td>'+esc(r['Title']||'')+'</td>'+
+          '<td>'+platDates(r)+'</td>'+
+          '<td class="tpstagecell"></td>'+
+          '<td><button class="small tpdate">Edit dates</button></td>';
+        const sel=document.createElement('select'); sel.className='tpstage';
+        sel.innerHTML=STAGES.map(function(s){ return '<option'+(s===r['Stage']?' selected':'')+'>'+esc(s)+'</option>'; }).join('');
+        sel.onchange=async function(){ sel.disabled=true;
+          const res=await savePiece(r,{ 'Stage':sel.value }); sel.disabled=false;
+          if(res.ok){ renderTodayPosts(); renderPipe(); renderToday(); }
+        };
+        tr.querySelector('.tpstagecell').appendChild(sel);
+        tr.querySelector('.platcell').onclick=function(){ openPlatformEditor(r); };
+        tr.querySelector('.tpdate').onclick=function(){ openDateEditor(r); };
+        tb.appendChild(tr);
+      });
+      $('tpCount').textContent=rows.length+TT(' post(s) today')+(urgent?(' · '+urgent+TT(' not ready')):'');
+    }
+
+    // Batch = pieces sharing the client + the batch number embedded in the Piece ID (e.g. C12.1 -> 12).
+    function batchOf(id){ const m=String(id||'').match(/(\d+)\.\d+\s*$/); return m?m[1]:''; }
+    function batchMates(r){ const b=batchOf(r['Piece ID']); if(!b) return [r];
+      return allRows.filter(function(x){ return x['Client']===r['Client'] && batchOf(x['Piece ID'])===b; }); }
+
+    const PLAT_OPTIONS=['IG & FB','TikTok','LinkedIn','Website Article'];
+    // Match a stored token (old or new) to one of the four options, so the editor pre-checks correctly.
+    const PLAT_MATCH={ 'IG & FB':/ig|instagram|reel|story|fb|facebook/i, 'TikTok':/tiktok|tt/i, 'LinkedIn':/linkedin/i, 'Website Article':/website|web|article/i };
+    function openPlatformEditor(r){
+      $('peTitle').textContent=r['Piece ID']+' · '+(r['Title']||'');
+      const cur=(r['PlatformList']||[]).map(function(s){return String(s).trim().toLowerCase();});
+      $('peBoxes').innerHTML=PLAT_OPTIONS.map(function(p){
+        const on=cur.some(function(t){ return PLAT_MATCH[p] && PLAT_MATCH[p].test(t); });
+        return '<label class="pebox"><input type="checkbox" value="'+esc(p)+'"'+(on?' checked':'')+'> '+esc(p)+'</label>';
+      }).join('');
+      $('peAll').checked=false;
+      $('peBatchInfo').textContent='('+batchMates(r).length+' piece(s))';
+      $('peMsg').className='pstatus muted'; $('peMsg').textContent=igFbOn(r['Client'])?'This client posts IG and Facebook together.':'';
+      $('platEditor').classList.remove('hidden'); $('platEditor').dataset.row=r.row;
+    }
+    function closePlatformEditor(){ $('platEditor').classList.add('hidden'); }
+    (function(){
+      var s=document.getElementById('peSave'), c=document.getElementById('peCancel');
+      if(c) c.onclick=closePlatformEditor;
+      if(s) s.onclick=async function(){
+        const rowNo=Number($('platEditor').dataset.row); const r=allRows.filter(function(x){ return x.row===rowNo; })[0];
+        if(!r){ closePlatformEditor(); return; }
+        const picked=Array.from($('peBoxes').querySelectorAll('input:checked')).map(function(i){ return i.value; });
+        const targets=$('peAll').checked ? batchMates(r) : [r];
+        s.disabled=true; $('peMsg').className='pstatus muted'; $('peMsg').textContent='Saving…';
+        const val=picked.join(', ');
+        const updates=targets.map(function(t){ return {row:t.row, pieceId:t['Piece ID'], changes:{ 'Platform':val }}; });
+        const res=await savePieces(updates);
+        s.disabled=false;
+        const failed=(res.errors||[]).map(function(e){ return e.pieceId; });
+        if(!res.ok){ $('peMsg').className='pstatus err'; $('peMsg').textContent=res.error; }
+        else if(failed.length){ $('peMsg').className='pstatus err'; $('peMsg').textContent=TT('Saved ')+res.rows.length+TT(', failed: ')+failed.join(', ')+TT(' — try again.'); }
+        else { $('peMsg').className='pstatus ok'; $('peMsg').textContent=TT('Saved ')+res.rows.length+TT(' piece(s).'); setTimeout(closePlatformEditor,600); }
+        renderPipe(); renderToday(); renderTodayPosts();
+      };
+    })();
+
+    // ── One shared save + date editor, used by Today and Pipeline ──
+    async function savePiece(r, changes){
+      const data=await call('updatePiece',{ row:r.row, pieceId:r['Piece ID'], changes:changes });
+      if(!data.ok) return {ok:false,error:data.error||'save failed'};
+      const fresh=data.result.row; const idx=allRows.findIndex(function(x){ return x.row===fresh.row; });
+      if(idx>=0) allRows[idx]=fresh;
+      if(current && current.row===fresh.row) current=fresh;
+      return {ok:true,row:fresh};
+    }
+    // Bulk save: one round-trip for many rows. updates = [{row, pieceId, changes}].
+    async function savePieces(updates){
+      if(!updates.length) return {ok:true, rows:[], errors:[]};
+      const data=await call('updatePieces',{ updates:updates });
+      if(!data.ok) return {ok:false, error:data.error||'save failed', rows:[], errors:[]};
+      (data.result.rows||[]).forEach(function(fresh){ const idx=allRows.findIndex(function(x){ return x.row===fresh.row; });
+        if(idx>=0) allRows[idx]=fresh; if(current && current.row===fresh.row) current=fresh; });
+      return {ok:true, rows:data.result.rows||[], errors:data.result.errors||[]};
+    }
+    // Client-side date validation (mirrors assignOne) + intra-batch double-booking guard.
+    function assignCheck(r, ymd, allowSame, used){
+      if(!r || !ymd) return false;
+      const d=new Date(ymd+'T00:00:00'); if(isNaN(d)||d.getDay()===0) return false;
+      const cl=r['Client']||'';
+      const takenExisting=allRows.some(function(x){ return x.row!==r.row && x['Client']===cl && x['Publish Date']===ymd; });
+      const takenBatch=used[cl] && used[cl][ymd];
+      if((takenExisting || takenBatch) && !allowSame) return false;
+      used[cl]=used[cl]||{}; used[cl][ymd]=(used[cl][ymd]||0)+1;
+      return true;
+    }
+    function openDateEditor(r){
+      $('deTitle').textContent=r['Piece ID']+' · '+(r['Title']||'');
+      $('dePublish').value=r['Publish Date']||''; $('deIG').value=r['IG Date']||''; $('deTT').value=r['TikTok Date']||'';
+      $('deMsg').className='pstatus muted'; $('deMsg').textContent='Leave IG or TikTok blank to use the main publish date.';
+      $('deAllPlat').checked = !(r['IG Date']||r['TikTok Date']);
+      $('deBatch').checked=false; $('deBatchInfo').textContent='('+batchMates(r).length+' piece(s))';
+      $('dateEditor').classList.remove('hidden'); $('dateEditor').dataset.row=r.row;
+    }
+    function closeDateEditor(){ $('dateEditor').classList.add('hidden'); }
 
     function renderToday(){
       const rows=filtered().filter(function(r){
@@ -505,20 +1215,20 @@
       if(!rows.length) tb.innerHTML='<tr><td colspan="8"><div class="empty">Nothing needs attention right now.</div></td></tr>';
       rows.forEach(function(r){
         const tr=document.createElement('tr'); tr.className='clickable'; tr.onclick=function(){ openPanel(r); };
-        tr.innerHTML='<td>'+esc(r['Piece ID'])+'</td><td>'+esc(r['Client'])+'</td><td>'+esc(r['Format'])+'</td>'+
-          '<td>'+stagePill(r['Stage'])+'</td><td>'+esc(r['Next Step'])+'</td><td>'+esc(r['Chase Who'])+'</td>'+
-          '<td>'+onTrack(r['On Track'])+'</td><td>'+esc(r['Publish Date'])+'</td>';
+        tr.innerHTML='<td>'+esc(r['Piece ID'])+'<div class="rowtitle">'+esc(r['Title']||'')+'</div></td><td>'+clientChip(r['Client'])+'</td><td>'+fmtChip(r['Format'])+'</td>'+
+          '<td>'+platLabel(r['PlatformList'],r['Client'])+'</td>'+
+          '<td>'+stagePill(r['Stage'])+'</td>'+
+          '<td>'+onTrack(r['On Track'])+'</td><td class="cellbtn datecell">'+platDates(r)+'</td><td>'+copyLink(r['Copy Link'])+'</td>';
+        tr.querySelector('.datecell').onclick=function(e){ e.stopPropagation(); openDateEditor(r); };
         tb.appendChild(tr);
       });
       $('todayCount').textContent=rows.length+' piece(s) need attention';
     }
 
-    async function loadLog(){
-      const tb=$('logBody'); tb.innerHTML='<tr><td colspan="6"><div class="empty">Loading…</div></td></tr>';
-      const data=await call('listLog',{limit:200});
-      if(!data.ok){ tb.innerHTML='<tr><td colspan="6"><div class="empty">'+esc(data.error)+'</div></td></tr>'; return; }
-      const rows=data.result.rows||[]; tb.innerHTML='';
-      if(!rows.length){ tb.innerHTML='<tr><td colspan="6"><div class="empty">No activity yet.</div></td></tr>'; return; }
+    function renderLogRows(rows){
+      const tb=$('logBody'); if(!tb) return;
+      if(!rows || !rows.length){ tb.innerHTML='<tr><td colspan="6"><div class="empty">No activity yet.</div></td></tr>'; return; }
+      tb.innerHTML='';
       rows.forEach(function(r){
         const tr=document.createElement('tr');
         tr.innerHTML='<td class="muted">'+esc(r.when)+'</td><td>'+esc(r.who)+'</td><td>'+esc(r.piece)+'</td>'+
@@ -526,27 +1236,81 @@
         tb.appendChild(tr);
       });
     }
+    async function loadLog(){
+      const tb=$('logBody');
+      let cached=null; try{ cached=JSON.parse(localStorage.getItem('orbitLog')||'null'); }catch(e){}
+      if(cached && cached.length){ renderLogRows(cached); }                 // instant from cache
+      else { tb.innerHTML='<tr><td colspan="6"><div class="empty">Loading…</div></td></tr>'; }
+      const data=await call('listLog',{limit:200});
+      if(!data.ok){ if(!(cached&&cached.length)) tb.innerHTML='<tr><td colspan="6"><div class="empty">'+esc(data.error)+'</div></td></tr>'; return; }
+      const rows=data.result.rows||[];
+      renderLogRows(rows);
+      try{ localStorage.setItem('orbitLog', JSON.stringify(rows)); }catch(e){}
+    }
 
+    function toggleViralLinks(){ $('pViralLinks').classList.toggle('hidden', !$('pViral').checked); }
+    document.addEventListener('DOMContentLoaded',function(){ var v=$('pViral'); if(v) v.addEventListener('change',toggleViralLinks); });
     function buildStageSelect(){ $('pStage').innerHTML=STAGES.map(function(s){ return '<option>'+esc(s)+'</option>'; }).join(''); }
     function openPanel(r){
       current=r;
       $('pTitle').textContent=r['Title']||r['Piece ID'];
       $('pMeta').textContent=r['Piece ID']+' · '+r['Client']+' · '+r['Format']+(r['PlatformList'].length?' · '+r['PlatformList'].join(', '):'');
       $('pStage').value=r['Stage']||'1 Copywriting';
+      $('pDate').value=r['Publish Date']||'';
+      $('pTitleEdit').value=r['Title']||'';
+      (function(){ const sw=$('pSwap'); if(!sw) return;
+        const cands=allRows.filter(function(x){ return x.row!==r.row && x['Client']===r['Client'] && (x['Format']||'')===(r['Format']||'') && /^9 /.test(x['Stage']||'') && x['Publish Date']; });
+        sw.innerHTML='<option value="">Swap with… (ready, same format)</option>'+cands.map(function(x){ return '<option value="'+x.row+'">'+esc(x['Piece ID'])+' \u00b7 '+esc(niceDate(x['Publish Date']))+'</option>'; }).join(''); })();
+      $('pPlat').innerHTML=PLAT_OPTIONS.map(function(p){ const on=(r['PlatformList']||[]).some(function(t){ return PLAT_MATCH[p] && PLAT_MATCH[p].test(t); }); return '<label class="pebox"><input type="checkbox" value="'+esc(p)+'"'+(on?' checked':'')+'> '+esc(p)+'</label>'; }).join('');
       $('pBlocked').checked=r['Blocked']==='TRUE';
       $('pCopyLink').value=r['Copy Link']||'';
+      $('pViral').checked=r['Viral']==='TRUE';
+      $('pViralIG').value=r['Viral IG Link']||''; $('pViralTT').value=r['Viral TT Link']||'';
+      toggleViralLinks();
       setPStatus('','muted'); $('overlay').classList.add('show');
       curReqs=[]; renderReqList(); loadReqsFor(r['Piece ID']);
     }
     $('pCancel').onclick=function(){ $('overlay').classList.remove('show'); };
     $('overlay').onclick=function(e){ if(e.target===$('overlay')) $('overlay').classList.remove('show'); };
 
+    $('pSwapBtn').onclick=async function(){
+      if(!current) return; const row=Number($('pSwap').value);
+      if(!row){ setPStatus('Pick a ready piece to swap with.','err'); return; }
+      const b=allRows.filter(function(x){ return x.row===row; })[0]; if(!b) return;
+      this.disabled=true; const res=await swapDates(current,b); this.disabled=false;
+      if(!res.ok){ setPStatus(res.error||'Swap failed','err'); return; }
+      renderPipe(); renderToday(); renderTodayPosts();
+      const fr=allRows.filter(function(x){ return x.row===current.row; })[0]; if(fr) openPanel(fr);
+      setPStatus('Swapped dates.','ok');
+    };
+    $('pPushBtn').onclick=async function(){
+      if(!current || !current['Publish Date']){ setPStatus('No date to push from.','err'); return; }
+      const t=pushTargets(current);
+      if(!window.confirm('Push '+t.length+' piece(s) forward one posting day?')) return;
+      this.disabled=true; const res=await pushFrom(current); this.disabled=false;
+      if(!res.ok){ setPStatus(res.error||'Push failed','err'); return; }
+      renderPipe(); renderToday(); renderTodayPosts();
+      const fr=allRows.filter(function(x){ return x.row===current.row; })[0]; if(fr) openPanel(fr);
+      setPStatus('Pushed '+t.length+' piece(s).','ok');
+    };
     $('pSave').onclick=async function(){
       if(!current) return;
       const changes={};
       if($('pStage').value!==(current['Stage']||'')) changes['Stage']=$('pStage').value;
       if(($('pCopyLink').value||'')!==(current['Copy Link']||'')) changes['Copy Link']=$('pCopyLink').value;
       if($('pBlocked').checked!==(current['Blocked']==='TRUE')) changes['Blocked']=$('pBlocked').checked;
+      if($('pViral').checked!==(current['Viral']==='TRUE')) changes['Viral']=$('pViral').checked;
+      if(($('pViralIG').value||'')!==(current['Viral IG Link']||'')) changes['Viral IG Link']=$('pViralIG').value;
+      if(($('pViralTT').value||'')!==(current['Viral TT Link']||'')) changes['Viral TT Link']=$('pViralTT').value;
+      if(($('pTitleEdit').value||'')!==(current['Title']||'')) changes['Title']=$('pTitleEdit').value.trim();
+      const origPlat=PLAT_OPTIONS.filter(function(p){ return (current['PlatformList']||[]).some(function(t){ return PLAT_MATCH[p] && PLAT_MATCH[p].test(t); }); }).join(', ');
+      const pickedPlat=Array.from($('pPlat').querySelectorAll('input:checked')).map(function(i){ return i.value; }).join(', ');
+      if(pickedPlat!==origPlat) changes['Platform']=pickedPlat;
+      const newDate=($('pDate').value||'').trim(), curDate=(current['Publish Date']||'').trim();
+      if(newDate!==curDate){
+        if(newDate){ const dd=new Date(newDate+'T00:00:00'); if(dd.getDay()===0){ setPStatus('Publish date is a Sunday — pick another day.','err'); return; } }
+        changes['Publish Date']=newDate; changes['Ready By']=newDate?minus14(newDate):'';
+      }
       if(!Object.keys(changes).length){ setPStatus('No changes.','muted'); return; }
       $('pSave').disabled=true; setPStatus('Saving…','muted');
       const data=await call('updatePiece',{ row:current.row, pieceId:current['Piece ID'], changes:changes });
@@ -557,6 +1321,52 @@
       renderPipe(); renderToday(); setPStatus('Saved.','ok');
     };
 
+    // ── Parked area: three collapsed columns, 10 per page, newest first ──
+    const PARKED_STATE={ open:'', page:{ pub:0, hold:0, uns:0 } };
+    function renderParked(rows){
+      const host=$('parkedArea'); if(!host) return;
+      const groups={
+        pub:{ label:'Published Work', items:rows.filter(function(r){ return /^10 Published/.test(r['Stage']||''); }) },
+        hold:{ label:'⏸️ On Hold',       items:rows.filter(function(r){ var st=r['Stage']||''; return st==='On Hold'||st==='⏸️ On Hold'; }) },
+        uns:{ label:'Unselected',     items:rows.filter(function(r){ return /Unselected/.test(r['Stage']||''); }) }
+      };
+      Object.keys(groups).forEach(function(k){
+        groups[k].items.sort(function(a,b){ return (b['Publish Date']||'').localeCompare(a['Publish Date']||''); });
+      });
+      host.innerHTML='';
+      Object.keys(groups).forEach(function(k){
+        const g=groups[k], open=PARKED_STATE.open===k, per=10;
+        const pages=Math.max(1, Math.ceil(g.items.length/per));
+        if(PARKED_STATE.page[k]>=pages) PARKED_STATE.page[k]=0;
+        const pg=PARKED_STATE.page[k], slice=g.items.slice(pg*per,(pg+1)*per);
+        const col=document.createElement('div'); col.className='pcol'+(open?' open':'');
+        let body='';
+        if(open){
+          body= g.items.length ? '<div class="tablewrap"><table class="ptable"><thead><tr><th>Piece ID</th><th>Client</th><th>Format</th><th>Title</th><th>Stage</th><th>Date</th></tr></thead><tbody>'+
+            slice.map(function(r){
+              return '<tr class="clickable pitem" data-row="'+r.row+'"><td>'+esc(r['Piece ID'])+viralMark(r)+'</td><td>'+clientChip(r['Client'])+'</td>'+
+                '<td>'+fmtChip(r['Format'])+'</td><td>'+esc(r['Title']||'')+'</td><td>'+stagePill(r['Stage'])+'</td>'+
+                '<td>'+esc(niceDate(r['Publish Date']))+'</td></tr>';
+            }).join('')+'</tbody></table></div>'+
+            (pages>1?'<div class="ppage"><button class="small pprev"'+(pg===0?' disabled':'')+'>← Newer</button>'+
+              '<span class="muted">Page '+(pg+1)+' of '+pages+'</span>'+
+              '<button class="small pnext"'+(pg>=pages-1?' disabled':'')+'>Older →</button></div>':'')
+            : '<div class="empty">Nothing here.</div>';
+        }
+        col.innerHTML='<button class="phead" type="button">'+esc(g.label)+' <span class="pn">'+g.items.length+'</span><span class="pcar">'+(open?'▾':'▸')+'</span></button>'+
+          '<div class="pbody'+(open?'':' hidden')+'">'+body+'</div>';
+        col.querySelector('.phead').onclick=function(){ PARKED_STATE.open = open?'':k; renderPipe(); };
+        const prev=col.querySelector('.pprev'), next=col.querySelector('.pnext');
+        if(prev) prev.onclick=function(){ if(PARKED_STATE.page[k]>0){ PARKED_STATE.page[k]--; renderPipe(); } };
+        if(next) next.onclick=function(){ if(PARKED_STATE.page[k]<pages-1){ PARKED_STATE.page[k]++; renderPipe(); } };
+        col.querySelectorAll('.pitem').forEach(function(el){ el.onclick=function(){
+          const r=allRows.filter(function(x){ return String(x.row)===el.dataset.row; })[0]; if(r) openPanel(r); }; });
+        host.appendChild(col);
+      });
+    }
+
+    function viralMark(r){ return (r['Viral']==='TRUE') ? ' <span class="viral" title="Marked viral">★</span>' : ''; }
+
     function reqMark(r){
       const n = r['openReqs']||0; if(!n) return '';
       const role = normRole(PREFS.role);
@@ -564,6 +1374,55 @@
     }
     function stagePill(s){ if(!s) return ''; return '<span class="pill '+(STAGE_COLOUR[s]||'st-off')+'">'+esc(s)+'</span>'; }
     function chips(list){ return (list||[]).map(function(p){ return '<span class="chip">'+esc(p)+'</span>'; }).join('')||'<span class="muted">—</span>'; }
+    function igFbOn(client){ return !!(META && META.igFb && META.igFb[client]); }
+    // Platform labels with IG&FB grouping (neutral text chips, not brand logos).
+    function platLabel(list, client){
+      list=(list||[]).map(function(s){return String(s).trim();}).filter(Boolean);
+      const low=list.map(function(s){return s.toLowerCase();});
+      const has=function(re){ return low.some(function(x){ return re.test(x); }); };
+      const out=[];
+      if(has(/ig|instagram|reel|story/)) out.push(igFbOn(client)?'IG & FB':'IG');
+      else if(has(/fb|facebook/)) out.push('FB');
+      if(has(/tiktok|tt/)) out.push('TikTok');
+      if(has(/linkedin/)) out.push('LinkedIn');
+      if(has(/website|web/)) out.push('Website Article');
+      list.forEach(function(p){ if(!/ig|instagram|reel|story|fb|facebook|tiktok|tt|linkedin|website|web/i.test(p)) out.push(p); });
+      const seen={}; const uniq=out.filter(function(x){ if(seen[x])return false; seen[x]=1; return true; });
+      return uniq.length? uniq.map(function(x){ return '<span class="chip plat">'+esc(x)+'</span>'; }).join('') : '<span class="muted">—</span>';
+    }
+    function todayISO(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+    function isReadyStage(s){ return /^(9 Ready to Publish|10 Published)/.test(s||''); }
+    // Notion-style pastel chips (soft bg, muted ink) for Format and Client.
+    const FMT_TONE={ 'Carousel':'#dbeafe|#1e40af','VO reel':'#ede9fe|#5b21b6','On-camera reel':'#ffedd5|#9a3412','Sit-down video':'#dcfce7|#166534','POV b-roll':'#fce7f3|#9d174d' };
+    const CLIENT_TONE={ 'Ice':'#e0f2fe|#075985','Lynn':'#fef9c3|#854d0e','Melissa':'#fae8ff|#86198f','SRU':'#dcfce7|#166534','Dianna':'#ffe4e6|#9f1239' };
+    function toneChip(v, map){ const t=(map[v]||'#eef0ee|#5a635a').split('|'); return v? '<span class="tchip" style="background:'+t[0]+';color:'+t[1]+'">'+esc(v)+'</span>':'<span class="muted">—</span>'; }
+    function fmtChip(f){ return toneChip(f, FMT_TONE); }
+    function clientChip(c){ return toneChip(c, CLIENT_TONE); }
+    function niceDate(ymd){ if(!ymd) return '—'; const d=new Date(ymd+'T00:00:00'); if(isNaN(d)) return ymd;
+      const D=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], M=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      return D[d.getDay()]+' '+d.getDate()+' '+M[d.getMonth()]; }
+    // One line per platform, always showing the platform name and its date.
+    function platDates(r){
+      const base=r['Publish Date']||'', ig=r['IG Date']||base, tt=r['TikTok Date']||base;
+      const list=(r['PlatformList']||[]).map(function(s){return String(s).trim();}).filter(Boolean);
+      const low=list.map(function(s){return s.toLowerCase();});
+      const has=function(re){ return low.some(function(x){ return re.test(x); }); };
+      const out=[];
+      if(has(/ig|instagram|reel|story/)) out.push([igFbOn(r['Client'])?'IG & FB':'IG', ig]);
+      else if(has(/fb|facebook/)) out.push(['FB', ig]);
+      if(has(/tiktok|tt/)) out.push(['TikTok', tt]);
+      if(has(/linkedin/)) out.push(['LinkedIn', base]);
+      if(has(/website|web/)) out.push(['Website Article', base]);
+      if(!out.length) out.push(['Publish', base]);
+      const _stg=r['Stage']||'', _ready=/^(9 |10 )/.test(_stg), _iso=todayISO();
+      function _stat(dt){ if(!dt) return ['','']; if(dt<_iso){ return _ready?['pd-posted','Posted']:['pd-over','Overdue']; } if(dt===_iso) return ['pd-today','Today']; return ['pd-sched','']; }
+      const _uniq=[...new Set(out.map(function(p){return p[1];}))];
+      if(_uniq.length<=1){ const dt=out[0]?out[0][1]:''; const s=_stat(dt);
+        return '<div class="pdate '+s[0]+'"><span class="pd">'+esc(niceDate(dt))+'</span>'+(s[1]?'<span class="pdtag">'+s[1]+'</span>':'')+'</div>'; }
+      return out.map(function(p){ const s=_stat(p[1]);
+        return '<div class="pdate '+s[0]+'"><span class="chip plat">'+esc(p[0])+'</span> <span class="pd">'+esc(niceDate(p[1]))+'</span>'+(s[1]?'<span class="pdtag">'+s[1]+'</span>':'')+'</div>';
+      }).join('');
+    }
     function onTrack(v){
       if(!v) return '<span class="t-muted">—</span>';
       let c='t-muted';
@@ -572,7 +1431,43 @@
       else if(v.indexOf('🔴')===0||/Behind|Blocked/.test(v)) c='t-red';
       return '<span class="'+c+'">'+esc(v)+'</span>';
     }
-    function copyLink(u){ return u ? '<a class="lnk" href="'+esc(u)+'" target="_blank" rel="noopener" title="Open copy page">🔗</a>' : '<span class="lnk disabled" title="No page yet">🔗</span>'; }
+    function getBatch(r){ var b=parseFloat(r['Batch']); if(!isNaN(b)) return b; var m=String(r['Piece ID']||'').match(/(\d+)\.\d+/); return m?parseFloat(m[1]):null; }
+    function maxBatch(cl){ let m=null; allRows.forEach(function(r){ if(r['Client']===cl){ const b=getBatch(r); if(b!==null&&(m===null||b>m)) m=b; } }); return m; }
+    function batchOverride(cl){ try{ const v=localStorage.getItem('orbitBatch:'+cl); return v!=null?parseInt(v,10):null; }catch(e){ return null; } }
+    function setBatchOverride(cl,n){ try{ localStorage.setItem('orbitBatch:'+cl,String(n)); }catch(e){} }
+    function batchDone(cl){ try{ const v=localStorage.getItem('orbitDone:'+cl); return v!=null&&v!==''?parseInt(v,10):null; }catch(e){ return null; } }
+    function setBatchDone(cl,v){ try{ if(v==null||v==='') localStorage.removeItem('orbitDone:'+cl); else localStorage.setItem('orbitDone:'+cl,String(v)); }catch(e){} }
+    function batchSize(cl){ try{ const v=localStorage.getItem('orbitSize:'+cl); return v!=null&&v!==''?parseInt(v,10):null; }catch(e){ return null; } }
+    function setBatchSize(cl,v){ try{ if(v==null||v==='') localStorage.removeItem('orbitSize:'+cl); else localStorage.setItem('orbitSize:'+cl,String(v)); }catch(e){} }
+    function renderBatchProgress(){
+      const host=$('batchProg'); if(!host) return;
+      const clients=(META && META.clients)||[], quota=(META && META.quota)||{};
+      const parts=[];
+      clients.forEach(function(cl){
+        const quotaN=Number(quota[cl])||0;
+        const sizeOv=batchSize(cl); const q = sizeOv!=null?sizeOv:quotaN; if(!q) return;
+        const ov=batchOverride(cl); const cur = ov!=null ? ov : (maxBatch(cl)||1);
+        const auto=allRows.filter(function(r){ return r['Client']===cl && getBatch(r)===cur && /^(9 |10 )/.test(r['Stage']||''); }).length;
+        const man=batchDone(cl); const within = man!=null ? man : auto;
+        const filled=Math.max(0,Math.min(within,q));
+        let boxes=''; for(let i=0;i<q;i++){ boxes+='<span class="bp-box'+(i<filled?' on':'')+'"></span>'; }
+        parts.push('<div class="bp-row" data-client="'+esc(cl)+'">'+
+          '<div class="bp-head"><span class="bp-name">'+esc(cl)+' <span class="bp-bt">\u00b7 Batch '+cur+'</span></span>'+
+          '<span style="display:flex;align-items:center"><span class="bp-num">'+within+'/'+q+'</span><button class="bp-gear" type="button" title="Advanced">\u2699</button></span></div>'+
+          '<div class="bp-boxes">'+boxes+'</div>'+
+          '<div class="bp-adv hidden">'+
+            '<label>Current batch<input type="number" class="bp-f-batch" data-client="'+esc(cl)+'" value="'+cur+'" min="1"></label>'+
+            '<label>Done so far<input type="number" class="bp-f-done" data-client="'+esc(cl)+'" value="'+(man!=null?man:'')+'" min="0" placeholder="auto ('+auto+')"></label>'+
+            '<label>Contents this batch<input type="number" class="bp-f-size" data-client="'+esc(cl)+'" value="'+(sizeOv!=null?sizeOv:'')+'" min="1" placeholder="quota ('+quotaN+')"></label>'+
+          '</div></div>');
+      });
+      host.innerHTML = parts.length ? parts.join('') : '<div class="empty">Set a quota per client (in Onboard Client) to see batch progress.</div>';
+      Array.prototype.forEach.call(host.querySelectorAll('.bp-f-batch'), function(inp){ inp.onchange=function(){ setBatchOverride(inp.dataset.client, parseInt(inp.value,10)||1); renderBatchProgress(); }; });
+      Array.prototype.forEach.call(host.querySelectorAll('.bp-f-done'), function(inp){ inp.onchange=function(){ setBatchDone(inp.dataset.client, inp.value===''?'':(parseInt(inp.value,10)||0)); renderBatchProgress(); }; });
+      Array.prototype.forEach.call(host.querySelectorAll('.bp-f-size'), function(inp){ inp.onchange=function(){ setBatchSize(inp.dataset.client, inp.value===''?'':(parseInt(inp.value,10)||0)); renderBatchProgress(); }; });
+      Array.prototype.forEach.call(host.querySelectorAll('.bp-gear'), function(g){ g.onclick=function(){ const adv=g.closest('.bp-row').querySelector('.bp-adv'); if(adv) adv.classList.toggle('hidden'); }; });
+    }
+    function copyLink(u){ return u ? '<a class="lnk" href="'+esc(u)+'" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="Open copy page">Open Copy</a>' : '<span class="muted" title="No copy page yet">—</span>'; }
 
     let lastValidatedTsv=null;
     $('tsv').addEventListener('input', function(){ $('save').disabled=true; lastValidatedTsv=null; });
@@ -590,7 +1485,7 @@
       $('save').disabled=true; $('validate').disabled=true; setImp('Saving…','muted');
       const data=await call('importBatch',{tsv:tsv}); $('validate').disabled=false;
       if(!data.ok){ setImp(data.error,'err'); return; }
-      setImp('Saved '+data.result.total+' row(s).','ok'); renderReport(data.result);
+      setImp(TT('Saved ')+data.result.total+TT(' row(s).'),'ok'); renderReport(data.result);
       $('tsv').value=''; lastValidatedTsv=null; loadRows();
     };
     function renderReport(r){
@@ -608,28 +1503,38 @@
 
     // ── Prompts & Handoffs ──
     let hoKind = 'schedule';
+    const HO_HELP = {
+      schedule: 'AI prompt to plan a batch. Fill in the Batch no., Generate, then paste it into your AI (Claude/ChatGPT) to draft the batch layout. Internal — not sent to the client.',
+      reminder: 'A ready-to-send message listing what the client still owes — approvals, input, footage. Send it to the client when you need to chase a decision.',
+      links: 'A checklist of pieces that still have no copy link. Use it internally to see which pieces need a Notion/Google-Doc page made.'
+    };
+    function setHoHelp(){ const el=$('hoHelp'); if(el) el.textContent=HO_HELP[hoKind]||''; }
     document.querySelectorAll('#tab-handoff .seg button').forEach(function(b){
       b.onclick = function(){
         document.querySelectorAll('#tab-handoff .seg button').forEach(function(x){ x.classList.remove('on'); });
         b.classList.add('on');
-        hoKind = b.id === 'hoKindReminder' ? 'reminder' : (b.id === 'hoKindLinks' ? 'links' : (b.id === 'hoKindImport' ? 'import' : 'schedule'));
+        hoKind = b.id === 'hoKindReminder' ? 'reminder' : (b.id === 'hoKindLinks' ? 'links' : 'schedule');
+        setHoHelp();
       };
     });
+    setHoHelp();
     $('hoGenerate').onclick = async function(){
-      const client = $('hoClient').value;
-      const rows = allRows.filter(function(r){ return r['Client']===client; });
-      let text = '';
-      if (hoKind === 'schedule')      text = genSchedulePrompt(client, rows);
-      else if (hoKind === 'import')   text = genImportPrompt(client, rows);
-      else if (hoKind === 'reminder') text = genReminder(client, rows);
-      else                            text = genMissingLinks(client, rows);
-      // append open asset requests to schedule + reminder (not to missing-links)
-      if (hoKind === 'schedule' || hoKind === 'reminder') {
-        const reqs = await openReqLines(client);
-        if (reqs) text += '\n' + reqs;
-      }
-      $('hoOut').value = text;
-      setHo(text ? 'Generated. Review, then copy.' : 'Nothing to generate for this client.', 'muted');
+      const btn=$('hoGenerate'); btn.disabled=true; setHo('Generating…','muted');
+      try {
+        const client = $('hoClient').value;
+        const rows = allRows.filter(function(r){ return r['Client']===client; });
+        let text = '';
+        if (hoKind === 'schedule')      text = genSchedulePrompt(client, rows);
+        else if (hoKind === 'reminder') text = genReminder(client, rows);
+        else                            text = genMissingLinks(client, rows);
+        // append open asset requests to schedule + reminder (not to missing-links)
+        if (hoKind === 'schedule' || hoKind === 'reminder') {
+          const reqs = await openReqLines(client);
+          if (reqs) text += '\n' + reqs;
+        }
+        $('hoOut').value = text;
+        setHo(text ? 'Generated. Review, then copy.' : 'Nothing to generate for this client.', 'muted');
+      } finally { btn.disabled=false; }
     };
     $('hoCopy').onclick = function(){
       const t = $('hoOut').value; if(!t){ setHo('Generate something first.','muted'); return; }
@@ -639,49 +1544,6 @@
     function setHo(m,c){ $('hoStatus').className='pstatus '+(c||'muted'); $('hoStatus').textContent=m; }
 
     // (1) Scheduling prompt: master prompt (delta 4B) + current schedule for the AI to continue from.
-    // Import batch prompt: forces the AI to emit an exact, importable Block A (tab-separated, dates assigned).
-    function genImportPrompt(client, rows){
-      const batch = ($('hoBatch').value||'').trim() || '[BATCH NUMBER]';
-      const bilingual = (client === 'Ice');
-      const days = (META.postingDays && META.postingDays[client] && META.postingDays[client].length)
-        ? META.postingDays[client].join(', ') : 'Mon, Tue, Wed, Thu, Fri, Sat';
-      const dated = rows.filter(function(r){ return r['Publish Date']; })
-        .sort(function(a,b){ return a['Publish Date'].localeCompare(b['Publish Date']); });
-      const sched = dated.map(function(r){ return '  ' + r['Publish Date'] + '  ' + r['Piece ID'] + '  ' + (r['Format']||''); }).join('\n') || '  (none yet)';
-      const lastDate = dated.length ? dated[dated.length-1]['Publish Date'] : '(none)';
-      const exampleBatch = (batch==='[BATCH NUMBER]'?'12':batch);
-      const HEADER = 'Piece ID\tClient\tFormat\tPlatform\tTitle\tPublish Date\tReady By\tStage\tFounder\tCopy Link';
-      return [
-'You are laying out batch ' + batch + ' for ' + client + ' and returning it ready to paste into the Orbit importer, with posting dates assigned.',
-'',
-'=== OUTPUT FORMAT — the dashboard rejects anything that deviates ===',
-'- Output ONLY the table. No sentence before it, no note after it, no ``` code fence, no Markdown pipe characters (|).',
-'- The FIRST line of your reply must be this header, copied EXACTLY, columns separated by a single Tab character (not spaces):',
-HEADER,
-'- Then one row per piece. Every row has the same 10 fields in the same order, each separated by a single Tab — that is 9 Tabs per line.',
-'- Keep empty trailing fields: if Founder and Copy Link are blank, the line still ends with their two Tabs. Do not drop columns.',
-'- Do not rename, reorder, add, or remove any column. Do not repeat the header. No blank lines between rows.',
-'',
-'=== COLUMN RULES ===',
-'- Piece ID: ' + client + '\u2019s prefix scheme with batch number ' + batch + ' typed in (e.g. C' + exampleBatch + '.1, VO' + exampleBatch + '.2). Never invent a scheme; if an ID would collide or you are unsure, stop and ask instead of guessing.',
-'- Client: exactly "' + client + '".',
-'- Format: exactly one of  Carousel | VO reel | On-camera reel | Sit-down video | POV b-roll.',
-'- Platform: one or more of  IG Reels, IG Post, TikTok, Facebook, LinkedIn, Website  (comma-separated inside the single cell).',
-'- Title: ' + (bilingual ? 'bilingual, written as  Thai / English.' : 'English.'),
-'- Publish Date: YYYY-MM-DD. Allowed posting days for ' + client + ':  ' + days + '. NEVER a Sunday. Continue on from the last scheduled date below with no gaps and no clashes; stagger pillars/series and alternate video vs carousel so the same format is not posted on consecutive days.',
-'- Ready By: YYYY-MM-DD, exactly 14 days before that same row\u2019s Publish Date.',
-'- Stage: exactly  1 Copywriting  for every new piece.',
-'- Founder: leave blank unless this is an SRU per-founder row.',
-'- Copy Link: the Notion page URL if you have it, otherwise leave the cell empty (do not type the word "blank").',
-'',
-'=== CURRENT SCHEDULE (continue after this; do not reuse a taken date) ===',
-sched,
-'Last scheduled posting date so far: ' + lastDate,
-'',
-'Return only the header line followed by the data rows, Tab-separated.'
-      ].join('\n');
-    }
-
     function genSchedulePrompt(client, rows){
       const batch = ($('hoBatch').value||'').trim() || '[BATCH NUMBER]';
       const bilingual = (client === 'Ice');
@@ -734,7 +1596,7 @@ sched,
         else if (/Content Ready for Review/.test(st)) ask = 'The finished post is ready. Please review it and approve.';
         else if (/Copywriting Ready for Review/.test(st)) ask = "The copy is ready. Please read it and let us know if it's good to go.";
         else ask = 'Please take a look at this one.';
-        lines.push('• ' + (r['Title']||r['Piece ID']));
+        lines.push('• ' + r['Piece ID'] + (r['Title']?('  ·  '+r['Title']):''));
         lines.push('  ' + ask);
         if (r['Publish Date']) lines.push('  Posting ' + r['Publish Date'] + when);
         if (r['Copy Link']) lines.push('  ' + r['Copy Link']);
@@ -822,9 +1684,10 @@ sched,
 
     // ── Invoicing ──
     let META = { settings:{}, billing:{}, clients:[] };
+    let metaLoaded=false;
     async function loadMeta(){
-      const data = await call('getMeta');
-      if (data.ok) META = data.result;
+      const data = await callBooted('getMeta');
+      if (data && data.ok) { META = data.result; metaLoaded = true; }
       return META;
     }
     function money(cur, n){
@@ -1003,6 +1866,7 @@ sched,
       const clients=(META && META.clients && META.clients.length) ? META.clients : ['Ice','Lynn','Melissa','SRU','Dianna'];
       clients.forEach(function(cl){
         const key=keys[cl]; const tr=document.createElement('tr');
+        if(NEW_CLIENT && cl===NEW_CLIENT) tr.className='justmade';
         if(!key){
           tr.innerHTML='<td>'+esc(cl)+'</td><td class="muted">No link key set — add one in the Clients tab</td><td></td>';
           tb.appendChild(tr); return;
@@ -1027,6 +1891,14 @@ sched,
     // ── Assign Publish Dates ──
     function isoOf(d){ const m=d.getMonth()+1, day=d.getDate(); return d.getFullYear()+'-'+(m<10?'0':'')+m+'-'+(day<10?'0':'')+day; }
     function minus14(ymd){ const d=new Date(ymd+'T00:00:00'); d.setDate(d.getDate()-14); return isoOf(d); }
+    function clientAllowedDays(client){ const arr=(META.postingDays && META.postingDays[client])||['Mon','Tue','Wed','Thu','Fri','Sat']; const s=new Set(); arr.forEach(function(x){ const n=dayNum(x); if(n!=null) s.add(n); }); if(!s.size)[1,2,3,4,5,6].forEach(function(n){s.add(n);}); return s; }
+    function nextPostingDay(ymd, client){ const ok=clientAllowedDays(client); let d=new Date(ymd+'T00:00:00'), g=0; do { d=new Date(d.getTime()+86400000); } while(!ok.has(d.getDay()) && g++<400); return isoOf(d); }
+    function swapDates(a,b){ const da=a['Publish Date']||'', db=b['Publish Date']||'';
+      return savePieces([{row:a.row,pieceId:a['Piece ID'],changes:{'Publish Date':db,'Ready By':db?minus14(db):''}},
+        {row:b.row,pieceId:b['Piece ID'],changes:{'Publish Date':da,'Ready By':da?minus14(da):''}}]); }
+    function pushTargets(r){ const from=r['Publish Date']; if(!from) return [];
+      return allRows.filter(function(x){ return x['Client']===r['Client'] && x['Publish Date'] && x['Publish Date']>=from && PARKED.indexOf(x['Stage']||'')===-1 && !/Rolled Over|^10 /.test(x['Stage']||''); }); }
+    function pushFrom(r){ const upd=pushTargets(r).map(function(x){ const nd=nextPostingDay(x['Publish Date'], r['Client']); return {row:x.row,pieceId:x['Piece ID'],changes:{'Publish Date':nd,'Ready By':minus14(nd)}}; }); return savePieces(upd); }
     function dayNum(name){ return ({sun:0,mon:1,tue:2,wed:3,thu:4,fri:5,sat:6})[String(name||'').slice(0,3).toLowerCase()]; }
     function fmtClass(fmt){ return isVideoFormat(fmt) ? 'video' : 'static'; }
     function suggestDatesForClient(client, pieces, style){
@@ -1058,7 +1930,7 @@ sched,
     }
     function renderAssign(){
       const client=$('assignClient')?$('assignClient').value:'';
-      let undated=allRows.filter(function(r){ return !r['Publish Date']; });
+      let undated=allRows.filter(function(r){ return !r['Publish Date'] && BOARD_HIDE.indexOf(r['Stage'])===-1; });
       if(client) undated=undated.filter(function(r){ return r['Client']===client; });
       undated.sort(function(a,b){ return String(a['Piece ID']).localeCompare(String(b['Piece ID'])); });
       if($('assignCount')) $('assignCount').textContent=undated.length+' undated';
@@ -1075,8 +1947,23 @@ sched,
           '<td>'+esc(r['Title']||'')+'</td>'+
           '<td><input type="date" value="'+esc(sug)+'" style="font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:8px"></td>'+
           '<td style="text-align:center"><input type="checkbox" title="Allow a day that already has a piece"></td>'+
-          '<td><button class="small" data-save="'+esc(r['Piece ID'])+'" data-row="'+r.row+'">Save</button></td>';
+          '<td><div class="assignact"><button class="small" data-save="'+esc(r['Piece ID'])+'" data-row="'+r.row+'">Save</button>'+
+            '<div class="markgrp"><button class="mini" data-mark="10 Published">Published</button>'+
+            '<button class="mini" data-mark="⏸️ On Hold">On Hold</button>'+
+            '<button class="mini" data-mark="◼️ Unselected">Unselected</button></div></div></td>';
         tb.appendChild(tr);
+        tr.querySelectorAll('button[data-mark]').forEach(function(mb){
+          const label=mb.textContent;
+          mb.onclick=async function(){
+            const grp=mb.parentNode, btns=grp.querySelectorAll('button');
+            Array.prototype.forEach.call(btns,function(x){ x.disabled=true; }); mb.textContent='…';
+            const res=await savePiece(r,{ 'Stage':mb.dataset.mark });
+            if(!res.ok){ Array.prototype.forEach.call(btns,function(x){ x.disabled=false; }); mb.textContent=label;
+              setAssign(r['Piece ID']+': '+res.error,'err'); return; }
+            setAssign(r['Piece ID']+' → '+mb.dataset.mark+'.','ok');
+            renderAssign(); renderPipe(); renderToday();
+          };
+        });
       });
       tb.querySelectorAll('button[data-save]').forEach(function(b){
         b.onclick=async function(){
@@ -1114,6 +2001,109 @@ sched,
     function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
     function loadPrefs(){ try{ return JSON.parse(localStorage.getItem('orbitPrefs')||'{}'); }catch(e){ return {}; } }
     function savePrefs(){ try{ localStorage.setItem('orbitPrefs', JSON.stringify(PREFS)); }catch(e){} }
+
+    /* ── i18n overlay: EN is native/default; TH applied on demand ── */
+    (function(){
+      var TH = {"Content operations for WealthWise Atelier.": "ระบบจัดการงานคอนเทนต์ของ WealthWise Atelier", "Waiting for sign-in…": "กำลังรอการเข้าสู่ระบบ…", "Today": "วันนี้", "Pipeline": "Pipeline", "Assign Dates": "กำหนดวันโพสต์", "Import": "นำเข้า", "Prompts & Handoffs": "Prompt & ส่งต่องาน", "Invoices": "ใบแจ้งหนี้", "Onboard Client": "เพิ่มลูกค้าใหม่", "Client View": "มุมมองลูกค้า", "Activity Log": "บันทึกกิจกรรม", "Batch Progress": "ความคืบหน้า Batch", "Sign out": "ออกจากระบบ", "Today's posts": "โพสต์วันนี้", "Going live today. Not ready yet shows red. Change status or dates right here — it saves to the master.": "ที่จะโพสต์วันนี้ อันที่ยังไม่พร้อมจะขึ้นสีแดง แก้สถานะหรือวันได้ตรงนี้เลย ระบบจะบันทึกลงมาสเตอร์ให้", "Today's work": "งานวันนี้", "Pieces that need a hand — behind schedule, waiting on the client, or posting soon.": "ชิ้นงานที่ต้องดูแล ทั้งที่ล่าช้า รอลูกค้า หรือใกล้ถึงกำหนดโพสต์", "View as": "ดูในมุมมอง", "All": "ทั้งหมด", "Graphic Designer": "กราฟิกดีไซเนอร์", "Video Editor": "ตัดต่อวิดีโอ", "Piece ID": "รหัสชิ้นงาน", "Client": "ลูกค้า", "Format": "รูปแบบ", "Stage": "ขั้นตอน", "On Track": "ตามกำหนด", "Posting dates": "วันที่โพสต์", "Every piece across the production ladder. Click any row to update it.": "ทุกชิ้นงานในทุกขั้นตอนการผลิต คลิกที่แถวไหนก็ได้เพื่อแก้ไข", "View": "มุมมอง", "Table": "ตาราง", "Board": "Board", "Refresh": "Refresh", "★ Viral only": "★ เฉพาะ Viral", "Platform": "แพลตฟอร์ม", "Date": "วันที่", "Copy": "Copy", "Open Copy": "เปิด Copy", "Assign Publish Dates": "กำหนดวันเผยแพร่", "Pieces waiting for a posting date. Suggested dates follow each client's posting days and skip any day already taken — tick same-day to double up on purpose.": "ชิ้นงานที่รอกำหนดวันโพสต์ วันที่แนะนำจะอิงตามวันโพสต์ของลูกค้าแต่ละราย และข้ามวันที่มีคิวอยู่แล้ว ติ๊ก same-day ถ้าต้องการโพสต์ซ้อนวันเดียวกัน", "Posting style": "สไตล์การโพสต์", "Alternate formats (reel → carousel → reel)": "สลับรูปแบบ (reel → carousel → reel)", "Any format (same allowed)": "รูปแบบใดก็ได้ (ซ้ำกันได้)", "Save all suggested": "บันทึกที่แนะนำทั้งหมด", "Auto-rearrange whole board": "จัดเรียงทั้ง Board อัตโนมัติ", "Title": "ชื่อเรื่อง", "Suggested / chosen date": "วันที่แนะนำ / ที่เลือก", "Same-day": "วันเดียวกัน", "Import a batch": "นำเข้าทั้งชุด", "Paste Block A with its header row. Validate first — Save turns on only when nothing is blocking.": "วาง Block A พร้อมแถวหัวตาราง กด Validate ก่อน ปุ่ม Save จะเปิดใช้งานเมื่อไม่มีข้อผิดพลาดค้างอยู่", "Add one piece": "เพิ่มทีละชิ้น", "Add piece": "เพิ่มชิ้นงาน", "Paste a batch": "วางทั้งชุด", "Validate": "ตรวจสอบ", "Save to Sheet": "บันทึกลงชีต", "Ready-to-copy text built from the live schedule. Pick a client, pick what you need.": "ข้อความพร้อม Copy สร้างจากตารางงานล่าสุด เลือกลูกค้าและสิ่งที่ต้องการ", "Batch no.": "ชุดที่", "Scheduling prompt": "Prompt จัดตาราง", "Client reminder": "ข้อความเตือนลูกค้า", "Missing links": "ลิงก์ที่ขาด", "Generate": "สร้าง", "Generating…": "กำลังสร้าง…", "AI prompt to plan a batch. Fill in the Batch no., Generate, then paste it into your AI (Claude/ChatGPT) to draft the batch layout. Internal — not sent to the client.": "Prompt สำหรับวางแผนคอนเทนต์ทั้งชุด กรอกเลขชุด กด Generate แล้วนำไปวางใน AI (Claude/ChatGPT) เพื่อร่างแผนงาน ใช้ภายในทีม ไม่ได้ส่งให้ลูกค้า", "A ready-to-send message listing what the client still owes — approvals, input, footage. Send it to the client when you need to chase a decision.": "ข้อความพร้อมส่งให้ลูกค้า บอกสิ่งที่ยังรอจากลูกค้า เช่น การอนุมัติ ข้อมูล หรือฟุตเทจ ใช้เมื่อต้องการติดตามงานจากลูกค้า", "A checklist of pieces that still have no copy link. Use it internally to see which pieces need a Notion/Google-Doc page made.": "รายการชิ้นงานที่ยังไม่มีลิงก์ Copy ใช้ภายในทีมเพื่อดูว่าชิ้นไหนต้องสร้างหน้า Notion/Google Doc", "Copy to clipboard": "Copy", "Generate a client invoice from the stored fees. Mark it paid to turn it into a receipt.": "สร้างใบแจ้งหนี้ของลูกค้าจากค่าบริการที่บันทึกไว้ กดชำระแล้วเพื่อเปลี่ยนเป็นใบเสร็จ", "Currency": "สกุลเงิน", "Payment": "การชำระเงิน", "Version 1": "เวอร์ชัน 1", "Version 2": "เวอร์ชัน 2", "Refresh list": "Refresh รายการ", "Base description": "รายละเอียดหลัก", "Base ฿": "หลัก ฿", "Base S$": "หลัก S$", "Add-on description (leave blank if none)": "รายละเอียดเสริม (เว้นว่างถ้าไม่มี)", "Add-on ฿": "เสริม ฿", "Add-on S$": "เสริม S$", "Preview": "ดูตัวอย่าง", "Save & record invoice": "บันทึก & ลงใบแจ้งหนี้", "Invoice No": "เลขที่ใบแจ้งหนี้", "Total": "ยอดรวม", "Status": "สถานะ", "Issued": "วันที่ออก", "Paid": "ชำระแล้ว", "Onboard a client": "เพิ่มลูกค้าใหม่", "Fill this once and the client is set up everywhere: profile, posting rhythm, billing, dropdowns, and their private calendar link.": "กรอกครั้งเดียว ระบบจะตั้งค่าลูกค้าให้ครบทุกที่ ทั้งโปรไฟล์ จังหวะการโพสต์ การเรียกเก็บเงิน ตัวเลือกต่างๆ และลิงก์ปฏิทินส่วนตัวของลูกค้า", "The basics": "ข้อมูลพื้นฐาน", "Client name": "ชื่อลูกค้า", "Must match exactly what you'll use in Piece IDs and imports.": "ต้องตรงกับที่ใช้ในรหัสชิ้นงานและการนำเข้าทุกประการ", "Social handles": "บัญชีโซเชียล", "Founder(s)": "ผู้ก่อตั้ง", "Who on the client side must act. Blank uses the client name.": "ฝั่งลูกค้าที่ต้องเป็นคนดำเนินการ เว้นว่างจะใช้ชื่อลูกค้า", "Notes": "หมายเหตุ", "Content rhythm": "จังหวะคอนเทนต์", "Pieces per batch (quota)": "จำนวนชิ้นต่อชุด (Quota)", "Batch cadence": "รอบของชุดงาน", "Posting days": "วันที่โพสต์", "Days this client posts. Used to suggest dates and avoid double-booking.": "วันที่ลูกค้ารายนี้โพสต์ ใช้แนะนำวันและเลี่ยงการจองซ้อน", "Their Instagram is linked to Facebook": "Instagram ของลูกค้าเชื่อมกับ Facebook", "Tick if posting to IG also posts to FB — the calendar then shows \"IG & FB\" as one action.": "ติ๊กถ้าโพสต์ IG แล้วขึ้น FB ด้วย ปฏิทินจะแสดง \"IG & FB\" เป็นงานเดียว", "Billing": "การเรียกเก็บเงิน", "Package description": "รายละเอียดแพ็กเกจ", "Billing cycle": "รอบการเรียกเก็บ", "Base fee (THB)": "ค่าบริการหลัก (THB)", "Base fee (SGD)": "ค่าบริการหลัก (SGD)", "Add-on description": "รายละเอียดส่วนเสริม", "Primary currency": "สกุลเงินหลัก", "Add-on fee (THB)": "ค่าบริการเสริม (THB)", "Add-on fee (SGD)": "ค่าบริการเสริม (SGD)", "Create client": "สร้างลูกค้า", "Each client's private read-only calendar. Copy the link, open it, or share it — the client sees only their own pieces, and there's nothing for them to edit.": "ปฏิทินส่วนตัวแบบอ่านอย่างเดียวของลูกค้าแต่ละราย Copy ลิงก์ เปิด หรือแชร์ได้ ลูกค้าจะเห็นเฉพาะงานของตัวเองและแก้ไขอะไรไม่ได้", "Calendar link": "ลิงก์ปฏิทิน", "Every change made through the dashboard, newest first.": "ทุกการเปลี่ยนแปลงผ่าน Dashboard เรียงจากใหม่สุด", "When": "เมื่อ", "Who": "โดย", "Piece": "ชิ้นงาน", "Field": "ฟิลด์", "From": "จาก", "To": "เป็น", "Blocked": "ติดปัญหา", "★ Viral (mark once published)": "★ Viral (ทำเครื่องหมายเมื่อโพสต์แล้ว)", "Copy link": "ลิงก์ Copy", "Footage & photos needed": "ฟุตเทจ & รูปที่ต้องใช้", "Nothing requested yet.": "ยังไม่มีการขอ", "Add": "เพิ่ม", "Save": "บันทึก", "Close": "ปิด", "Platforms": "แพลตฟอร์ม", "Apply to the whole batch": "ใช้กับทั้งชุด", "Save platforms": "บันทึกแพลตฟอร์ม", "Cancel": "ยกเลิก", "Main publish date": "วันเผยแพร่หลัก", "IG date": "วันที่ IG", "(blank = same as main)": "(เว้นว่าง = ตามวันหลัก)", "TikTok date": "วันที่ TikTok", "Apply main date to all platforms": "ใช้วันหลักกับทุกแพลตฟอร์ม", "(clears IG/TikTok overrides)": "(ล้างค่าเฉพาะของ IG/TikTok)", "Save dates": "บันทึกวันที่", "Piece ID (e.g. C12.1)": "รหัสชิ้นงาน (เช่น C12.1)", "Platform (e.g. IG, TikTok)": "แพลตฟอร์ม (เช่น IG, TikTok)", "e.g. 3": "เช่น 3", "Generated text appears here…": "ข้อความที่สร้างจะแสดงที่นี่…", "e.g. Ice": "เช่น Ice", "Anything the team should know": "สิ่งที่ทีมควรรู้", "Ice  ·  comma-separate if several": "Ice  ·  คั่นด้วยจุลภาคถ้ามีหลายคน", "Monthly content package": "แพ็กเกจคอนเทนต์รายเดือน", "Optional": "ไม่บังคับ", "How many": "จำนวนเท่าไร", "Note (exactly what's needed)": "หมายเหตุ (ระบุสิ่งที่ต้องใช้ให้ชัด)", "IG post URL (https://instagram.com/…)": "ลิงก์โพสต์ IG (https://instagram.com/…)", "TikTok post URL (https://tiktok.com/…)": "ลิงก์โพสต์ TikTok (https://tiktok.com/…)", "Signing you in…": "กำลังเข้าสู่ระบบ…", "Checking with Orbit…": "กำลังตรวจสอบกับ Orbit…", "Signed out. Sign in again above.": "ออกจากระบบแล้ว เข้าสู่ระบบอีกครั้งด้านบน", "Main date is a Sunday — pick another day.": "วันหลักตรงกับวันอาทิตย์ กรุณาเลือกวันอื่น", "Saving…": "กำลังบันทึก…", "Saved.": "บันทึกแล้ว", "Loading…": "กำลังโหลด…", "0 posts today": "0 โพสต์วันนี้", "Nothing scheduled to publish today.": "ไม่มีงานที่กำหนดโพสต์วันนี้", "No pieces yet. Import a batch to get started.": "ยังไม่มีชิ้นงาน นำเข้าทั้งชุดเพื่อเริ่มต้น", "Nothing in the active pipeline.": "ไม่มีงานใน Pipeline ที่ทำอยู่", "Nothing needs attention right now.": "ยังไม่มีงานที่ต้องดูแลตอนนี้", "No activity yet.": "ยังไม่มีกิจกรรม", "Nothing here.": "ไม่มีข้อมูล", "No open requests.": "ไม่มีคำขอค้างอยู่", "Nothing pasted yet.": "ยังไม่ได้วางข้อมูล", "Validating…": "กำลังตรวจสอบ…", "Ready to save.": "พร้อมบันทึก", "Fix the blocking errors, then validate again.": "แก้ข้อผิดพลาดที่ค้างอยู่ แล้วตรวจสอบอีกครั้ง", "Text changed — validate again.": "ข้อความเปลี่ยนไป ตรวจสอบอีกครั้ง", "Nothing to generate for this client.": "ไม่มีข้อมูลให้สร้างสำหรับลูกค้ารายนี้", "Please sign in to continue.": "กรุณาเข้าสู่ระบบเพื่อดำเนินการต่อ", "Your session expired. Please sign in again.": "เซสชันหมดอายุ กรุณาเข้าสู่ระบบอีกครั้ง", "Please sign in again.": "กรุณาเข้าสู่ระบบอีกครั้ง", "Client name is required.": "ต้องระบุชื่อลูกค้า", "Pick at least one posting day.": "เลือกวันโพสต์อย่างน้อยหนึ่งวัน", "Piece ID is required.": "ต้องระบุรหัสชิ้นงาน", "Leave IG or TikTok blank to use the main publish date.": "เว้น IG หรือ TikTok ว่างไว้เพื่อใช้วันเผยแพร่หลัก", "URGENT": "ด่วน", "Edit dates": "แก้วันที่", "Received": "รับแล้ว", "Mark paid": "ทำเครื่องหมายชำระแล้ว", "Saved ": "บันทึกแล้ว ", " piece(s).": " ชิ้น", ", failed — ": ", ล้มเหลว: ", ", failed: ": ", ล้มเหลว: ", ". Try again.": " ลองอีกครั้ง", " — try again.": " ลองอีกครั้ง", "Failed: ": "ล้มเหลว: ", " post(s) today": " โพสต์วันนี้", " not ready": " ยังไม่พร้อม", " skipped (fix and retry)": " ที่ข้ามไป (แก้แล้วลองใหม่)", " row(s).": " แถว"};
+      var SKIP_IDS = {invDocWrap:1, hoOut:1, report:1, invPreviewWrap:1};
+      var tracked = [];      // {node, raw}
+      var phTracked = [];    // {el, raw}
+      var muted = false, obs = null;
+      var LANG = 'en';
+      try { LANG = localStorage.getItem('orbitLang') || 'en'; } catch(e){}
+
+      window.TT = function(s){ return (LANG==='th' && TH[s]!=null) ? TH[s] : s; };
+
+      function skipEl(el){
+        while(el && el.nodeType===1){
+          var t = el.tagName;
+          if(t==='SCRIPT'||t==='STYLE'||t==='TEXTAREA') return true;
+          if(el.id && SKIP_IDS[el.id]) return true;
+          el = el.parentNode;
+        }
+        return false;
+      }
+      function parts(raw){
+        var m = raw.match(/^(\s*)([\s\S]*?)(\s*)$/);
+        return m ? [m[1], m[2], m[3]] : ['', raw, ''];
+      }
+      function trNode(node){
+        var raw = node.nodeValue; if(!raw) return;
+        var p = parts(raw), core = p[1];
+        if(!core || TH[core]==null) return;
+        if(skipEl(node.parentNode)) return;
+        tracked.push({node:node, raw:raw});
+        node.nodeValue = p[0] + TH[core] + p[2];
+      }
+      function trPh(el){
+        if(skipEl(el)) return;
+        var v = el.getAttribute('placeholder'); if(v==null) return;
+        var core = v.replace(/^\s+|\s+$/g,''); if(core==='' || TH[core]==null) return;
+        phTracked.push({el:el, raw:v});
+        el.setAttribute('placeholder', v.replace(core, TH[core]));
+      }
+      function walk(root){
+        if(!root) return;
+        if(root.nodeType===3){ trNode(root); return; }
+        if(root.nodeType!==1) return;
+        var t = root.tagName;
+        if(t==='SCRIPT'||t==='STYLE'||t==='TEXTAREA') return;
+        if(root.id && SKIP_IDS[root.id]) return;
+        var tw = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null, false), n;
+        var list = [];
+        while((n = tw.nextNode())) list.push(n);
+        list.forEach(trNode);
+        if(root.getAttribute && root.getAttribute('placeholder')!=null) trPh(root);
+        if(root.querySelectorAll){
+          Array.prototype.forEach.call(root.querySelectorAll('[placeholder]'), trPh);
+        }
+      }
+      function applyTH(){ muted=true; try{ walk(document.body); } finally { muted=false; } }
+      function revertEN(){
+        muted=true;
+        try{
+          tracked.forEach(function(o){ try{ if(o.node.parentNode) o.node.nodeValue=o.raw; }catch(e){} });
+          phTracked.forEach(function(o){ try{ o.el.setAttribute('placeholder', o.raw); }catch(e){} });
+        } finally { tracked=[]; phTracked=[]; muted=false; }
+      }
+      function startObs(){
+        if(obs || !window.MutationObserver) return;
+        obs = new MutationObserver(function(muts){
+          if(muted || LANG!=='th') return;
+          muted=true;
+          try{
+            muts.forEach(function(m){
+              if(m.type==='childList'){
+                Array.prototype.forEach.call(m.addedNodes, function(nd){ walk(nd); });
+              } else if(m.type==='characterData'){
+                trNode(m.target);
+              }
+            });
+          } finally { muted=false; }
+        });
+        obs.observe(document.body, {childList:true, subtree:true, characterData:true});
+      }
+      function stopObs(){ if(obs){ obs.disconnect(); obs=null; } }
+
+      function setLang(l){
+        LANG = (l==='th') ? 'th' : 'en';
+        try{ localStorage.setItem('orbitLang', LANG); }catch(e){}
+        document.documentElement.setAttribute('lang', LANG);
+        var en=document.getElementById('langEN'), th=document.getElementById('langTH');
+        if(en) en.classList.toggle('on', LANG==='en');
+        if(th) th.classList.toggle('on', LANG==='th');
+        if(LANG==='th'){ applyTH(); startObs(); }
+        else { stopObs(); revertEN(); }
+      }
+      window.orbitSetLang = setLang;
+
+      document.addEventListener('DOMContentLoaded', function(){
+        var en=document.getElementById('langEN'), th=document.getElementById('langTH');
+        if(en) en.addEventListener('click', function(){ setLang('en'); });
+        if(th) th.addEventListener('click', function(){ setLang('th'); });
+        setLang(LANG);   // default 'en' is a no-op; restores saved 'th' if set
+      });
+    })();
   </script>
 </body>
 </html>
