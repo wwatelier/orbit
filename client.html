@@ -332,6 +332,10 @@ window.__orbitBoot = (function(){
   .sh{font-size:16px}
   a,button{-webkit-tap-highlight-color:rgba(63,90,73,.15)}
 }
+  .pdate.pd-posted .pd, .pdate.pd-posted .pdtag { color:#3f8f66; }
+  .pdate.pd-today .pd, .pdate.pd-today .pdtag { color:#c07a2b; font-weight:600; }
+  .pdate.pd-sched .pd { color:var(--text-soft); }
+  .pdtag { margin-left:6px; font-size:9px; text-transform:uppercase; letter-spacing:.04em; opacity:.9; }
 </style>
 </head>
 <body>
@@ -518,7 +522,15 @@ function platDates(r){
   if(has(/linkedin/)) out.push(["LinkedIn", base]);
   if(has(/website|web/)) out.push(["Website", base]);
   if(!out.length) out.push(["Publish", base]);
-  return out.map(p=>'<div class="pdate"><span class="chip">'+esc(p[0])+'</span> <span class="pd">'+esc(niceDate(p[1]))+'</span></div>').join("");
+  const _ti=isoOf(today0());
+  return out.map(p=>{
+    const _pi=p[1]?isoOf(parseDate(p[1])):"";
+    let cls="pd-sched", tag="Scheduled";
+    if(!_pi){ cls=""; tag=""; }
+    else if(_pi<_ti){ cls="pd-posted"; tag="Posted"; }
+    else if(_pi===_ti){ cls="pd-today"; tag="Today"; }
+    return '<div class="pdate '+cls+'"><span class="chip">'+esc(p[0])+'</span> <span class="pd">'+esc(niceDate(p[1]))+'</span>'+(tag?'<span class="pdtag">'+tag+'</span>':'')+'</div>';
+  }).join("");
 }
 function clientPlat(platform){
   const list=String(platform||"").split(",").map(s=>s.trim()).filter(Boolean);

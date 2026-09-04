@@ -297,16 +297,20 @@
     .saveprog.ok .sp-msg::before { content:"\2713  "; }
     .saveprog.ok .sp-track, .saveprog.ok .sp-pct,
     .saveprog.err .sp-track, .saveprog.err .sp-pct { display:none; }
-    .batchprog { margin:10px 8px 4px; padding-top:12px; border-top:1px solid var(--line); }
-    .batchprog:empty { display:none; }
-    .bp-title { font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-soft); margin:0 6px 9px; }
-    .bp-row { margin:0 6px 10px; }
-    .bp-head { display:flex; justify-content:space-between; font-size:12px; margin-bottom:4px; }
-    .bp-name { color:var(--ink); font-weight:500; }
+    .batchprog { display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:16px 24px; }
+    .bp-row { margin:0; }
+    .bp-head { display:flex; justify-content:space-between; font-size:14px; margin-bottom:6px; }
+    .bp-name { color:var(--ink); font-weight:600; }
     .bp-num { color:var(--ink-soft); font-variant-numeric:tabular-nums; }
-    .bp-track { height:6px; background:var(--line); border-radius:99px; overflow:hidden; }
+    .bp-track { height:8px; background:var(--line); border-radius:99px; overflow:hidden; }
     .bp-fill { height:100%; width:0; background:var(--brand); border-radius:99px; transition:width .3s ease; }
     .bp-fill.full { background:#4e8f6b; }
+    /* per-platform posted/scheduled */
+    .pdate.pd-posted .pd, .pdate.pd-posted .pdtag { color:#4e8f6b; }
+    .pdate.pd-today .pd, .pdate.pd-today .pdtag { color:#c07a2b; font-weight:600; }
+    .pdate.pd-over .pd, .pdate.pd-over .pdtag { color:#c0392b; }
+    .pdate.pd-sched .pd { color:var(--ink-soft); }
+    .pdtag { margin-left:6px; font-size:9px; text-transform:uppercase; letter-spacing:.04em; opacity:.9; }
   </style>
 </head>
 <body>
@@ -333,13 +337,14 @@
       <button class="navbtn" data-tab="onboard"><span class="ic">✛</span> Onboard Client</button>
       <button class="navbtn" data-tab="clientview"><span class="ic">↗</span> Client View</button>
       <button class="navbtn" data-tab="log"><span class="ic">≡</span> Activity Log</button>
-      <div class="batchprog" id="batchProg"></div>
       <div class="sidefoot"><div class="who" id="whoamiMin"></div><button id="signout">Sign out</button></div>
     </nav>
 
     <main class="main">
       <div id="langToggle" class="langtoggle" role="group" aria-label="Language"><button id="langEN" type="button" class="on">EN</button><button id="langTH" type="button">TH</button></div>
       <section class="hidden" id="tab-today">
+        <div class="head" style="margin-bottom:14px"><div><h2>Batch Progress</h2><p class="sub">Ready-to-post or published vs the agreed quota, per client's current batch.</p></div></div>
+        <div class="surface" id="batchWrap" style="margin-bottom:22px"><div class="batchprog" id="batchProg"></div></div>
         <div class="hero">
           <div class="hero-date" id="heroDate"></div>
           <h2 class="hero-h">Today's posts</h2>
@@ -565,6 +570,7 @@
     <div class="panel">
       <h3 id="pTitle"></h3>
       <div class="pid" id="pMeta"></div>
+      <div class="field"><label>Title</label><input type="text" id="pTitleEdit" style="font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;width:100%"></div>
       <div class="field"><label>Stage</label><select id="pStage"></select></div>
       <div class="field"><label>Publish date</label><input type="date" id="pDate" style="font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px"></div>
       <div class="field"><label>Platforms</label><div id="pPlat" class="peboxes"></div></div>
@@ -1234,6 +1240,7 @@
       $('pMeta').textContent=r['Piece ID']+' · '+r['Client']+' · '+r['Format']+(r['PlatformList'].length?' · '+r['PlatformList'].join(', '):'');
       $('pStage').value=r['Stage']||'1 Copywriting';
       $('pDate').value=r['Publish Date']||'';
+      $('pTitleEdit').value=r['Title']||'';
       $('pPlat').innerHTML=PLAT_OPTIONS.map(function(p){ const on=(r['PlatformList']||[]).some(function(t){ return PLAT_MATCH[p] && PLAT_MATCH[p].test(t); }); return '<label class="pebox"><input type="checkbox" value="'+esc(p)+'"'+(on?' checked':'')+'> '+esc(p)+'</label>'; }).join('');
       $('pBlocked').checked=r['Blocked']==='TRUE';
       $('pCopyLink').value=r['Copy Link']||'';
@@ -1255,6 +1262,7 @@
       if($('pViral').checked!==(current['Viral']==='TRUE')) changes['Viral']=$('pViral').checked;
       if(($('pViralIG').value||'')!==(current['Viral IG Link']||'')) changes['Viral IG Link']=$('pViralIG').value;
       if(($('pViralTT').value||'')!==(current['Viral TT Link']||'')) changes['Viral TT Link']=$('pViralTT').value;
+      if(($('pTitleEdit').value||'')!==(current['Title']||'')) changes['Title']=$('pTitleEdit').value.trim();
       const origPlat=PLAT_OPTIONS.filter(function(p){ return (current['PlatformList']||[]).some(function(t){ return PLAT_MATCH[p] && PLAT_MATCH[p].test(t); }); }).join(', ');
       const pickedPlat=Array.from($('pPlat').querySelectorAll('input:checked')).map(function(i){ return i.value; }).join(', ');
       if(pickedPlat!==origPlat) changes['Platform']=pickedPlat;
@@ -1366,7 +1374,14 @@
       if(has(/linkedin/)) out.push(['LinkedIn', base]);
       if(has(/website|web/)) out.push(['Website Article', base]);
       if(!out.length) out.push(['Publish', base]);
-      return out.map(function(p){ return '<div class="pdate"><span class="chip plat">'+esc(p[0])+'</span> <span class="pd">'+esc(niceDate(p[1]))+'</span></div>'; }).join('');
+      const _stg=r['Stage']||'', _ready=/^(9 |10 )/.test(_stg), _iso=todayISO();
+      return out.map(function(p){
+        let cls='pd-sched', tag='Scheduled';
+        if(!p[1]){ cls=''; tag=''; }
+        else if(p[1]<_iso){ if(_ready){ cls='pd-posted'; tag='Posted'; } else { cls='pd-over'; tag='Overdue'; } }
+        else if(p[1]===_iso){ cls='pd-today'; tag='Today'; }
+        return '<div class="pdate '+cls+'"><span class="chip plat">'+esc(p[0])+'</span> <span class="pd">'+esc(niceDate(p[1]))+'</span>'+(tag?'<span class="pdtag">'+tag+'</span>':'')+'</div>';
+      }).join('');
     }
     function onTrack(v){
       if(!v) return '<span class="t-muted">—</span>';
@@ -1376,6 +1391,7 @@
       else if(v.indexOf('🔴')===0||/Behind|Blocked/.test(v)) c='t-red';
       return '<span class="'+c+'">'+esc(v)+'</span>';
     }
+    function getBatch(r){ var b=parseFloat(r['Batch']); if(!isNaN(b)) return b; var m=String(r['Piece ID']||'').match(/(\d+)\.\d+/); return m?parseFloat(m[1]):null; }
     function renderBatchProgress(){
       const host=$('batchProg'); if(!host) return;
       const clients=(META && META.clients)||[], quota=(META && META.quota)||{};
@@ -1383,15 +1399,15 @@
       clients.forEach(function(cl){
         const rows=allRows.filter(function(r){ const s=r['Stage']||''; return r['Client']===cl && PARKED.indexOf(s)===-1 && !/Rolled Over/.test(s); });
         if(!rows.length) return;
-        let cur=null; rows.forEach(function(r){ const b=parseFloat(r['Batch']); if(!isNaN(b)&&(cur===null||b>cur)) cur=b; });
-        const inBatch = cur!==null ? rows.filter(function(r){ return parseFloat(r['Batch'])===cur; }) : rows;
+        let cur=null; rows.forEach(function(r){ const b=getBatch(r); if(b!==null&&(cur===null||b>cur)) cur=b; });
+        const inBatch = cur!==null ? rows.filter(function(r){ return getBatch(r)===cur; }) : rows;
         const q = Number(quota[cl])||inBatch.length||0;
         const done = inBatch.filter(function(r){ return /^(9 |10 )/.test(r['Stage']||''); }).length;
         const pct = q ? Math.min(100, Math.round(done/q*100)) : 0;
         parts.push('<div class="bp-row"><div class="bp-head"><span class="bp-name">'+esc(cl)+'</span><span class="bp-num">'+done+'/'+q+'</span></div>'+
           '<div class="bp-track"><div class="bp-fill'+(q>0&&done>=q?' full':'')+'" style="width:'+pct+'%"></div></div></div>');
       });
-      host.innerHTML = parts.length ? ('<div class="bp-title">Batch Progress</div>'+parts.join('')) : '';
+      host.innerHTML = parts.join(''); const w=$('batchWrap'); if(w) w.style.display = parts.length ? '' : 'none';
     }
     function copyLink(u){ return u ? '<a class="lnk" href="'+esc(u)+'" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="Open copy page">Open Copy</a>' : '<span class="muted" title="No copy page yet">—</span>'; }
 
