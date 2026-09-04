@@ -304,6 +304,11 @@
     .bp-name { color:var(--ink); font-weight:600; }
     .bp-batch { width:44px; font:inherit; font-weight:600; color:var(--ink); border:1px solid var(--line); border-radius:6px; padding:1px 4px; margin-left:2px; background:#fff; }
     .bp-batch:focus { outline:none; border-color:var(--brand); }
+    .bp-gear { border:none; background:none; cursor:pointer; color:var(--ink-soft); font-size:14px; line-height:1; padding:0 2px; }
+    .bp-gear:hover { color:var(--ink); }
+    .bp-adv { margin-top:9px; font-size:12px; color:var(--ink-soft); display:flex; align-items:center; gap:8px; }
+    .bp-adv.hidden { display:none; }
+    .bp-done { width:78px; font:inherit; font-size:12px; border:1px solid var(--line); border-radius:6px; padding:2px 6px; }
     .bp-num { color:var(--ink-soft); font-size:12px; font-variant-numeric:tabular-nums; }
     .bp-boxes { display:flex; flex-wrap:wrap; gap:4px; }
     .bp-box { width:13px; height:13px; border-radius:3px; background:var(--line); }
@@ -1429,6 +1434,8 @@
     function maxBatch(cl){ let m=null; allRows.forEach(function(r){ if(r['Client']===cl){ const b=getBatch(r); if(b!==null&&(m===null||b>m)) m=b; } }); return m; }
     function batchOverride(cl){ try{ const v=localStorage.getItem('orbitBatch:'+cl); return v!=null?parseInt(v,10):null; }catch(e){ return null; } }
     function setBatchOverride(cl,n){ try{ localStorage.setItem('orbitBatch:'+cl,String(n)); }catch(e){} }
+    function batchDone(cl){ try{ const v=localStorage.getItem('orbitDone:'+cl); return v!=null&&v!==''?parseInt(v,10):null; }catch(e){ return null; } }
+    function setBatchDone(cl,v){ try{ if(v==null||v==='') localStorage.removeItem('orbitDone:'+cl); else localStorage.setItem('orbitDone:'+cl,String(v)); }catch(e){} }
     function renderBatchProgress(){
       const host=$('batchProg'); if(!host) return;
       const clients=(META && META.clients)||[], quota=(META && META.quota)||{};
@@ -1436,12 +1443,21 @@
       clients.forEach(function(cl){
         const q = Number(quota[cl])||0; if(!q) return;
         const ov=batchOverride(cl); const cur = ov!=null ? ov : (maxBatch(cl)||1);
-        const within=allRows.filter(function(r){ return r['Client']===cl && getBatch(r)===cur && /^(9 |10 )/.test(r['Stage']||''); }).length;
-        let boxes=''; for(let i=0;i<q;i++){ boxes+='<span class="bp-box'+(i<within?' on':'')+'"></span>'; }
-        parts.push('<div class="bp-row"><div class="bp-head"><span class="bp-name">'+esc(cl)+' \u00b7 Batch <input type="number" class="bp-batch" data-client="'+esc(cl)+'" value="'+cur+'" min="1" title="Current batch (editable)"></span><span class="bp-num">'+within+'/'+q+'</span></div><div class="bp-boxes">'+boxes+'</div></div>');
+        const auto=allRows.filter(function(r){ return r['Client']===cl && getBatch(r)===cur && /^(9 |10 )/.test(r['Stage']||''); }).length;
+        const man=batchDone(cl); const within = man!=null ? man : auto;
+        const filled=Math.max(0,Math.min(within,q));
+        let boxes=''; for(let i=0;i<q;i++){ boxes+='<span class="bp-box'+(i<filled?' on':'')+'"></span>'; }
+        parts.push('<div class="bp-row" data-client="'+esc(cl)+'">'+
+          '<div class="bp-head"><span class="bp-name">'+esc(cl)+' \u00b7 Batch <input type="number" class="bp-batch" data-client="'+esc(cl)+'" value="'+cur+'" min="1" title="Current batch"></span>'+
+          '<span style="display:flex;align-items:center;gap:8px"><span class="bp-num">'+within+'/'+q+'</span><button class="bp-gear" type="button" title="Advanced">\u2699</button></span></div>'+
+          '<div class="bp-boxes">'+boxes+'</div>'+
+          '<div class="bp-adv hidden">Done so far <input type="number" class="bp-done" data-client="'+esc(cl)+'" value="'+(man!=null?man:'')+'" min="0" placeholder="auto ('+auto+')"> <span class="muted">blank = auto-count</span></div>'+
+          '</div>');
       });
       host.innerHTML = parts.length ? parts.join('') : '<div class="empty">Set a quota per client to see batch progress.</div>';
       Array.prototype.forEach.call(host.querySelectorAll('.bp-batch'), function(inp){ inp.onchange=function(){ setBatchOverride(inp.dataset.client, parseInt(inp.value,10)||1); renderBatchProgress(); }; });
+      Array.prototype.forEach.call(host.querySelectorAll('.bp-done'), function(inp){ inp.onchange=function(){ setBatchDone(inp.dataset.client, inp.value===''?'':(parseInt(inp.value,10)||0)); renderBatchProgress(); }; });
+      Array.prototype.forEach.call(host.querySelectorAll('.bp-gear'), function(g){ g.onclick=function(){ const adv=g.closest('.bp-row').querySelector('.bp-adv'); if(adv) adv.classList.toggle('hidden'); }; });
     }
     function copyLink(u){ return u ? '<a class="lnk" href="'+esc(u)+'" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="Open copy page">Open Copy</a>' : '<span class="muted" title="No copy page yet">—</span>'; }
 
