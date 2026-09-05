@@ -512,7 +512,7 @@ function render(data){
 
 function isParkedRow(r){ const s=String(r.stage||""); const t=s.trim(); return classify(s).group==="closed" || t==="On Hold" || t==="⏸️ On Hold" || /closed/i.test(s); }
 function isViral(r){ return r.viral===true || String(r.viral).toUpperCase()==="TRUE"; }
-const FMT_TONE={ 'Carousel':'#dbeafe|#1e40af','VO reel':'#ede9fe|#5b21b6','On-camera reel':'#ffedd5|#9a3412','Sit-down video':'#dcfce7|#166534','POV b-roll':'#fce7f3|#9d174d' };
+const FMT_TONE={ 'Carousel':'#dbeafe|#1e40af','VO reel':'#ede9fe|#5b21b6','On-camera reel':'#ffedd5|#9a3412','Sit-down video':'#dcfce7|#166534','POV Reels':'#fce7f3|#9d174d' };
 function fmtChip(f){ const t=(FMT_TONE[f]||'#eef0ee|#5a635a').split('|'); return f? '<span class="tchip" style="background:'+t[0]+';color:'+t[1]+'">'+esc(f)+'</span>':''; }
 function niceDate(ymd){ const d=parseDate(ymd); return d?fmtShort(d):"\u2014"; }
 function collabTag(r){

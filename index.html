@@ -428,7 +428,7 @@
           <div class="addgrid">
             <input type="text" id="acId" placeholder="Piece ID (e.g. C12.1)">
             <select id="acClient"><option>Ice</option><option>Lynn</option><option>Melissa</option><option>SRU</option><option>Dianna</option></select>
-            <select id="acFormat"><option>Carousel</option><option>VO reel</option><option>On-camera reel</option><option>Sit-down video</option><option>POV b-roll</option></select>
+            <select id="acFormat"><option>Carousel</option><option>VO reel</option><option>On-camera reel</option><option>Sit-down video</option><option>POV Reels</option></select>
             <input type="text" id="acPlatform" placeholder="Platform (e.g. IG, TikTok)">
             <input type="text" id="acTitle" placeholder="Title">
             <input type="date" id="acDate">
@@ -1417,7 +1417,7 @@
     function todayISO(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
     function isReadyStage(s){ return /^(9 Ready to Publish|10 Published)/.test(s||''); }
     // Notion-style pastel chips (soft bg, muted ink) for Format and Client.
-    const FMT_TONE={ 'Carousel':'#dbeafe|#1e40af','VO reel':'#ede9fe|#5b21b6','On-camera reel':'#ffedd5|#9a3412','Sit-down video':'#dcfce7|#166534','POV b-roll':'#fce7f3|#9d174d' };
+    const FMT_TONE={ 'Carousel':'#dbeafe|#1e40af','VO reel':'#ede9fe|#5b21b6','On-camera reel':'#ffedd5|#9a3412','Sit-down video':'#dcfce7|#166534','POV Reels':'#fce7f3|#9d174d' };
     const CLIENT_TONE={ 'Ice':'#e0f2fe|#075985','Lynn':'#fef9c3|#854d0e','Melissa':'#fae8ff|#86198f','SRU':'#dcfce7|#166534','Dianna':'#ffe4e6|#9f1239' };
     function toneChip(v, map){ const t=(map[v]||'#eef0ee|#5a635a').split('|'); return v? '<span class="tchip" style="background:'+t[0]+';color:'+t[1]+'">'+esc(v)+'</span>':'<span class="muted">—</span>'; }
     function fmtChip(f){ return toneChip(f, FMT_TONE); }
