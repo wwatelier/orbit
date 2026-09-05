@@ -398,7 +398,7 @@
             <select id="roleView"><option value="all">All</option><option value="designer">Graphic Designer</option><option value="editor">Video Editor</option></select>
           </label>
         </div>
-        <div id="bulkBar" class="bulkbar hidden"><span id="bulkCount">0 selected</span><select id="bulkStage"><option value="">Set stage…</option></select><button id="bulkApplyStage" class="small">Apply</button><button id="bulkRemoveDates" class="small">Remove dates</button><button id="bulkClear" class="small ghost">Clear</button></div>
+        <div id="bulkBar" class="bulkbar hidden"><span id="bulkCount">0 selected</span><select id="bulkStage"><option value="">Set stage…</option></select><button id="bulkApplyStage" class="small">Apply</button><button id="bulkRemoveDates" class="small">Remove dates</button><button id="bulkClear" class="small ghost">Clear</button><span id="bulkMsg" class="pstatus muted" style="margin-left:4px"></span></div>
         <div class="surface" id="tableView"><div class="tablewrap">
           <table><thead><tr><th class="selcol"><input type="checkbox" id="pipeAll" title="Select all on this page"></th><th>Piece ID</th><th>Client</th><th>Format</th><th>Platform</th><th>Stage</th><th>On Track</th><th>Date</th><th>Copy</th></tr></thead><tbody id="pipeBody"></tbody></table>
         </div><div id="pipePager" class="ppage" style="margin-top:12px"></div></div>
@@ -971,8 +971,27 @@
     (function(){
       var pa=$('pipeAll'); if(pa) pa.onchange=function(){ Array.prototype.slice.call(document.querySelectorAll('#pipeBody .selcell input')).forEach(function(b){ b.checked=pa.checked; if(pa.checked) SEL.add(b.dataset.id); else SEL.delete(b.dataset.id); }); renderBulkBar(); };
       function selUpdates(changes){ return Array.from(SEL).map(function(id){ var r=allRows.filter(function(x){ return x['Piece ID']===id; })[0]; return r?{row:r.row, pieceId:id, changes:changes}:null; }).filter(Boolean); }
-      var bs=$('bulkApplyStage'); if(bs) bs.onclick=async function(){ var st=$('bulkStage').value; if(!st) return; var updates=selUpdates({Stage:st}); if(!updates.length) return; var b=this,o=b.textContent; b.disabled=true; b.textContent='Saving…'; var res=await savePieces(updates); b.disabled=false; b.textContent=o; if(res.ok){ SEL.clear(); $('bulkStage').value=''; } renderPipe(); renderToday(); renderTodayPosts(); };
-      var bd=$('bulkRemoveDates'); if(bd) bd.onclick=async function(){ if(!SEL.size) return; if(!confirm('Remove posting dates (Publish, IG, TikTok) from '+SEL.size+' piece(s)? Ready By is kept.')) return; var updates=selUpdates({'Publish Date':'','IG Date':'','TikTok Date':''}); if(!updates.length) return; var b=this,o=b.textContent; b.disabled=true; b.textContent='Removing…'; var res=await savePieces(updates); b.disabled=false; b.textContent=o; if(res.ok){ SEL.clear(); } renderPipe(); renderToday(); renderTodayPosts(); };
+      var bs=$('bulkApplyStage'); if(bs) bs.onclick=async function(){ var msg=$('bulkMsg'); function say(t,k){ if(msg){ msg.className='pstatus '+(k||'muted'); msg.textContent=t; } }
+        var st=$('bulkStage').value; if(!st){ say('Pick a stage first.','err'); return; }
+        var updates=selUpdates({Stage:st}); if(!updates.length){ say('Nothing selected.','err'); return; }
+        var b=this,o=b.textContent; b.disabled=true; b.textContent='Saving…'; say('Saving '+updates.length+'…');
+        try{ var res=await savePieces(updates); var f=(res.errors||[]).length;
+          if(!res.ok){ say(res.error||'Save failed.','err'); }
+          else if(f){ say('Set '+res.rows.length+' · '+f+' failed.','err'); }
+          else { say('Set stage on '+res.rows.length+'.','ok'); SEL.clear(); $('bulkStage').value=''; }
+        }catch(e){ say('Save failed: '+((e&&e.message)||e),'err'); }
+        b.disabled=false; b.textContent=o; renderPipe(); renderToday(); renderTodayPosts(); };
+      var bd=$('bulkRemoveDates'); if(bd) bd.onclick=async function(){ var msg=$('bulkMsg'); function say(t,k){ if(msg){ msg.className='pstatus '+(k||'muted'); msg.textContent=t; } }
+        if(!SEL.size){ say('Nothing selected.','err'); return; }
+        if(!confirm('Remove posting dates (Publish, IG, TikTok) from '+SEL.size+' piece(s)? Ready By is kept.')) return;
+        var updates=selUpdates({'Publish Date':'','IG Date':'','TikTok Date':''}); if(!updates.length){ say('Nothing selected.','err'); return; }
+        var b=this,o=b.textContent; b.disabled=true; b.textContent='Removing…'; say('Removing dates on '+updates.length+'…');
+        try{ var res=await savePieces(updates); var f=(res.errors||[]).length;
+          if(!res.ok){ say(res.error||'Save failed.','err'); }
+          else if(f){ say('Cleared '+res.rows.length+' · '+f+' failed.','err'); }
+          else { say('Removed dates on '+res.rows.length+'.','ok'); SEL.clear(); }
+        }catch(e){ say('Save failed: '+((e&&e.message)||e),'err'); }
+        b.disabled=false; b.textContent=o; renderPipe(); renderToday(); renderTodayPosts(); };
       var bc=$('bulkClear'); if(bc) bc.onclick=function(){ SEL.clear(); renderPipe(); };
     })();
     $('logRefresh').onclick = loadLog;
