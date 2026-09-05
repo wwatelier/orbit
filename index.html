@@ -100,6 +100,9 @@
     .pi-t { font-size:13px; line-height:1.35; }
     .pi-m { font-size:11px; color:var(--ink-soft); margin-top:3px; }
     .ppage { display:flex; align-items:center; justify-content:center; gap:12px; padding:10px; font-size:12px; }
+    .bulkbar { position:sticky; top:8px; z-index:6; display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:9px 12px; margin-bottom:10px; background:#eef4ff; border:1px solid var(--line); border-radius:10px; font-size:13px; }
+    .bulkbar #bulkCount { font-weight:600; }
+    .selcol { width:34px; } .selcell { width:34px; text-align:center; }
     .modal { position:fixed; inset:0; background:rgba(30,36,30,.34); display:flex; align-items:center; justify-content:center; z-index:60; }
     .modalcard { background:#fff; border-radius:14px; padding:22px 24px; width:min(94vw,420px); box-shadow:0 20px 50px rgba(0,0,0,.2); }
     .delab { display:block; font-size:12px; color:var(--ink-soft); margin-bottom:12px; }
@@ -395,8 +398,9 @@
             <select id="roleView"><option value="all">All</option><option value="designer">Graphic Designer</option><option value="editor">Video Editor</option></select>
           </label>
         </div>
+        <div id="bulkBar" class="bulkbar hidden"><span id="bulkCount">0 selected</span><select id="bulkStage"><option value="">Set stage…</option></select><button id="bulkApplyStage" class="small">Apply</button><button id="bulkRemoveDates" class="small">Remove dates</button><button id="bulkClear" class="small ghost">Clear</button></div>
         <div class="surface" id="tableView"><div class="tablewrap">
-          <table><thead><tr><th>Piece ID</th><th>Client</th><th>Format</th><th>Platform</th><th>Stage</th><th>On Track</th><th>Date</th><th>Copy</th></tr></thead><tbody id="pipeBody"></tbody></table>
+          <table><thead><tr><th class="selcol"><input type="checkbox" id="pipeAll" title="Select all on this page"></th><th>Piece ID</th><th>Client</th><th>Format</th><th>Platform</th><th>Stage</th><th>On Track</th><th>Date</th><th>Copy</th></tr></thead><tbody id="pipeBody"></tbody></table>
         </div><div id="pipePager" class="ppage" style="margin-top:12px"></div></div>
         <div id="boardView" class="board hidden"></div>
         <div id="parkedArea" class="parked"></div>
@@ -964,6 +968,13 @@
       };
     })();
     $('viralOnly').onchange = function(){ PREFS.viralOnly=$('viralOnly').checked; savePrefs(); PIPE_PAGE=0; renderPipe(); };
+    (function(){
+      var pa=$('pipeAll'); if(pa) pa.onchange=function(){ Array.prototype.slice.call(document.querySelectorAll('#pipeBody .selcell input')).forEach(function(b){ b.checked=pa.checked; if(pa.checked) SEL.add(b.dataset.id); else SEL.delete(b.dataset.id); }); renderBulkBar(); };
+      function selUpdates(changes){ return Array.from(SEL).map(function(id){ var r=allRows.filter(function(x){ return x['Piece ID']===id; })[0]; return r?{row:r.row, pieceId:id, changes:changes}:null; }).filter(Boolean); }
+      var bs=$('bulkApplyStage'); if(bs) bs.onclick=async function(){ var st=$('bulkStage').value; if(!st) return; var updates=selUpdates({Stage:st}); if(!updates.length) return; var b=this,o=b.textContent; b.disabled=true; b.textContent='Saving…'; var res=await savePieces(updates); b.disabled=false; b.textContent=o; if(res.ok){ SEL.clear(); $('bulkStage').value=''; } renderPipe(); renderToday(); renderTodayPosts(); };
+      var bd=$('bulkRemoveDates'); if(bd) bd.onclick=async function(){ if(!SEL.size) return; if(!confirm('Remove posting dates (Publish, IG, TikTok) from '+SEL.size+' piece(s)? Ready By is kept.')) return; var updates=selUpdates({'Publish Date':'','IG Date':'','TikTok Date':''}); if(!updates.length) return; var b=this,o=b.textContent; b.disabled=true; b.textContent='Removing…'; var res=await savePieces(updates); b.disabled=false; b.textContent=o; if(res.ok){ SEL.clear(); } renderPipe(); renderToday(); renderTodayPosts(); };
+      var bc=$('bulkClear'); if(bc) bc.onclick=function(){ SEL.clear(); renderPipe(); };
+    })();
     $('logRefresh').onclick = loadLog;
     $('clientFilter').onchange = function(){ PREFS.client=$('clientFilter').value; savePrefs(); PIPE_PAGE=0; renderPipe(); renderToday(); };
     $('viewTable').onclick=function(){ setView('table'); };
@@ -1060,21 +1071,23 @@
     function renderPipe(){
       const rows=filtered(); const tb=$('pipeBody'); tb.innerHTML='';
       const active=rows.filter(function(r){ return PARKED.indexOf(r['Stage'])===-1 && !/^10 Published/.test(r['Stage']||''); });
-      if(!rows.length) tb.innerHTML='<tr><td colspan="8"><div class="empty">No pieces yet. Import a batch to get started.</div></td></tr>';
+      if(!rows.length) tb.innerHTML='<tr><td colspan="9"><div class="empty">No pieces yet. Import a batch to get started.</div></td></tr>';
       function rowTr(r){
         const tr=document.createElement('tr'); tr.className='clickable'; tr.onclick=function(){ openPanel(r); };
-        tr.innerHTML='<td>'+esc(r['Piece ID'])+reqMark(r)+viralMark(r)+'<div class="rowtitle">'+esc(r['Title']||'')+'</div>'+collabTag(r)+'</td><td>'+clientChip(r['Client'])+'</td><td>'+fmtChip(r['Format'])+'</td>'+
+        tr.innerHTML='<td class="selcell"><input type="checkbox" data-id="'+esc(r['Piece ID'])+'"'+(SEL.has(r['Piece ID'])?' checked':'')+'></td><td>'+esc(r['Piece ID'])+reqMark(r)+viralMark(r)+'<div class="rowtitle">'+esc(r['Title']||'')+'</div>'+collabTag(r)+'</td><td>'+clientChip(r['Client'])+'</td><td>'+fmtChip(r['Format'])+'</td>'+
           '<td class="cellbtn platcell">'+platLabel(r['PlatformList'],r['Client'])+'</td><td>'+stagePill(r['Stage'])+'</td>'+
           '<td>'+onTrack(r['On Track'])+'</td><td class="cellbtn datecell">'+platDates(r)+'</td><td>'+copyLink(r['Copy Link'])+'</td>';
         const a=tr.querySelector('a.lnk'); if(a) a.onclick=function(e){ e.stopPropagation(); };
         tr.querySelector('.platcell').onclick=function(e){ e.stopPropagation(); openPlatformEditor(r); };
         tr.querySelector('.datecell').onclick=function(e){ e.stopPropagation(); openDateEditor(r); };
+        var _cb=tr.querySelector('.selcell input'); if(_cb){ _cb.onclick=function(e){ e.stopPropagation(); }; _cb.onchange=function(){ if(_cb.checked) SEL.add(r['Piece ID']); else SEL.delete(r['Piece ID']); renderBulkBar(); }; }
         return tr;
       }
       const PIPE_PER=30, pipePages=Math.max(1, Math.ceil(active.length/PIPE_PER));
       if(PIPE_PAGE>=pipePages) PIPE_PAGE=0;
       active.slice(PIPE_PAGE*PIPE_PER,(PIPE_PAGE+1)*PIPE_PER).forEach(function(r){ tb.appendChild(rowTr(r)); });
       renderParked(rows);
+      renderBulkBar();
       (function(){ var pg=$('pipePager'); if(!pg) return;
         if(pipePages<=1){ pg.innerHTML=''; return; }
         var from=PIPE_PAGE*PIPE_PER+1, to=Math.min(active.length,(PIPE_PAGE+1)*PIPE_PER);
@@ -1360,6 +1373,15 @@
     // ── Parked area: three collapsed columns, 10 per page, newest first ──
     const PARKED_STATE={ open:'', page:{ pub:0, hold:0, uns:0 } };
     let PIPE_PAGE=0;
+    const SEL=new Set();
+    function renderBulkBar(){
+      var bar=$('bulkBar'); if(!bar) return;
+      var sel=$('bulkStage');
+      if(sel && !sel.dataset.filled){ sel.innerHTML='<option value="">Set stage…</option>'+STAGES.map(function(s){ return '<option value="'+esc(s)+'">'+esc(s)+'</option>'; }).join(''); sel.dataset.filled='1'; }
+      var n=SEL.size, cnt=$('bulkCount'); if(cnt) cnt.textContent=n+' selected';
+      if(n===0) bar.classList.add('hidden'); else bar.classList.remove('hidden');
+      var pa=$('pipeAll'); if(pa){ var boxes=Array.prototype.slice.call(document.querySelectorAll('#pipeBody .selcell input')); var ck=boxes.filter(function(b){ return b.checked; }).length; pa.checked=boxes.length>0 && ck===boxes.length; pa.indeterminate=ck>0 && ck<boxes.length; }
+    }
     function renderParked(rows){
       const host=$('parkedArea'); if(!host) return;
       const groups={
