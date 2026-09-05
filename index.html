@@ -103,6 +103,7 @@
     .bulkbar { position:sticky; top:8px; z-index:6; display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:9px 12px; margin-bottom:10px; background:#eef4ff; border:1px solid var(--line); border-radius:10px; font-size:13px; }
     .bulkbar #bulkCount { font-weight:600; }
     .selcol { width:34px; } .selcell { width:34px; text-align:center; }
+    .stageinline { font:inherit; padding:4px 6px; border:1px solid var(--line); border-radius:8px; max-width:230px; background:#fff; }
     .modal { position:fixed; inset:0; background:rgba(30,36,30,.34); display:flex; align-items:center; justify-content:center; z-index:60; }
     .modalcard { background:#fff; border-radius:14px; padding:22px 24px; width:min(94vw,420px); box-shadow:0 20px 50px rgba(0,0,0,.2); }
     .delab { display:block; font-size:12px; color:var(--ink-soft); margin-bottom:12px; }
@@ -1094,11 +1095,12 @@
       function rowTr(r){
         const tr=document.createElement('tr'); tr.className='clickable'; tr.onclick=function(){ openPanel(r); };
         tr.innerHTML='<td class="selcell"><input type="checkbox" data-id="'+esc(r['Piece ID'])+'"'+(SEL.has(r['Piece ID'])?' checked':'')+'></td><td>'+esc(r['Piece ID'])+reqMark(r)+viralMark(r)+'<div class="rowtitle">'+esc(r['Title']||'')+'</div>'+collabTag(r)+'</td><td>'+clientChip(r['Client'])+'</td><td>'+fmtChip(r['Format'])+'</td>'+
-          '<td class="cellbtn platcell">'+platLabel(r['PlatformList'],r['Client'])+'</td><td>'+stagePill(r['Stage'])+'</td>'+
+          '<td class="cellbtn platcell">'+platLabel(r['PlatformList'],r['Client'])+'</td><td class="cellbtn stagecell">'+stagePill(r['Stage'])+'</td>'+
           '<td>'+onTrack(r['On Track'])+'</td><td class="cellbtn datecell">'+platDates(r)+'</td><td>'+copyLink(r['Copy Link'])+'</td>';
         const a=tr.querySelector('a.lnk'); if(a) a.onclick=function(e){ e.stopPropagation(); };
         tr.querySelector('.platcell').onclick=function(e){ e.stopPropagation(); openPlatformEditor(r); };
         tr.querySelector('.datecell').onclick=function(e){ e.stopPropagation(); openDateEditor(r); };
+        tr.querySelector('.stagecell').onclick=function(e){ e.stopPropagation(); openStageEditor(r, tr.querySelector('.stagecell')); };
         var _cb=tr.querySelector('.selcell input'); if(_cb){ _cb.onclick=function(e){ e.stopPropagation(); }; _cb.onchange=function(){ if(_cb.checked) SEL.add(r['Piece ID']); else SEL.delete(r['Piece ID']); renderBulkBar(); }; }
         return tr;
       }
@@ -1268,9 +1270,10 @@
         const tr=document.createElement('tr'); tr.className='clickable'; tr.onclick=function(){ openPanel(r); };
         tr.innerHTML='<td>'+esc(r['Piece ID'])+'<div class="rowtitle">'+esc(r['Title']||'')+'</div>'+collabTag(r)+'</td><td>'+clientChip(r['Client'])+'</td><td>'+fmtChip(r['Format'])+'</td>'+
           '<td>'+platLabel(r['PlatformList'],r['Client'])+'</td>'+
-          '<td>'+stagePill(r['Stage'])+'</td>'+
+          '<td class="cellbtn stagecell">'+stagePill(r['Stage'])+'</td>'+
           '<td>'+onTrack(r['On Track'])+'</td><td class="cellbtn datecell">'+platDates(r)+'</td><td>'+copyLink(r['Copy Link'])+'</td>';
         tr.querySelector('.datecell').onclick=function(e){ e.stopPropagation(); openDateEditor(r); };
+        tr.querySelector('.stagecell').onclick=function(e){ e.stopPropagation(); openStageEditor(r, tr.querySelector('.stagecell')); };
         tb.appendChild(tr);
       });
       $('todayCount').textContent=rows.length+' piece(s) need attention';
@@ -1449,6 +1452,20 @@
       const n = r['openReqs']||0; if(!n) return '';
       const role = normRole(PREFS.role);
       return role!=='all' ? '<span class="reqbadge">'+n+' asset'+(n>1?'s':'')+'</span>' : '<span class="reqdot" title="'+n+' open asset request'+(n>1?'s':'')+'"></span>';
+    }
+    function openStageEditor(r, cell){
+      if(!cell) return;
+      var opts=STAGES.slice(); if(r['Stage'] && opts.indexOf(r['Stage'])<0) opts.unshift(r['Stage']);
+      var sel=document.createElement('select'); sel.className='stageinline';
+      sel.innerHTML=opts.map(function(s){ return '<option value="'+esc(s)+'"'+(s===r['Stage']?' selected':'')+'>'+esc(s)+'</option>'; }).join('');
+      cell.innerHTML=''; cell.appendChild(sel); try{ sel.focus(); }catch(e){}
+      var done=false;
+      function revert(){ if(done) return; done=true; cell.innerHTML=stagePill(r['Stage']); }
+      sel.onclick=function(e){ e.stopPropagation(); };
+      sel.onblur=function(){ setTimeout(revert,150); };
+      sel.onchange=async function(){ var v=sel.value; if(v===(r['Stage']||'')){ revert(); return; } done=true; sel.disabled=true;
+        try{ await savePieces([{ row:r.row, pieceId:r['Piece ID'], changes:{ Stage:v } }]); }catch(e){}
+        renderPipe(); renderToday(); renderTodayPosts(); };
     }
     function stagePill(s){ if(!s) return ''; return '<span class="pill '+(STAGE_COLOUR[s]||'st-off')+'">'+esc(s)+'</span>'; }
     function chips(list){ return (list||[]).map(function(p){ return '<span class="chip">'+esc(p)+'</span>'; }).join('')||'<span class="muted">—</span>'; }
