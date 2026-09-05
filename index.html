@@ -397,7 +397,7 @@
         </div>
         <div class="surface" id="tableView"><div class="tablewrap">
           <table><thead><tr><th>Piece ID</th><th>Client</th><th>Format</th><th>Platform</th><th>Stage</th><th>On Track</th><th>Date</th><th>Copy</th></tr></thead><tbody id="pipeBody"></tbody></table>
-        </div></div>
+        </div><div id="pipePager" class="ppage" style="margin-top:12px"></div></div>
         <div id="boardView" class="board hidden"></div>
         <div id="parkedArea" class="parked"></div>
       </section>
@@ -963,15 +963,15 @@
         renderTodayPosts(); renderPipe(); renderToday();
       };
     })();
-    $('viralOnly').onchange = function(){ PREFS.viralOnly=$('viralOnly').checked; savePrefs(); renderPipe(); };
+    $('viralOnly').onchange = function(){ PREFS.viralOnly=$('viralOnly').checked; savePrefs(); PIPE_PAGE=0; renderPipe(); };
     $('logRefresh').onclick = loadLog;
-    $('clientFilter').onchange = function(){ PREFS.client=$('clientFilter').value; savePrefs(); renderPipe(); renderToday(); };
+    $('clientFilter').onchange = function(){ PREFS.client=$('clientFilter').value; savePrefs(); PIPE_PAGE=0; renderPipe(); renderToday(); };
     $('viewTable').onclick=function(){ setView('table'); };
     $('viewBoard').onclick=function(){ setView('board'); };
     function applyPipePrefs(){ $('clientFilter').value=PREFS.client||''; setView(PREFS.view||'table'); syncRoleSelects(); }
     function normRole(r){ return (r==='designer'||r==='editor')?r:'all'; }
     function syncRoleSelects(){ const v=normRole(PREFS.role); if($('roleView')) $('roleView').value=v; if($('todayRole')) $('todayRole').value=v; }
-    function setRole(v){ PREFS.role=normRole(v); savePrefs(); syncRoleSelects(); renderPipe(); renderToday(); }
+    function setRole(v){ PREFS.role=normRole(v); savePrefs(); syncRoleSelects(); PIPE_PAGE=0; renderPipe(); renderToday(); }
     $('roleView').onchange=function(){ setRole($('roleView').value); };
     $('todayRole').onchange=function(){ setRole($('todayRole').value); };
     $('assignClient').onchange=function(){ renderAssign(); };
@@ -1071,8 +1071,20 @@
         tr.querySelector('.datecell').onclick=function(e){ e.stopPropagation(); openDateEditor(r); };
         return tr;
       }
-      active.forEach(function(r){ tb.appendChild(rowTr(r)); });
+      const PIPE_PER=30, pipePages=Math.max(1, Math.ceil(active.length/PIPE_PER));
+      if(PIPE_PAGE>=pipePages) PIPE_PAGE=0;
+      active.slice(PIPE_PAGE*PIPE_PER,(PIPE_PAGE+1)*PIPE_PER).forEach(function(r){ tb.appendChild(rowTr(r)); });
       renderParked(rows);
+      (function(){ var pg=$('pipePager'); if(!pg) return;
+        if(pipePages<=1){ pg.innerHTML=''; return; }
+        var from=PIPE_PAGE*PIPE_PER+1, to=Math.min(active.length,(PIPE_PAGE+1)*PIPE_PER);
+        pg.innerHTML='<button class="small" id="pipePrev"'+(PIPE_PAGE===0?' disabled':'')+'>\u2190 Prev</button>'+
+          '<span class="muted">'+from+'\u2013'+to+' of '+active.length+' \u00b7 Page '+(PIPE_PAGE+1)+' of '+pipePages+'</span>'+
+          '<button class="small" id="pipeNext"'+(PIPE_PAGE>=pipePages-1?' disabled':'')+'>Next \u2192</button>';
+        var pv=$('pipePrev'), nx=$('pipeNext');
+        if(pv) pv.onclick=function(){ if(PIPE_PAGE>0){ PIPE_PAGE--; renderPipe(); var t=$('tableView'); if(t) t.scrollIntoView({behavior:'smooth',block:'start'}); } };
+        if(nx) nx.onclick=function(){ if(PIPE_PAGE<pipePages-1){ PIPE_PAGE++; renderPipe(); var t=$('tableView'); if(t) t.scrollIntoView({behavior:'smooth',block:'start'}); } };
+      })();
       $('pipeCount').textContent=active.length+' active';
 
       const bv=$('boardView'); bv.innerHTML='';
@@ -1347,6 +1359,7 @@
 
     // ── Parked area: three collapsed columns, 10 per page, newest first ──
     const PARKED_STATE={ open:'', page:{ pub:0, hold:0, uns:0 } };
+    let PIPE_PAGE=0;
     function renderParked(rows){
       const host=$('parkedArea'); if(!host) return;
       const groups={
