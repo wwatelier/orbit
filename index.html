@@ -323,7 +323,7 @@
     .pdate.pd-over .pd, .pdate.pd-over .pdtag { color:#c0392b; }
     .pdate.pd-sched .pd { color:var(--ink-soft); }
     .pdtag { margin-left:6px; font-size:9px; text-transform:uppercase; letter-spacing:.04em; opacity:.9; }
-    .collabtag { display:inline-block; margin-left:6px; font-size:10px; padding:1px 7px; border-radius:99px; background:#eaf0f6; color:#3a5a7a; vertical-align:middle; font-weight:500; }
+    .collabtag { display:block; width:fit-content; margin-top:4px; font-size:10px; padding:1px 7px; border-radius:99px; background:#eaf0f6; color:#3a5a7a; font-weight:500; }
     .collabtag.feat { background:#f5efe6; color:#8a6d3b; }
   </style>
 </head>
@@ -428,7 +428,7 @@
           <div class="addgrid">
             <input type="text" id="acId" placeholder="Piece ID (e.g. C12.1)">
             <select id="acClient"><option>Ice</option><option>Lynn</option><option>Melissa</option><option>SRU</option><option>Dianna</option></select>
-            <select id="acFormat"><option>Carousel</option><option>VO reel</option><option>On-camera reel</option><option>Sit-down video</option><option>POV Reels</option></select>
+            <select id="acFormat"><option>Carousel</option><option>VO Reels</option><option>On-camera Reels</option><option>Sit-down Reels</option><option>POV Reels</option></select>
             <input type="text" id="acPlatform" placeholder="Platform (e.g. IG, TikTok)">
             <input type="text" id="acTitle" placeholder="Title">
             <input type="date" id="acDate">
@@ -1063,7 +1063,7 @@
       if(!rows.length) tb.innerHTML='<tr><td colspan="8"><div class="empty">No pieces yet. Import a batch to get started.</div></td></tr>';
       function rowTr(r){
         const tr=document.createElement('tr'); tr.className='clickable'; tr.onclick=function(){ openPanel(r); };
-        tr.innerHTML='<td>'+esc(r['Piece ID'])+reqMark(r)+viralMark(r)+collabTag(r)+'<div class="rowtitle">'+esc(r['Title']||'')+'</div></td><td>'+clientChip(r['Client'])+'</td><td>'+fmtChip(r['Format'])+'</td>'+
+        tr.innerHTML='<td>'+esc(r['Piece ID'])+reqMark(r)+viralMark(r)+'<div class="rowtitle">'+esc(r['Title']||'')+'</div>'+collabTag(r)+'</td><td>'+clientChip(r['Client'])+'</td><td>'+fmtChip(r['Format'])+'</td>'+
           '<td class="cellbtn platcell">'+platLabel(r['PlatformList'],r['Client'])+'</td><td>'+stagePill(r['Stage'])+'</td>'+
           '<td>'+onTrack(r['On Track'])+'</td><td class="cellbtn datecell">'+platDates(r)+'</td><td>'+copyLink(r['Copy Link'])+'</td>';
         const a=tr.querySelector('a.lnk'); if(a) a.onclick=function(e){ e.stopPropagation(); };
@@ -1108,7 +1108,7 @@
       rows.forEach(function(r){
         const notReady=!isReadyStage(r['Stage']); if(notReady) urgent++;
         const tr=document.createElement('tr'); if(notReady) tr.className='notready';
-        tr.innerHTML='<td>'+esc(r['Piece ID'])+viralMark(r)+collabTag(r)+(notReady?'<span class="urg">URGENT</span>':'')+'</td>'+
+        tr.innerHTML='<td>'+esc(r['Piece ID'])+viralMark(r)+(notReady?'<span class="urg">URGENT</span>':'')+collabTag(r)+'</td>'+
           '<td>'+clientChip(r['Client'])+'</td><td>'+fmtChip(r['Format'])+'</td>'+
           '<td class="cellbtn platcell">'+platLabel(r['PlatformList'],r['Client'])+'</td>'+
           '<td>'+esc(r['Title']||'')+'</td>'+
@@ -1222,7 +1222,7 @@
       if(!rows.length) tb.innerHTML='<tr><td colspan="8"><div class="empty">Nothing needs attention right now.</div></td></tr>';
       rows.forEach(function(r){
         const tr=document.createElement('tr'); tr.className='clickable'; tr.onclick=function(){ openPanel(r); };
-        tr.innerHTML='<td>'+esc(r['Piece ID'])+collabTag(r)+'<div class="rowtitle">'+esc(r['Title']||'')+'</div></td><td>'+clientChip(r['Client'])+'</td><td>'+fmtChip(r['Format'])+'</td>'+
+        tr.innerHTML='<td>'+esc(r['Piece ID'])+'<div class="rowtitle">'+esc(r['Title']||'')+'</div>'+collabTag(r)+'</td><td>'+clientChip(r['Client'])+'</td><td>'+fmtChip(r['Format'])+'</td>'+
           '<td>'+platLabel(r['PlatformList'],r['Client'])+'</td>'+
           '<td>'+stagePill(r['Stage'])+'</td>'+
           '<td>'+onTrack(r['On Track'])+'</td><td class="cellbtn datecell">'+platDates(r)+'</td><td>'+copyLink(r['Copy Link'])+'</td>';
@@ -1417,7 +1417,7 @@
     function todayISO(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
     function isReadyStage(s){ return /^(9 Ready to Publish|10 Published)/.test(s||''); }
     // Notion-style pastel chips (soft bg, muted ink) for Format and Client.
-    const FMT_TONE={ 'Carousel':'#dbeafe|#1e40af','VO reel':'#ede9fe|#5b21b6','On-camera reel':'#ffedd5|#9a3412','Sit-down video':'#dcfce7|#166534','POV Reels':'#fce7f3|#9d174d' };
+    const FMT_TONE={ 'Carousel':'#dbeafe|#1e40af','VO Reels':'#ede9fe|#5b21b6','On-camera Reels':'#ffedd5|#9a3412','Sit-down Reels':'#dcfce7|#166534','POV Reels':'#fce7f3|#9d174d' };
     const CLIENT_TONE={ 'Ice':'#e0f2fe|#075985','Lynn':'#fef9c3|#854d0e','Melissa':'#fae8ff|#86198f','SRU':'#dcfce7|#166534','Dianna':'#ffe4e6|#9f1239' };
     function toneChip(v, map){ const t=(map[v]||'#eef0ee|#5a635a').split('|'); return v? '<span class="tchip" style="background:'+t[0]+';color:'+t[1]+'">'+esc(v)+'</span>':'<span class="muted">—</span>'; }
     function fmtChip(f){ return toneChip(f, FMT_TONE); }
@@ -1456,7 +1456,7 @@
       if(has(/linkedin/)) out.push(['LinkedIn', base]);
       if(has(/website|web/)) out.push(['Website Article', base]);
       if(!out.length) out.push(['Publish', base]);
-      const _stg=r['Stage']||'', _ready=/^(9 |10 )/.test(_stg), _iso=todayISO();
+      const _stg=r['Stage']||'', _ready=/Published/.test(_stg), _iso=todayISO();
       function _stat(dt){ if(!dt) return ['','']; if(dt<_iso){ return _ready?['pd-posted','Posted']:['pd-over','Overdue']; } if(dt===_iso) return ['pd-today','Today']; return ['pd-sched','']; }
       const _uniq=[...new Set(out.map(function(p){return p[1];}))];
       if(_uniq.length<=1){ const dt=out[0]?out[0][1]:''; const s=_stat(dt);
