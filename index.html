@@ -255,9 +255,13 @@
       .main{ padding:18px; }
     }
     @media print {
-      body * { visibility:hidden; }
-      #invDoc, #invDoc *, #repDoc, #repDoc * { visibility:visible; }
-      #invDoc, #repDoc { position:absolute; left:0; top:0; width:100%; border:none; box-shadow:none; }
+      @page { margin: 12mm; }
+      html, body { height:auto !important; overflow:visible !important; background:#fff !important; }
+      body.printing > * { display:none !important; }
+      body.printing #printRoot { display:block !important; }
+      #printRoot { display:none; }
+      #printRoot .controls, #printRoot .navbtn { display:none !important; }
+      #invDoc, #repDoc { border:none !important; box-shadow:none !important; width:100% !important; max-width:100% !important; }
       .navbtn,.controls,.head,.sidebar{ display:none !important; }
     }
 
@@ -462,6 +466,7 @@
         </div>
         <div class="seg" style="margin-bottom:16px">
           <button id="hoKindSchedule" class="on">Import batch prompt</button>
+          <button id="hoKindPast">Import past content</button>
           <button id="hoKindReminder">Client reminder</button>
           <button id="hoKindLinks">Missing links</button>
         </div>
@@ -508,7 +513,9 @@
           </div>
         </div>
         <div id="invDocWrap"></div>
-        <div class="surface" style="margin-top:16px"><div class="tablewrap">
+        <div class="surface" style="margin-top:16px">
+          <div class="controls" style="padding:10px 12px 0"><strong style="font-size:14px">Invoice history</strong><select id="invScope" style="font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:8px"><option value="client">This client only</option><option value="all">All clients</option></select><span id="invListCount" class="muted" style="font-size:12px"></span></div>
+          <div class="tablewrap">
           <table><thead><tr><th>Invoice No</th><th>Client</th><th>Total</th><th>Status</th><th>Issued</th><th>Paid</th><th></th></tr></thead><tbody id="invListBody"></tbody></table>
         </div></div>
       </section>
@@ -1620,6 +1627,7 @@
     let hoKind = 'schedule';
     const HO_HELP = {
       schedule: 'This is the Import-batch prompt. Pick a client, fill in the Batch no., Generate, then paste it into your AI (Claude/ChatGPT). The AI assigns dates + Piece IDs and replies with a batch you paste straight into the Import tab → Validate → Save. Internal — not sent to the client.',
+      past: 'For back-filling content that already exists (e.g. a client\'s old Notion calendar). Generate this, paste it into your AI together with the client\'s existing list, and it converts their wording into Orbit\'s exact columns and Stage names, keeping the original dates. Then paste the result into Import → Validate → Save.',
       reminder: 'A ready-to-send message listing what the client still owes — approvals, input, footage. Send it to the client when you need to chase a decision.',
       links: 'A checklist of pieces that still have no copy link. Use it internally to see which pieces need a Notion/Google-Doc page made.'
     };
@@ -1628,7 +1636,7 @@
       b.onclick = function(){
         document.querySelectorAll('#tab-handoff .seg button').forEach(function(x){ x.classList.remove('on'); });
         b.classList.add('on');
-        hoKind = b.id === 'hoKindReminder' ? 'reminder' : (b.id === 'hoKindLinks' ? 'links' : 'schedule');
+        hoKind = b.id === 'hoKindReminder' ? 'reminder' : (b.id === 'hoKindLinks' ? 'links' : (b.id === 'hoKindPast' ? 'past' : 'schedule'));
         setHoHelp();
       };
     });
@@ -1640,6 +1648,7 @@
         const rows = allRows.filter(function(r){ return r['Client']===client; });
         let text = '';
         if (hoKind === 'schedule')      text = genSchedulePrompt(client, rows);
+        else if (hoKind === 'past')     text = genPastImportPrompt(client, rows);
         else if (hoKind === 'reminder') text = genReminder(client, rows);
         else                            text = genMissingLinks(client, rows);
         // append open asset requests to schedule + reminder (not to missing-links)
@@ -1659,6 +1668,47 @@
     function setHo(m,c){ $('hoStatus').className='pstatus '+(c||'muted'); $('hoStatus').textContent=m; }
 
     // (1) Scheduling prompt: master prompt (delta 4B) + current schedule for the AI to continue from.
+    // Definitions so an AI can translate ANY client's status wording into Orbit's exact Stage names.
+    function stageDictionaryLines(){
+      return [
+'ORBIT STAGE DICTIONARY — output the Stage wording EXACTLY as written on the left. Match the client\'s own wording to the closest one:',
+'  "1 Copywriting"                    copy is being written; nothing submitted yet. (e.g. Not started, To do, First draft, Drafting, In progress, To write)',
+'  "2 Copywriting Ready for Review"   copy is written and waiting on someone to check it. (e.g. Script Submitted, Under Review, Waiting for confirm the copy, Pending review)',
+'  "3 Copywriting Approved"           copy signed off; production has not started.',
+'  "4 Waiting for Voiceover / Video"  waiting on the client for voiceover or raw footage. (e.g. Waiting for Voice from X, Waiting for Sitdown VDO, Awaiting footage)',
+'  "5 Voiceover / Video Received"     the raw voice or footage has arrived; editing has not started. (e.g. Received, Footage in)',
+'  "6 In Production"                  being edited, designed or built. (e.g. In Editing, To Edit, Editing, Design in progress)',
+'  "7 Content Ready for Review"       the finished asset is waiting for approval.',
+'  "8 Content Approved"               the asset is approved but not scheduled yet.',
+'  "9 Ready to Publish"               done and queued/scheduled, not live yet. (e.g. Ready to Publish, Scheduled, Write Caption, Ready)',
+'  "10 Published"                     already live. (e.g. Live, Posted, Published, Done, Complete)',
+'  "⏸️ On Hold"                        paused; not counted against the quota. (e.g. On Hold, Paused)',
+'  "◼️ Unselected"                     considered and dropped; will not be made.',
+'  "🔁 Rolled Over"                    pushed to a later batch.',
+'If a status has no sensible match, use "1 Copywriting". Never invent a Stage name and never output the client\'s original wording.'
+      ];
+    }
+    function blockAContractLines(){
+      return [
+'OUTPUT FORMAT — Block A. Output ONLY this table, nothing before or after it: no explanation, no code fences, no markdown pipes, no numbering column.',
+'Tab-separated. First line is exactly this header, then one line per piece:',
+'Piece ID\tClient\tFormat\tPlatform\tTitle\tPublish Date\tReady By\tStage\tFounder\tCopy Link',
+'',
+'COLUMN RULES:',
+'  Piece ID      FORMAT-PERSON-BATCH.SEQ, e.g. C-ICE-12.1. Must be unique.',
+'  Client        exactly one of the Orbit client names.',
+'  Format        exactly one of: Carousel | VO Reels | On-camera Reels | Sit-down Reels | POV Reels',
+'  Platform      comma-separated from: IG & FB, TikTok, LinkedIn, Website Article',
+'  Title         the post title.',
+'  Publish Date  YYYY-MM-DD. Never a Sunday.',
+'  Ready By      YYYY-MM-DD, normally about 14 days before Publish Date.',
+'  Stage         exactly one name from the stage dictionary above.',
+'  Founder       the collab partner account, or blank for a normal solo post.',
+'  Copy Link     full URL of the copy page, or blank.',
+'',
+'MISSING DATA: leave the cell EMPTY. Never guess, never write "N/A", "TBD", "-" or "unknown", and never drop or reorder a column. Every line must have exactly 10 tab-separated fields, even when some are empty.'
+      ];
+    }
     function genSchedulePrompt(client, rows){
       const batch = ($('hoBatch').value||'').trim() || '[BATCH NUMBER]';
       const bilingual = (client === 'Ice');
@@ -1684,12 +1734,33 @@ sched,
 '3. Collabs: if a piece is a collaboration with another WWA account, put that account’s name in the Founder column (e.g. Dianna) — it then also shows on that account’s own calendar. Reflect it in the Piece ID as PERSON = poster+partner (e.g. OC-' + client + '+DIA-' + (batch==='[BATCH NUMBER]'?'12':batch) + '.1 means ' + client + ' posts, Dianna collabs). If a different account is the one actually posting, make THAT account the ID PERSON instead (e.g. VO-DIA-… posts from Dianna). A normal solo post leaves Founder blank and uses ' + client + ' as the ID PERSON.',
 '4. Titles: ' + (bilingual ? 'bilingual "Thai / English".' : 'English.'),
 '5. CREATE a Notion copy page for each piece in ' + client + '’s Notion space, and put its URL in the Copy Link column. Ask me for the parent page/folder to create them under if you don’t already know it. Do NOT leave Copy Link blank — the whole point is that you return the links so the team doesn’t fill them by hand.',
-'6. Output the batch as Block A EXACTLY: a TSV table with the header row',
-'   Piece ID\tClient\tFormat\tPlatform\tTitle\tPublish Date\tReady By\tStage\tFounder\tCopy Link',
-'   one row per piece, nothing else wrapped around the table. New pieces are Stage "1 Copywriting".',
+'6. New pieces are Stage "1 Copywriting" unless you already know a piece is further along.',
+''
+      ].concat(stageDictionaryLines()).concat(['']).concat(blockAContractLines()).join('\n');
+    }
+
+    // Back-fill prompt: converts a client's existing/past calendar into Orbit's exact format.
+    function genPastImportPrompt(client, rows){
+      const known = ((META&&META.clients)||[]).join(', ');
+      const existingIds = rows.map(function(r){ return r['Piece ID']; }).filter(Boolean).slice(-40).join(', ') || '(none yet)';
+      return [
+'You are converting EXISTING content records for ' + client + ' into Orbit\'s import format.',
+'I will paste their current list (from Notion, a spreadsheet, or wherever it lives). Its columns and status wording will NOT match Orbit. Your job is to translate it, not to plan anything new.',
 '',
-'Never output IDs, dates, or a table shape other than Block A above. The dashboard reads it verbatim.'
-      ].join('\n');
+'HARD RULES:',
+'1. These pieces ALREADY EXIST. Keep their original publish dates exactly as given. Do NOT invent, shift or re-schedule any date. If a piece has no date, leave Publish Date empty.',
+'2. Do NOT create copy pages and do NOT invent links. If a link exists in the source, carry it over; otherwise leave Copy Link empty.',
+'3. Translate each status into an Orbit Stage using the dictionary below. If a piece is clearly already posted (a past date, or a status like Live / Posted / Done), use "10 Published".',
+'4. Piece IDs: if the source already has one, keep it verbatim. If not, build one as FORMAT-PERSON-BATCH.SEQ using ' + client + '\'s scheme, and make sure it does not clash with the existing IDs below.',
+'5. Never drop a piece. If something is unclear, still output the row with the unclear cells left empty, then list those rows in a short note AFTER the table.',
+'',
+'Orbit client names: ' + (known || client),
+'Existing Piece IDs already in Orbit (do not reuse): ' + existingIds,
+''
+      ].concat(stageDictionaryLines()).concat(['']).concat(blockAContractLines()).concat([
+'',
+'Now wait for me to paste the client\'s existing content list.'
+      ]).join('\n');
     }
 
     // (2) Client reminder: their pending (client-court) pieces as a copy-paste LINE message.
@@ -1826,7 +1897,8 @@ sched,
       $('invAddSGD').value   = b.addSGD || '';
       if (b.currency) $('invCurrency').value = b.currency;
     }
-    $('invClient').onchange = fillFromBilling;
+    $('invClient').onchange = function(){ fillFromBilling(); loadInvoices(); };
+    (function(){ var s=$('invScope'); if(s) s.onchange=function(){ loadInvoices(); }; })();
     $('invRefresh').onclick = loadInvoices;
     $('invPreview').onclick = function(){ renderInvoiceDoc(false); setInv('Preview ready below.','muted'); $('invDocWrap').scrollIntoView({behavior:'smooth', block:'start'}); };
 
@@ -1898,8 +1970,23 @@ sched,
           '</div>'+
         '</div>'+
       '</div>'+
-      '<div class="controls" style="margin-top:12px"><button class="small" onclick="window.print()">Print / Save '+title+' as PDF</button></div>';
+      '<div class="controls" style="margin-top:12px"><button class="small" id="invPrintBtn">Print / Save '+title+' as PDF</button></div>';
       $('invDocWrap').innerHTML = html;
+      var _pb=$('invPrintBtn'); if(_pb) _pb.onclick=function(){ printDoc(no+(isReceipt?'-receipt':'')); };
+    }
+    // Names the saved PDF after the document and prints only that document
+    // (isolating it in #printRoot so browsers don't emit blank pages for the rest of the app).
+    function printDoc(filename, nodeId){
+      var src=document.getElementById(nodeId||'invDoc'); if(!src){ window.print(); return; }
+      var prev=document.title;
+      try{ document.title=String(filename||'Orbit').replace(/[\/\\:*?"<>|]+/g,'-'); }catch(e){}
+      var root=document.getElementById('printRoot');
+      if(!root){ root=document.createElement('div'); root.id='printRoot'; document.body.appendChild(root); }
+      root.innerHTML=''; root.appendChild(src.cloneNode(true));
+      document.body.classList.add('printing');
+      function restore(){ document.body.classList.remove('printing'); root.innerHTML=''; try{ document.title=prev; }catch(e){} window.removeEventListener('afterprint',restore); }
+      window.addEventListener('afterprint',restore);
+      setTimeout(function(){ window.print(); setTimeout(restore,1500); },40);
     }
     function invRow(n, service, amount){
       return '<tr><td style="text-align:center;padding:9px;border:1px solid #ddd">'+n+'</td>'+
@@ -1927,12 +2014,18 @@ sched,
     };
 
     async function loadInvoices(){
-      const data = await call('listInvoices', { client: $('invClient').value });
+      const scopeAll = ($('invScope') && $('invScope').value==='all');
+      const data = await call('listInvoices', { client: scopeAll ? '' : $('invClient').value });
       const tb = $('invListBody'); tb.innerHTML='';
       if (!data.ok){ tb.innerHTML='<tr><td colspan="7"><div class="empty">'+esc(data.error)+'</div></td></tr>'; return; }
       const rows = data.result.rows||[];
-      if (!rows.length){ tb.innerHTML='<tr><td colspan="7"><div class="empty">No invoices for this client yet.</div></td></tr>'; return; }
-      rows.reverse().forEach(function(r){
+      var _c=$('invListCount'); if(_c){ var unpaid=rows.filter(function(x){ return x.status!=='receipt'; }).length; _c.textContent=rows.length+' invoice(s)'+(unpaid?' · '+unpaid+' awaiting payment':''); }
+      if (!rows.length){ tb.innerHTML='<tr><td colspan="7"><div class="empty">'+(scopeAll?'No invoices yet.':'No invoices for this client yet.')+'</div></td></tr>'; return; }
+      rows.slice().sort(function(a,b){
+        var au=(a.status!=='receipt')?0:1, bu=(b.status!=='receipt')?0:1;
+        if(au!==bu) return au-bu;                       // awaiting payment first
+        return String(b.no).localeCompare(String(a.no)); // then newest
+      }).forEach(function(r){
         const isReceipt = r.status==='receipt';
         const badge = '<span class="pill '+(isReceipt?'st-9':'st-2')+'">'+(isReceipt?'Receipt':'Invoice')+'</span>';
         const tr = document.createElement('tr');
