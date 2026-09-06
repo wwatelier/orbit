@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Orbit · What's going out</title>
+<script>
+// Kick the request off while the page is still parsing so the Apps Script cold start
+// overlaps with rendering instead of following it.
+window.__boot = (function(){
+  try {
+    var k = new URLSearchParams(location.search).get('k') || '';
+    var c = new URLSearchParams(location.search).get('client') || '';
+    if(!k) return null;
+    var url = "https://script.google.com/macros/s/AKfycbz4IrRMhmoOSZSVIB5CacHmMW6T7TFjEDDT-31Ke0C0sZAYy2uBdzMiBCXwG__IV33mwQ/exec";
+    return { key:k, client:c,
+      promise: fetch(url, { method:"POST", body: JSON.stringify({ action:"teamToday", key:k, client:c }) })
+                 .then(function(r){ return r.json(); }) };
+  } catch(e){ return null; }
+})();
+</script>
+<style>
+  :root{
+    --bg:#f7f7f5; --surface:#fff; --line:#e6e6e2; --text:#1f2320; --muted:#6b716c; --faint:#9aa09b;
+    --ok-bg:#e7f3ec; --ok-tx:#1f6b41; --warn-bg:#fdf1dd; --warn-tx:#8a5a00; --late-bg:#fbe6e6; --late-tx:#a02a2a;
+    --accent:#2f4a3c;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue","Noto Sans Thai",sans-serif;
+    -webkit-font-smoothing:antialiased;}
+  .wrap{max-width:820px;margin:0 auto;padding:20px 16px 56px}
+  header{margin:6px 0 18px}
+  h1{font-size:23px;line-height:1.25;margin:0 0 4px;letter-spacing:-.01em}
+  .sub{color:var(--muted);font-size:13px}
+  .bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px}
+  button{font:inherit;background:var(--surface);border:1px solid var(--line);color:var(--text);
+    padding:7px 13px;border-radius:9px;cursor:pointer;min-height:38px}
+  button:hover{background:#f0f2ef}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  .seg{display:inline-flex;background:var(--surface);border:1px solid var(--line);border-radius:9px;overflow:hidden}
+  .seg button{border:0;border-radius:0;min-height:36px;padding:6px 12px}
+  .seg button.on{background:var(--accent);color:#fff}
+  h2{font-size:14px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:26px 0 10px;font-weight:600}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:13px;overflow:hidden}
+  .row{display:flex;gap:12px;padding:13px 15px;border-bottom:1px solid var(--line);align-items:flex-start}
+  .row:last-child{border-bottom:0}
+  .row.late{background:#fffafa}
+  .meta{flex:1;min-width:0}
+  .id{font-size:12px;color:var(--faint);white-space:nowrap}
+  .title{font-size:15px;line-height:1.4;margin:2px 0 6px;word-break:break-word}
+  .tags{display:flex;gap:5px;flex-wrap:wrap;align-items:center}
+  .tag{display:inline-block;font-size:11px;padding:2px 8px;border-radius:6px;background:#eef1ee;color:#5b625b;white-space:nowrap}
+  .tag.client{background:#e8eef6;color:#33506f;font-weight:600}
+  .tag.collab{background:#eaf0f6;color:#3a5a7a}
+  .status{flex:none;text-align:right;display:flex;flex-direction:column;gap:5px;align-items:flex-end}
+  .pill{display:inline-block;font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px;white-space:nowrap}
+  .pill.ok{background:var(--ok-bg);color:var(--ok-tx)}
+  .pill.warn{background:var(--warn-bg);color:var(--warn-tx)}
+  .pill.late{background:var(--late-bg);color:var(--late-tx)}
+  .when{font-size:11px;color:var(--faint);white-space:nowrap}
+  a.copy{font-size:12px;color:#2d5f9a;text-decoration:none;white-space:nowrap}
+  a.copy:hover{text-decoration:underline}
+  .empty{padding:26px 16px;text-align:center;color:var(--muted);font-size:14px}
+  .foot{margin-top:22px;color:var(--faint);font-size:12px;line-height:1.6}
+  .alert{background:#fff;border:1px solid var(--line);border-left:3px solid var(--late-tx);
+    border-radius:10px;padding:13px 15px;margin-bottom:14px;font-size:13px;color:var(--late-tx)}
+  .skel{height:62px;background:linear-gradient(90deg,#eee,#f6f6f4,#eee);background-size:200% 100%;
+    animation:sh 1.2s infinite;border-bottom:1px solid var(--line)}
+  @keyframes sh{0%{background-position:200% 0}100%{background-position:-200% 0}}
+  @media (max-width:520px){
+    .row{flex-direction:column;gap:8px}
+    .status{flex-direction:row;align-items:center;text-align:left;width:100%;justify-content:flex-start;gap:8px;flex-wrap:wrap}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1 id="h1">What's going out</h1>
+    <div class="sub" id="sub">Loading…</div>
+    <div class="bar">
+      <div class="seg" id="seg">
+        <button data-d="today" class="on" id="segToday">Today</button>
+        <button data-d="tomorrow" id="segTomorrow">Tomorrow</button>
+      </div>
+      <button id="refresh">Refresh</button>
+      <span class="sub" id="asof"></span>
+    </div>
+  </header>
+  <div id="main">
+    <div class="card"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div>
+  </div>
+  <div class="foot" id="foot"></div>
+</div>
+
+<script>
+"use strict";
+var WEB_APP_URL = "https://script.google.com/macros/s/AKfycbz4IrRMhmoOSZSVIB5CacHmMW6T7TFjEDDT-31Ke0C0sZAYy2uBdzMiBCXwG__IV33mwQ/exec";
+var params = new URLSearchParams(location.search);
+var KEY = params.get('k') || '';
+var CLIENT = params.get('client') || '';
+var DATA = null, DAY = 'today';
+
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+
+// A piece is "ready" once it reaches a ready/published stage; anything else going out
+// today is what the team needs to see first.
+function readiness(r){
+  var s = r.stage || '';
+  if (/Published/i.test(s)) return { cls:'ok', label:'Published' };
+  if (/Ready to Publish/i.test(s)) return { cls:'ok', label:'Ready' };
+  if (r.day === 'today') return { cls:'late', label:'Not ready' };
+  return { cls:'warn', label:'In progress' };
+}
+function collabTag(r){
+  var client=(r.client||'').trim(), pf=(r.postFrom||'').trim(), partner=(r.partner||'').trim();
+  if(partner===client) partner='';
+  var accounts=[]; [client,pf,partner].forEach(function(a){ a=(a||'').trim(); if(a&&accounts.indexOf(a)<0) accounts.push(a); });
+  if(accounts.length<2) return '';
+  var poster=pf||client, others=accounts.filter(function(a){ return a!==poster; });
+  return '<span class="tag collab">post from '+esc(poster)+' · collab with '+esc(others.join(' + '))+'</span>';
+}
+function platformsFor(r){
+  var out=[], d = (DAY==='today') ? DATA.today : DATA.tomorrow;
+  if (r.igDate ? r.igDate===d : r.publishDate===d) out.push('IG & FB');
+  if (r.ttDate ? r.ttDate===d : (r.publishDate===d && /tiktok/i.test(r.platform||''))) out.push('TikTok');
+  if (!out.length && r.platform) out = String(r.platform).split(/[,;]/).map(function(s){ return s.trim(); }).filter(Boolean);
+  return out;
+}
+function fmtDate(ymd){
+  if(!ymd) return '';
+  var p = ymd.split('-'); if(p.length!==3) return ymd;
+  var d = new Date(+p[0], +p[1]-1, +p[2]);
+  return d.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' });
+}
+
+function render(){
+  var main = document.getElementById('main');
+  if(!DATA){ return; }
+  var rows = DATA.rows.filter(function(r){ return r.day===DAY; });
+  var dateStr = fmtDate(DAY==='today' ? DATA.today : DATA.tomorrow);
+  document.getElementById('sub').textContent =
+    dateStr + (DATA.client ? ' · ' + DATA.client : ' · all clients');
+
+  var notReady = rows.filter(function(r){ return readiness(r).cls==='late'; }).length;
+  var html = '';
+  if (DAY==='today' && notReady) {
+    html += '<div class="alert"><strong>'+notReady+'</strong> piece'+(notReady===1?'':'s')+
+            ' going out today '+(notReady===1?'is':'are')+' not marked ready yet.</div>';
+  }
+  if (!rows.length) {
+    html += '<div class="card"><div class="empty">Nothing scheduled for '+
+            (DAY==='today'?'today':'tomorrow')+'.</div></div>';
+    main.innerHTML = html; return;
+  }
+  // group by client so a multi-client day reads cleanly
+  var byClient = {};
+  rows.forEach(function(r){ (byClient[r.client]=byClient[r.client]||[]).push(r); });
+  Object.keys(byClient).sort().forEach(function(cl){
+    html += '<h2>'+esc(cl)+' · '+byClient[cl].length+'</h2><div class="card">';
+    byClient[cl].forEach(function(r){
+      var rd = readiness(r), plats = platformsFor(r);
+      html += '<div class="row'+(rd.cls==='late'?' late':'')+'">'+
+        '<div class="meta">'+
+          '<div class="id">'+esc(r.pieceId)+'</div>'+
+          '<div class="title">'+esc(r.title||'(no title)')+'</div>'+
+          '<div class="tags">'+
+            (r.format?'<span class="tag">'+esc(r.format)+'</span>':'')+
+            plats.map(function(p){ return '<span class="tag">'+esc(p)+'</span>'; }).join('')+
+            collabTag(r)+
+          '</div>'+
+        '</div>'+
+        '<div class="status">'+
+          '<span class="pill '+rd.cls+'">'+esc(rd.label)+'</span>'+
+          '<span class="when">'+esc(r.stage||'')+'</span>'+
+          (r.copyLink?'<a class="copy" href="'+esc(r.copyLink)+'" target="_blank" rel="noopener">Open Copy</a>':'')+
+        '</div>'+
+      '</div>';
+    });
+    html += '</div>';
+  });
+  main.innerHTML = html;
+}
+
+function fail(msg, detail){
+  document.getElementById('sub').textContent = '';
+  document.getElementById('asof').textContent = '';
+  document.getElementById('seg').style.display='none';
+  document.getElementById('main').innerHTML =
+    '<div class="card"><div class="empty"><strong>'+esc(msg)+'</strong>'+
+    (detail?'<div style="margin-top:6px">'+esc(detail)+'</div>':'')+'</div></div>';
+}
+
+async function load(useBoot){
+  try{
+    var res;
+    if (useBoot && window.__boot && window.__boot.promise) res = await window.__boot.promise;
+    else res = await (await fetch(WEB_APP_URL, { method:"POST",
+      body: JSON.stringify({ action:"teamToday", key:KEY, client:CLIENT }) })).json();
+
+    if(!res || res.ok===false){
+      if(res && res.error==='bad_key') return fail('This link is not valid.',
+        'It may have been rotated. Ask the team for the current link.');
+      return fail('Could not load right now.', (res&&res.error)||'');
+    }
+    DATA = res;
+    document.getElementById('asof').textContent = 'as of ' + (res.generated||'');
+    var counts = { today:0, tomorrow:0 };
+    res.rows.forEach(function(r){ counts[r.day]++; });
+    document.getElementById('segToday').textContent = 'Today ('+counts.today+')';
+    document.getElementById('segTomorrow').textContent = 'Tomorrow ('+counts.tomorrow+')';
+    document.getElementById('foot').textContent =
+      'Read-only internal view. Shows only today and tomorrow. Nothing here can be edited.';
+    render();
+  } catch(e){
+    fail('Could not reach the server.', 'Check your connection and refresh.');
+  }
+}
+
+if(!KEY){
+  fail('This link is missing its key.', 'Use the full link copied from Orbit.');
+} else {
+  document.getElementById('refresh').onclick = function(){
+    this.disabled = true; this.textContent = 'Refreshing…';
+    var b = this;
+    load(false).then(function(){ b.disabled=false; b.textContent='Refresh'; });
+  };
+  Array.prototype.forEach.call(document.querySelectorAll('#seg button'), function(b){
+    b.onclick = function(){
+      DAY = b.dataset.d;
+      Array.prototype.forEach.call(document.querySelectorAll('#seg button'), function(x){ x.classList.remove('on'); });
+      b.classList.add('on');
+      render();
+    };
+  });
+  load(true);
+}
+</script>
+</body>
+</html>
