@@ -103,6 +103,26 @@
     .bulkbar { position:sticky; top:8px; z-index:6; display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:9px 12px; margin-bottom:10px; background:#eef4ff; border:1px solid var(--line); border-radius:10px; font-size:13px; }
     .bulkbar #bulkCount { font-weight:600; }
     .selcol { width:34px; } .selcell { width:34px; text-align:center; }
+    .yeargrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:16px; }
+    .mon { border:1px solid var(--line); border-radius:11px; padding:10px 11px 12px; }
+    .mon h4 { margin:0 0 8px; font-size:13px; font-weight:600; display:flex; justify-content:space-between; align-items:center; }
+    .mon h4 .offn { font-size:11px; color:#8a5a00; font-weight:500; }
+    .mgrid { display:grid; grid-template-columns:repeat(7,1fr); gap:2px; }
+    .mgrid .dh { font-size:10px; color:var(--ink-soft); text-align:center; padding-bottom:3px; }
+    .mgrid button { font:inherit; font-size:11px; line-height:1; padding:5px 0; border:1px solid transparent; border-radius:6px;
+      background:transparent; color:var(--ink); cursor:pointer; min-height:26px; }
+    .mgrid button:hover:not(:disabled) { background:#eef1ec; }
+    .mgrid button.off { background:#fdeaea; color:#a02a2a; font-weight:600; }
+    .mgrid button.sun { background:#f2f3f1; color:#a8aca6; cursor:not-allowed; }
+    .mgrid button.today { border-color:var(--brand); font-weight:700; }
+    .mgrid .pad { visibility:hidden; }
+    .expl { background:#f4f6f3; border:1px solid var(--line); border-radius:11px; padding:13px 15px; margin-bottom:14px; font-size:13px; line-height:1.65; }
+    .expl summary { cursor:pointer; font-weight:600; font-size:13px; }
+    .expl ul { margin:8px 0 0; padding-left:18px; } .expl li { margin:3px 0; }
+    .buf { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
+    .bufc { border:1px solid var(--line); border-radius:9px; padding:7px 11px; font-size:12px; background:#fff; }
+    .bufc b { font-size:13px; } .bufc.low { background:#fdf1dd; border-color:#e8d3a8; color:#8a5a00; }
+    .bufc.ok { background:#eef6f0; border-color:#cfe3d6; color:#1f6b41; }
     .stagepop { position:absolute; z-index:60; background:#fff; border:1px solid var(--line); border-radius:12px; box-shadow:0 12px 34px rgba(0,0,0,.16); padding:6px; min-width:250px; max-width:320px; }
     .stagepop .sp-head { font-size:11px; color:#777; padding:5px 8px 6px; }
     .stagepop .sp-list { max-height:320px; overflow:auto; display:flex; flex-direction:column; gap:1px; }
@@ -369,6 +389,7 @@
       <button class="navbtn" data-tab="import"><span class="ic">＋</span> Import</button>
       <button class="navbtn" data-tab="handoff"><span class="ic">✎</span> Prompts &amp; Handoffs</button>
       <button class="navbtn" data-tab="invoices"><span class="ic">฿</span> Invoices</button>
+      <button class="navbtn" data-tab="calendar"><span class="ic">▦</span> Team Calendar</button>
       <button class="navbtn" data-tab="onboard"><span class="ic">✛</span> Onboard Client</button>
       <button class="navbtn" data-tab="clientview"><span class="ic">↗</span> Client View</button>
       <button class="navbtn" data-tab="log"><span class="ic">≡</span> Activity Log</button>
@@ -411,6 +432,18 @@
       </section>
       <section class="hidden" id="tab-pipeline">
         <div class="head"><div><h2>Pipeline</h2><p class="sub">Every piece across the production ladder. Click any row to update it.</p></div></div>
+        <div class="buf" id="bufBar"></div>
+        <details class="expl"><summary>How this board is worked out</summary>
+          <ul>
+            <li><b>What you see.</b> Every active piece. Published, On Hold, Unselected and Rolled Over are moved to the collapsed sections underneath, so the board is only work that still needs doing.</li>
+            <li><b>Order.</b> Soonest publish date first, so the top of the list is the most urgent.</li>
+            <li><b>Ready By</b> is 14 days before the publish date, then pulled back off Sundays and any day marked off in Team Calendar. It is the production deadline, not the posting date.</li>
+            <li><b>On Track</b> compares today against Ready By: 🟢 On track, 🟠 At risk within 3 days, 🔴 Behind once it has passed. A piece at Ready to Publish or Published is never Behind.</li>
+            <li><b>Ready buffer.</b> The chips above show how many days of Ready-to-Publish content each client has ahead of today. Target is 7 days, and more is better. Amber means below target.</li>
+            <li><b>⚠ Needs info</b> means the piece is missing a publish date or a copy link.</li>
+            <li><b>Publish dates never move</b> for a day off. Only the internal deadlines shift.</li>
+          </ul>
+        </details>
         <div class="controls">
           <label class="inline">Client
             <select id="clientFilter"><option value="">All</option><option>Ice</option><option>Lynn</option><option>Melissa</option><option>SRU</option><option>Dianna</option></select>
@@ -539,6 +572,22 @@
           <div class="tablewrap">
           <table><thead><tr><th>Invoice No</th><th>Client</th><th>Total</th><th>Status</th><th>Issued</th><th>Paid</th><th></th></tr></thead><tbody id="invListBody"></tbody></table>
         </div></div>
+      </section>
+
+      <section class="hidden" id="tab-calendar">
+        <div class="head"><div><h2>Team Calendar</h2><p class="sub">Mark the days the team is not working. Sundays are always off. Production deadlines move off these days and work is spread out so nobody comes back to a pile-up. Publish dates never move.</p></div></div>
+        <div class="controls">
+          <label class="inline">Marking for
+            <select id="doScope"><option value="All">Everyone</option><option value="Graphic Designer">Graphic Designer</option><option value="Video Editor">Video Editor</option></select>
+          </label>
+          <button class="small" id="doPrevYear">←</button>
+          <strong id="doYear" style="min-width:64px;text-align:center"></strong>
+          <button class="small" id="doNextYear">→</button>
+          <button class="small" id="rebalance">Rebalance deadlines</button>
+          <span class="pstatus muted" id="rebalMsg"></span>
+          <span class="pstatus muted" id="doMsg">Click a day to mark it off. Click again to clear it. Shift-click to mark a range.</span>
+        </div>
+        <div class="surface" style="padding:18px;margin-top:16px"><div id="doGrid" class="yeargrid"></div></div>
       </section>
 
       <section class="hidden" id="tab-onboard">
@@ -944,6 +993,7 @@
         if(metaReady){ _t(); refreshMeta(_t); } else loadMeta().then(_t); }
       if(name==='assign'){ if(metaReady){ renderAssign(); refreshMeta(renderAssign); } else loadMeta().then(renderAssign); }
       if(name==='invoices'){ if(metaReady){ fillFromBilling(); loadInvoices(); refreshMeta(fillFromBilling); } else loadMeta().then(function(){ fillFromBilling(); loadInvoices(); }); }
+      if(name==='calendar'){ if(metaReady){ renderYearCal(); refreshMeta(renderYearCal); } else loadMeta().then(renderYearCal); }
       if(name==='onboard'){ buildDayBox(); }
       if(name==='clientview'){
         if(metaReady){ renderClientLinks(); refreshMeta(renderClientLinks); }
@@ -1004,7 +1054,7 @@
           'TikTok Date': allPlat ? '' : ($('deTT').value||'') };
         if(main){ const d=new Date(main+'T00:00:00');
           if(d.getDay()===0){ $('deMsg').className='pstatus err'; $('deMsg').textContent='Main date is a Sunday — pick another day.'; return; }
-          changes['Ready By']=minus14(main); }
+          changes['Ready By']=readyByFor(main, (current||{})['Format']); }
         const targets=$('deBatch').checked ? batchMates(r) : [r];
         s.disabled=true; $('deMsg').className='pstatus muted'; $('deMsg').textContent='Saving…';
         const updates=targets.map(function(t){ return {row:t.row, pieceId:t['Piece ID'], changes:changes}; });
@@ -1067,7 +1117,7 @@
         const rowNo=Number(btn.dataset.row); const dateEl=tr.querySelector('input[type=date]'); const catchEl=tr.querySelector('input[type=checkbox]');
         const ymd=dateEl.value; const rr=allRows.filter(function(x){ return x.row===rowNo; })[0];
         if(!assignCheck(rr, ymd, catchEl.checked, used)){ skipped++; continue; }
-        updates.push({row:rowNo, pieceId:btn.dataset.save, changes:{ 'Publish Date':ymd, 'Ready By':minus14(ymd) }});
+        updates.push({row:rowNo, pieceId:btn.dataset.save, changes:{ 'Publish Date':ymd, 'Ready By':readyByFor(ymd, (rowOf(btn.dataset.save)||{})['Format']) }});
       }
       const res=await savePieces(updates);
       renderAssign(); renderPipe(); renderToday();
@@ -1081,7 +1131,7 @@
     (function(){ var b=document.getElementById('acAdd'); if(!b) return;
       b.onclick=async function(){
         const id=($('acId').value||'').trim(); if(!id){ acStatus('Piece ID is required.','err'); return; }
-        const date=($('acDate').value||'').trim(); const ready=date?minus14(date):'';
+        const date=($('acDate').value||'').trim(); const ready=date?readyByFor(date, $('acFormat').value):'';
         const row=[id,$('acClient').value,$('acFormat').value,($('acPlatform').value||'').trim(),($('acTitle').value||'').trim(),date,ready,$('acStage').value,'',''];
         const tsv=BLOCK_A_HEADER+'\n'+row.join('\t');
         b.disabled=true; acStatus('Adding…','muted');
@@ -1110,7 +1160,7 @@
         for(const cl of Object.keys(byClient)){
           const pieces=byClient[cl].slice().sort(function(a,b){ return (a['Publish Date']||'zzz').localeCompare(b['Publish Date']||'zzz'); });
           const sugg=suggestDatesForClient(cl, pieces, style);
-          for(const p of pieces){ const ymd=sugg[p['Piece ID']]; if(ymd) jobs.push({row:p.row, pieceId:p['Piece ID'], changes:{ 'Publish Date':ymd, 'Ready By':minus14(ymd) }}); }
+          for(const p of pieces){ const ymd=sugg[p['Piece ID']]; if(ymd) jobs.push({row:p.row, pieceId:p['Piece ID'], changes:{ 'Publish Date':ymd, 'Ready By':readyByFor(ymd, p['Format']) }}); }
         }
         if(!jobs.length){ b.disabled=false; setAssign('Nothing to rearrange — every unpublished piece already has a date that fits.','muted'); return; }
         const res=await savePieces(jobs);
@@ -1171,6 +1221,7 @@
         if(pv) pv.onclick=function(){ if(PIPE_PAGE>0){ PIPE_PAGE--; renderPipe(); var t=$('tableView'); if(t) t.scrollIntoView({behavior:'smooth',block:'start'}); } };
         if(nx) nx.onclick=function(){ if(PIPE_PAGE<pipePages-1){ PIPE_PAGE++; renderPipe(); var t=$('tableView'); if(t) t.scrollIntoView({behavior:'smooth',block:'start'}); } };
       })();
+      renderBuffer();
       $('pipeCount').textContent=active.length+' active';
       (function(){ var el=$('needsCount'); if(!el) return;
         var want=PREFS.client||'', role=normRole(PREFS.role);
@@ -2192,6 +2243,173 @@ sched,
     }
     function setInv(m,c){ $('invStatus').className='pstatus '+(c||'muted'); $('invStatus').textContent=m; }
 
+    function rowOf(pieceId){ return allRows.filter(function(x){ return x['Piece ID']===pieceId; })[0]; }
+    // ── Team working calendar ──
+    // Sunday is permanently non-working. Marked days off come from the Days Off tab,
+    // scoped to Everyone or to one role. Publish dates are never affected by any of this.
+    let DO_YEAR = new Date().getFullYear();
+    function daysOffList(){ return (META && META.daysOff) || []; }
+    function roleOfFormat(fmt){ return /carousel/i.test(fmt||'') ? 'Graphic Designer' : 'Video Editor'; }
+    function isDayOff(ymd, role){
+      var d=new Date(ymd+'T00:00:00');
+      if(isNaN(d)) return false;
+      if(d.getDay()===0) return true;                      // Sunday, always
+      return daysOffList().some(function(x){
+        return x.date===ymd && (x.scope==='All' || !role || x.scope===role);
+      });
+    }
+    // Pull a deadline back to the previous working day for that role.
+    function prevWorkingDay(ymd, role){
+      var d=new Date(ymd+'T00:00:00'), guard=0;
+      while(isDayOff(isoOf(d), role) && guard++<400) d=new Date(d.getTime()-86400000);
+      return isoOf(d);
+    }
+    function capacityFor(role){
+      var s=(META&&META.settings)||{};
+      var k = role==='Graphic Designer' ? 'Capacity designer per day' : 'Capacity editor per day';
+      var n = parseInt(s[k],10);
+      return (n>0) ? n : 3;                                 // default 3 per role per day
+    }
+    // Ready By that respects the working calendar: 14 calendar days back, then off a non-working day.
+    function readyByFor(publishYMD, fmt){
+      if(!publishYMD) return '';
+      return prevWorkingDay(minus14(publishYMD), roleOfFormat(fmt));
+    }
+
+    function renderYearCal(){
+      var host=$('doGrid'); if(!host) return;
+      var y=$('doYear'); if(y) y.textContent=DO_YEAR;
+      var scope=($('doScope')&&$('doScope').value)||'All';
+      var todayIso=todayISO();
+      var MN=['January','February','March','April','May','June','July','August','September','October','November','December'];
+      var DN=['S','M','T','W','T','F','S'];
+      var html='';
+      for(var m=0;m<12;m++){
+        var first=new Date(DO_YEAR,m,1), dim=new Date(DO_YEAR,m+1,0).getDate();
+        var offCount=0, cells='';
+        for(var p=0;p<first.getDay();p++) cells+='<button class="pad" disabled></button>';
+        for(var day=1;day<=dim;day++){
+          var dt=new Date(DO_YEAR,m,day), iso=isoOf(dt), cls=[];
+          if(dt.getDay()===0) cls.push('sun');
+          else {
+            var marked=daysOffList().some(function(x){ return x.date===iso && (x.scope===scope || (scope!=='All' && x.scope==='All')); });
+            if(marked){ cls.push('off'); offCount++; }
+          }
+          if(iso===todayIso) cls.push('today');
+          var dis = dt.getDay()===0 ? ' disabled title="Sunday is always off"' : '';
+          cells+='<button class="'+cls.join(' ')+'" data-d="'+iso+'"'+dis+'>'+day+'</button>';
+        }
+        html+='<div class="mon"><h4>'+MN[m]+(offCount?'<span class="offn">'+offCount+' off</span>':'')+'</h4>'+
+              '<div class="mgrid">'+DN.map(function(x){return '<span class="dh">'+x+'</span>';}).join('')+cells+'</div></div>';
+      }
+      host.innerHTML=html;
+      var lastClicked=null;
+      Array.prototype.forEach.call(host.querySelectorAll('.mgrid button[data-d]'), function(b){
+        b.onclick=function(e){
+          var iso=b.dataset.d;
+          var range=[iso];
+          if(e.shiftKey && lastClicked){
+            var a=lastClicked<iso?lastClicked:iso, z=lastClicked<iso?iso:lastClicked;
+            range=[]; var d=new Date(a+'T00:00:00'), end=new Date(z+'T00:00:00');
+            while(d<=end){ if(d.getDay()!==0) range.push(isoOf(d)); d=new Date(d.getTime()+86400000); }
+          }
+          lastClicked=iso;
+          var turningOn = !b.classList.contains('off');
+          saveDaysOff(range, turningOn, ($('doScope')&&$('doScope').value)||'All');
+        };
+      });
+    }
+    async function saveDaysOff(dates, on, scope){
+      var msg=$('doMsg');
+      if(msg){ msg.className='pstatus muted'; msg.textContent='Saving…'; }
+      var payload = on
+        ? { add: dates.map(function(d){ return {date:d, scope:scope}; }), remove: [] }
+        : { add: [], remove: dates.map(function(d){ return {date:d, scope:scope}; }) };
+      var data=await call('setDaysOff', payload);
+      if(!data.ok){ if(msg){ msg.className='pstatus err'; msg.textContent=data.error||'Could not save.'; } return; }
+      META.daysOff = data.result.days||[];
+      renderYearCal();
+      if(msg){ msg.className='pstatus ok';
+        msg.textContent = on ? (dates.length+' day(s) marked off.') : (dates.length+' day(s) cleared.'); }
+    }
+    (function(){
+      var sc=$('doScope'); if(sc) sc.onchange=renderYearCal;
+      var pv=$('doPrevYear'); if(pv) pv.onclick=function(){ DO_YEAR--; renderYearCal(); };
+      var nx=$('doNextYear'); if(nx) nx.onclick=function(){ DO_YEAR++; renderYearCal(); };
+    })();
+
+    // ── Rebalance production deadlines ──
+    // Publish dates are never touched. For every unpublished piece we take its ideal
+    // deadline (14 days before posting), move it off Sundays and marked days off, then
+    // pull it earlier while a day is over capacity for that role, so a day off does not
+    // become a pile-up the next working day.
+    function planRebalance(){
+      const iso=todayISO();
+      const pieces=allRows.filter(function(r){
+        const st=r['Stage']||'';
+        if(/Published/i.test(st) || PARKED.indexOf(st)!==-1) return false;
+        return !!r['Publish Date'];
+      }).sort(function(a,b){ return (a['Publish Date']||'').localeCompare(b['Publish Date']||''); });
+
+      const load={};                                  // 'role|date' -> count
+      const jobs=[];
+      pieces.forEach(function(r){
+        const role=roleOfFormat(r['Format']);
+        let want=prevWorkingDay(minus14(r['Publish Date']), role);
+        let guard=0;
+        // step earlier while that working day is already full for this role
+        while(load[role+'|'+want] >= capacityFor(role) && guard++ < 200){
+          want=prevWorkingDay(isoOf(new Date(new Date(want+'T00:00:00').getTime()-86400000)), role);
+        }
+        load[role+'|'+want]=(load[role+'|'+want]||0)+1;
+        if((r['Ready By']||'')!==want) jobs.push({ row:r.row, pieceId:r['Piece ID'], changes:{ 'Ready By':want } });
+      });
+      return jobs;
+    }
+    (function(){
+      var b=$('rebalance'); if(!b) return;
+      b.onclick=async function(){
+        var jobs=planRebalance();
+        var msg=$('rebalMsg');
+        function say(t,k){ if(msg){ msg.className='pstatus '+(k||'muted'); msg.textContent=t; } }
+        if(!jobs.length){ say('Every deadline already sits on a working day with room to spare.','ok'); return; }
+        if(!confirm('Move '+jobs.length+' production deadline(s) onto working days with capacity? Publish dates are not touched.')) return;
+        b.disabled=true; var o=b.textContent; b.textContent='Rebalancing…'; say('Rebalancing '+jobs.length+'…');
+        try{
+          var res=await savePieces(jobs);
+          if(!res.ok) say(res.error||'Could not rebalance.','err');
+          else say('Moved '+res.rows.length+' deadline(s).'+((res.errors||[]).length?' '+res.errors.length+' failed.':''), (res.errors||[]).length?'err':'ok');
+        }catch(e){ say('Could not rebalance.','err'); }
+        b.disabled=false; b.textContent=o; renderPipe(); renderToday();
+      };
+    })();
+
+    // ── Ready-to-Publish buffer: how many days of stock each client has ahead ──
+    function bufferDays(client){
+      var iso=todayISO();
+      var ready=allRows.filter(function(r){
+        return r['Client']===client && /Ready to Publish/i.test(r['Stage']||'') &&
+               (r['Publish Date']||'') >= iso;
+      }).map(function(r){ return r['Publish Date']; }).sort();
+      if(!ready.length) return { days:0, pieces:0, last:'' };
+      var last=ready[ready.length-1];
+      var d=Math.round((new Date(last+'T00:00:00') - new Date(iso+'T00:00:00'))/86400000);
+      return { days:Math.max(0,d), pieces:ready.length, last:last };
+    }
+    function renderBuffer(){
+      var host=$('bufBar'); if(!host) return;
+      var target=parseInt(((META&&META.settings)||{})['Ready buffer days'],10); if(!(target>0)) target=7;
+      var clients=(META&&META.clients)||[];
+      var want=PREFS.client||'';
+      var list=want?[want]:clients;
+      host.innerHTML=list.map(function(cl){
+        var b=bufferDays(cl);
+        var ok=b.days>=target;
+        return '<span class="bufc '+(ok?'ok':'low')+'" title="Ready to Publish pieces dated from today onwards">'+
+               esc(cl)+' <b>'+b.days+'d</b> ready ('+b.pieces+')</span>';
+      }).join('') + '<span class="bufc" style="background:#fff">target <b>'+target+'d</b></span>';
+    }
+
     // ── Internal share link for Today's posts (no login, key held in Settings) ──
     // Strings are written in English and translated by the page's own translator,
     // so switching EN/TH keeps working (writing Thai directly here would stick).
@@ -2373,7 +2591,7 @@ sched,
       const me=allRows.filter(function(x){ return x.row===row; })[0]; const cl=me?me['Client']:'';
       const taken=allRows.some(function(x){ return x.row!==row && x['Client']===cl && x['Publish Date']===ymd; });
       if(taken && !allowSame) return {ok:false,error:'day taken'};
-      const data=await call('updatePiece',{ row:row, pieceId:pieceId, changes:{ 'Publish Date':ymd, 'Ready By':minus14(ymd) } });
+      const data=await call('updatePiece',{ row:row, pieceId:pieceId, changes:{ 'Publish Date':ymd, 'Ready By':readyByFor(ymd, me?me['Format']:'') } });
       if(!data.ok) return {ok:false,error:data.error};
       const fresh=data.result.row; const idx=allRows.findIndex(function(x){ return x.row===fresh.row; }); if(idx>=0) allRows[idx]=fresh;
       return {ok:true};
@@ -2393,7 +2611,7 @@ sched,
 
     /* ── i18n overlay: EN is native/default; TH applied on demand ── */
     (function(){
-      var TH = {"Share link": "ลิงก์แชร์", "Create share link": "สร้างลิงก์แชร์", "Rotate link": "เปลี่ยนลิงก์ใหม่", "Working…": "กำลังดำเนินการ…", "Creating…": "กำลังสร้าง…", "Rotating…": "กำลังเปลี่ยนลิงก์…", "Link copied.": "Copy ลิงก์แล้ว", "Share link created.": "สร้างลิงก์แชร์แล้ว", "New link created. Old links no longer work.": "สร้างลิงก์ใหม่แล้ว ลิงก์เดิมใช้ไม่ได้อีกต่อไป", "Could not create the link.": "สร้างลิงก์ไม่สำเร็จ", "No share link yet. Create one to share today and tomorrow with the team.": "ยังไม่มีลิงก์แชร์ กดสร้างเพื่อแชร์งานวันนี้และพรุ่งนี้ให้ทีม", "A no-login page showing today and tomorrow only. Anyone with the link can see it.": "หน้าสำหรับดูอย่างเดียว ไม่ต้องเข้าสู่ระบบ แสดงเฉพาะงานวันนี้และพรุ่งนี้ ใครก็ตามที่มีลิงก์จะเปิดดูได้", "Share link": "ลิงก์แชร์", "Copy link": "Copy ลิงก์", "Open": "เปิด", "Link copied.": "Copy ลิงก์แล้ว", "A no-login page showing today and tomorrow only. Anyone with the link can see it.": "หน้าสำหรับดูอย่างเดียว ไม่ต้องเข้าสู่ระบบ แสดงเฉพาะงานวันนี้และพรุ่งนี้ ใครก็ตามที่มีลิงก์จะเปิดดูได้", "No team link key yet. Add a \"Team link key\" row in the Settings tab.": "ยังไม่มี Team link key เพิ่มแถว \"Team link key\" ในแท็บ Settings ก่อน", " row(s)": " แถว", " ticked to import": " แถวที่ติ๊กไว้เพื่อนำเข้า", " need fixing": " แถวที่ต้องแก้", " with notes": " แถวมีหมายเหตุ", "Edit any cell, then tick the rows to import. Rows with a red issue cannot be ticked until fixed. Blank dates and links are fine, they get flagged in the pipeline.": "แก้ไขช่องไหนก็ได้ แล้วติ๊กแถวที่ต้องการนำเข้า แถวที่มีปัญหาสีแดงจะติ๊กไม่ได้จนกว่าจะแก้ ส่วนวันที่หรือลิงก์ที่เว้นว่างไว้ไม่เป็นไร ระบบจะขึ้นเครื่องหมายเตือนใน Pipeline ให้", " piece(s)": " ชิ้น", "Import ": "นำเข้า ", "Importing ": "กำลังนำเข้า ", " ready to import": " รายการพร้อมนำเข้า", " still need fixing": " รายการยังต้องแก้", " selected": " รายการที่เลือก", "Set stage on ": "ตั้งขั้นตอนแล้ว ", "Removed dates on ": "ลบวันที่แล้ว ", "Missing: ": "ขาด: ", " missing": " รายการที่ขาด", "Import past content": "นำเข้าคอนเทนต์ย้อนหลัง", "For back-filling content that already exists (e.g. a client's old Notion calendar). Generate this, paste it into your AI together with the client's existing list, and it converts their wording into Orbit's exact columns and Stage names, keeping the original dates. Then paste the result into Import → Validate → Save.": "ใช้สำหรับนำเข้าคอนเทนต์ที่มีอยู่แล้ว (เช่น ปฏิทิน Notion เดิมของลูกค้า) กด Generate แล้วนำไปวางใน AI พร้อมกับรายการเดิมของลูกค้า AI จะแปลงคำที่ลูกค้าใช้ให้เป็นคอลัมน์และชื่อ Stage ของ Orbit โดยคงวันที่เดิมไว้ จากนั้นนำผลลัพธ์ไปวางที่ นำเข้า → ตรวจสอบ → บันทึก", "This is the Import-batch prompt. Pick a client, fill in the Batch no., Generate, then paste it into your AI (Claude/ChatGPT). The AI assigns dates + Piece IDs and replies with a batch you paste straight into the Import tab → Validate → Save. Internal — not sent to the client.": "นี่คือ Prompt สำหรับนำเข้า Batch เลือกลูกค้า กรอกเลขชุด กด Generate แล้วนำไปวางใน AI (Claude/ChatGPT) AI จะกำหนดวันที่และรหัสชิ้นงาน แล้วส่งกลับมาเป็นชุดที่นำไปวางในแท็บนำเข้า → ตรวจสอบ → บันทึก ได้เลย ใช้ภายในทีม ไม่ได้ส่งให้ลูกค้า", "Tick all importable": "ติ๊กทั้งหมดที่นำเข้าได้", "Untick all": "ยกเลิกติ๊กทั้งหมด", "Re-check": "ตรวจสอบใหม่", "Re-checking…": "กำลังตรวจสอบใหม่…", "Issues": "ปัญหาที่พบ", "Nothing ticked to import.": "ยังไม่ได้ติ๊กรายการที่จะนำเข้า", "Tick the rows you want to import.": "ติ๊กแถวที่ต้องการนำเข้า", "Fix the red issues, then tick the rows.": "แก้ปัญหาสีแดงก่อน แล้วจึงติ๊กแถว", "Set stage…": "เลือกขั้นตอน…", "Set stage": "ตั้งขั้นตอน", "Apply": "ใช้", "Remove dates": "ลบวันที่", "Clear": "ล้าง", "Pick a stage first.": "เลือกขั้นตอนก่อน", "Nothing selected.": "ยังไม่ได้เลือกรายการ", "Removing…": "กำลังลบ…", "⚠ Needs info": "⚠ ข้อมูลไม่ครบ", "no publish date": "ไม่มีวันโพสต์", "no copy link": "ไม่มีลิงก์ Copy", "Dates": "วันที่", "Opens the same per-platform date editor used everywhere else.": "เปิดตัวแก้ไขวันที่แยกตามแพลตฟอร์ม ตัวเดียวกับที่ใช้ในหน้าอื่น", "No date set": "ยังไม่ได้กำหนดวันที่", "Post from": "โพสต์จาก", "Collab with (partner)": "Collab กับ (พาร์ทเนอร์)", "None (solo post)": "ไม่มี (โพสต์เดี่ยว)", "Invoice history": "ประวัติใบแจ้งหนี้", "This client only": "เฉพาะลูกค้ารายนี้", "All clients": "ลูกค้าทั้งหมด", "No invoices yet.": "ยังไม่มีใบแจ้งหนี้", "No invoices for this client yet.": "ยังไม่มีใบแจ้งหนี้ของลูกค้ารายนี้", "Rearranging…": "กำลังจัดเรียงใหม่…", "Nothing to rearrange — every unpublished piece already has a date that fits.": "ไม่มีอะไรต้องจัดเรียงใหม่ ทุกชิ้นที่ยังไม่เผยแพร่มีวันที่เหมาะสมอยู่แล้ว", "Pick a date first.": "เลือกวันที่ก่อน", "Could not reach the server. Check your connection and try again.": "เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ ตรวจสอบอินเทอร์เน็ตแล้วลองใหม่", "No response from the server.": "ไม่มีการตอบกลับจากเซิร์ฟเวอร์", "Unexpected reply from the server.": "การตอบกลับจากเซิร์ฟเวอร์ผิดรูปแบบ", "Import": "นำเข้า", "Content operations for WealthWise Atelier.": "ระบบจัดการงานคอนเทนต์ของ WealthWise Atelier", "Waiting for sign-in…": "กำลังรอการเข้าสู่ระบบ…", "Today": "วันนี้", "Pipeline": "Pipeline", "Assign Dates": "กำหนดวันโพสต์", "Import": "นำเข้า", "Prompts & Handoffs": "Prompt & ส่งต่องาน", "Invoices": "ใบแจ้งหนี้", "Onboard Client": "เพิ่มลูกค้าใหม่", "Client View": "มุมมองลูกค้า", "Activity Log": "บันทึกกิจกรรม", "Batch Progress": "ความคืบหน้า Batch", "Sign out": "ออกจากระบบ", "Today's posts": "โพสต์วันนี้", "Going live today. Not ready yet shows red. Change status or dates right here — it saves to the master.": "ที่จะโพสต์วันนี้ อันที่ยังไม่พร้อมจะขึ้นสีแดง แก้สถานะหรือวันได้ตรงนี้เลย ระบบจะบันทึกลงมาสเตอร์ให้", "Today's work": "งานวันนี้", "Pieces that need a hand — behind schedule, waiting on the client, or posting soon.": "ชิ้นงานที่ต้องดูแล ทั้งที่ล่าช้า รอลูกค้า หรือใกล้ถึงกำหนดโพสต์", "View as": "ดูในมุมมอง", "All": "ทั้งหมด", "Graphic Designer": "กราฟิกดีไซเนอร์", "Video Editor": "ตัดต่อวิดีโอ", "Piece ID": "รหัสชิ้นงาน", "Client": "ลูกค้า", "Format": "รูปแบบ", "Stage": "ขั้นตอน", "On Track": "ตามกำหนด", "Posting dates": "วันที่โพสต์", "Every piece across the production ladder. Click any row to update it.": "ทุกชิ้นงานในทุกขั้นตอนการผลิต คลิกที่แถวไหนก็ได้เพื่อแก้ไข", "View": "มุมมอง", "Table": "ตาราง", "Board": "Board", "Refresh": "Refresh", "★ Viral only": "★ เฉพาะ Viral", "Platform": "แพลตฟอร์ม", "Date": "วันที่", "Copy": "Copy", "Open Copy": "เปิด Copy", "Assign Publish Dates": "กำหนดวันเผยแพร่", "Pieces waiting for a posting date. Suggested dates follow each client's posting days and skip any day already taken — tick same-day to double up on purpose.": "ชิ้นงานที่รอกำหนดวันโพสต์ วันที่แนะนำจะอิงตามวันโพสต์ของลูกค้าแต่ละราย และข้ามวันที่มีคิวอยู่แล้ว ติ๊ก same-day ถ้าต้องการโพสต์ซ้อนวันเดียวกัน", "Posting style": "สไตล์การโพสต์", "Alternate formats (reel → carousel → reel)": "สลับรูปแบบ (reel → carousel → reel)", "Any format (same allowed)": "รูปแบบใดก็ได้ (ซ้ำกันได้)", "Save all suggested": "บันทึกที่แนะนำทั้งหมด", "Auto-rearrange whole board": "จัดเรียงทั้ง Board อัตโนมัติ", "Title": "ชื่อเรื่อง", "Suggested / chosen date": "วันที่แนะนำ / ที่เลือก", "Same-day": "วันเดียวกัน", "Import a batch": "นำเข้าทั้งชุด", "Paste Block A with its header row. Validate first — Save turns on only when nothing is blocking.": "วาง Block A พร้อมแถวหัวตาราง กด Validate ก่อน ปุ่ม Save จะเปิดใช้งานเมื่อไม่มีข้อผิดพลาดค้างอยู่", "Add one piece": "เพิ่มทีละชิ้น", "Add piece": "เพิ่มชิ้นงาน", "Paste a batch": "วางทั้งชุด", "Validate": "ตรวจสอบ", "Save to Sheet": "บันทึกลงชีต", "Ready-to-copy text built from the live schedule. Pick a client, pick what you need.": "ข้อความพร้อม Copy สร้างจากตารางงานล่าสุด เลือกลูกค้าและสิ่งที่ต้องการ", "Batch no.": "ชุดที่", "Scheduling prompt": "Prompt จัดตาราง", "Import batch prompt": "Prompt นำเข้า Batch", "Client reminder": "ข้อความเตือนลูกค้า", "Missing links": "ลิงก์ที่ขาด", "Generate": "สร้าง", "Generating…": "กำลังสร้าง…", "AI prompt to plan a batch. Fill in the Batch no., Generate, then paste it into your AI (Claude/ChatGPT) to draft the batch layout. Internal — not sent to the client.": "Prompt สำหรับวางแผนคอนเทนต์ทั้งชุด กรอกเลขชุด กด Generate แล้วนำไปวางใน AI (Claude/ChatGPT) เพื่อร่างแผนงาน ใช้ภายในทีม ไม่ได้ส่งให้ลูกค้า", "A ready-to-send message listing what the client still owes — approvals, input, footage. Send it to the client when you need to chase a decision.": "ข้อความพร้อมส่งให้ลูกค้า บอกสิ่งที่ยังรอจากลูกค้า เช่น การอนุมัติ ข้อมูล หรือฟุตเทจ ใช้เมื่อต้องการติดตามงานจากลูกค้า", "A checklist of pieces that still have no copy link. Use it internally to see which pieces need a Notion/Google-Doc page made.": "รายการชิ้นงานที่ยังไม่มีลิงก์ Copy ใช้ภายในทีมเพื่อดูว่าชิ้นไหนต้องสร้างหน้า Notion/Google Doc", "Copy to clipboard": "Copy", "Generate a client invoice from the stored fees. Mark it paid to turn it into a receipt.": "สร้างใบแจ้งหนี้ของลูกค้าจากค่าบริการที่บันทึกไว้ กดชำระแล้วเพื่อเปลี่ยนเป็นใบเสร็จ", "Currency": "สกุลเงิน", "Payment": "การชำระเงิน", "Version 1": "เวอร์ชัน 1", "Version 2": "เวอร์ชัน 2", "Refresh list": "Refresh รายการ", "Base description": "รายละเอียดหลัก", "Base ฿": "หลัก ฿", "Base S$": "หลัก S$", "Add-on description (leave blank if none)": "รายละเอียดเสริม (เว้นว่างถ้าไม่มี)", "Add-on ฿": "เสริม ฿", "Add-on S$": "เสริม S$", "Preview": "ดูตัวอย่าง", "Save & record invoice": "บันทึก & ลงใบแจ้งหนี้", "Invoice No": "เลขที่ใบแจ้งหนี้", "Total": "ยอดรวม", "Status": "สถานะ", "Issued": "วันที่ออก", "Paid": "ชำระแล้ว", "Onboard a client": "เพิ่มลูกค้าใหม่", "Fill this once and the client is set up everywhere: profile, posting rhythm, billing, dropdowns, and their private calendar link.": "กรอกครั้งเดียว ระบบจะตั้งค่าลูกค้าให้ครบทุกที่ ทั้งโปรไฟล์ จังหวะการโพสต์ การเรียกเก็บเงิน ตัวเลือกต่างๆ และลิงก์ปฏิทินส่วนตัวของลูกค้า", "The basics": "ข้อมูลพื้นฐาน", "Client name": "ชื่อลูกค้า", "Must match exactly what you'll use in Piece IDs and imports.": "ต้องตรงกับที่ใช้ในรหัสชิ้นงานและการนำเข้าทุกประการ", "Social handles": "บัญชีโซเชียล", "Founder(s)": "ผู้ก่อตั้ง", "Who on the client side must act. Blank uses the client name.": "ฝั่งลูกค้าที่ต้องเป็นคนดำเนินการ เว้นว่างจะใช้ชื่อลูกค้า", "Notes": "หมายเหตุ", "Content rhythm": "จังหวะคอนเทนต์", "Pieces per batch (quota)": "จำนวนชิ้นต่อชุด (Quota)", "Batch cadence": "รอบของชุดงาน", "Posting days": "วันที่โพสต์", "Days this client posts. Used to suggest dates and avoid double-booking.": "วันที่ลูกค้ารายนี้โพสต์ ใช้แนะนำวันและเลี่ยงการจองซ้อน", "Their Instagram is linked to Facebook": "Instagram ของลูกค้าเชื่อมกับ Facebook", "Tick if posting to IG also posts to FB — the calendar then shows \"IG & FB\" as one action.": "ติ๊กถ้าโพสต์ IG แล้วขึ้น FB ด้วย ปฏิทินจะแสดง \"IG & FB\" เป็นงานเดียว", "Billing": "การเรียกเก็บเงิน", "Package description": "รายละเอียดแพ็กเกจ", "Billing cycle": "รอบการเรียกเก็บ", "Base fee (THB)": "ค่าบริการหลัก (THB)", "Base fee (SGD)": "ค่าบริการหลัก (SGD)", "Add-on description": "รายละเอียดส่วนเสริม", "Primary currency": "สกุลเงินหลัก", "Add-on fee (THB)": "ค่าบริการเสริม (THB)", "Add-on fee (SGD)": "ค่าบริการเสริม (SGD)", "Create client": "สร้างลูกค้า", "Each client's private read-only calendar. Copy the link, open it, or share it — the client sees only their own pieces, and there's nothing for them to edit.": "ปฏิทินส่วนตัวแบบอ่านอย่างเดียวของลูกค้าแต่ละราย Copy ลิงก์ เปิด หรือแชร์ได้ ลูกค้าจะเห็นเฉพาะงานของตัวเองและแก้ไขอะไรไม่ได้", "Calendar link": "ลิงก์ปฏิทิน", "Every change made through the dashboard, newest first.": "ทุกการเปลี่ยนแปลงผ่าน Dashboard เรียงจากใหม่สุด", "When": "เมื่อ", "Who": "โดย", "Piece": "ชิ้นงาน", "Field": "ฟิลด์", "From": "จาก", "To": "เป็น", "Blocked": "ติดปัญหา", "★ Viral (mark once published)": "★ Viral (ทำเครื่องหมายเมื่อโพสต์แล้ว)", "Copy link": "ลิงก์ Copy", "Footage & photos needed": "ฟุตเทจ & รูปที่ต้องใช้", "Nothing requested yet.": "ยังไม่มีการขอ", "Add": "เพิ่ม", "Save": "บันทึก", "Close": "ปิด", "Platforms": "แพลตฟอร์ม", "Apply to the whole batch": "ใช้กับทั้งชุด", "Save platforms": "บันทึกแพลตฟอร์ม", "Cancel": "ยกเลิก", "Main publish date": "วันเผยแพร่หลัก", "IG date": "วันที่ IG", "(blank = same as main)": "(เว้นว่าง = ตามวันหลัก)", "TikTok date": "วันที่ TikTok", "Apply main date to all platforms": "ใช้วันหลักกับทุกแพลตฟอร์ม", "(clears IG/TikTok overrides)": "(ล้างค่าเฉพาะของ IG/TikTok)", "Save dates": "บันทึกวันที่", "Piece ID (e.g. C12.1)": "รหัสชิ้นงาน (เช่น C12.1)", "Platform (e.g. IG, TikTok)": "แพลตฟอร์ม (เช่น IG, TikTok)", "e.g. 3": "เช่น 3", "Generated text appears here…": "ข้อความที่สร้างจะแสดงที่นี่…", "e.g. Ice": "เช่น Ice", "Anything the team should know": "สิ่งที่ทีมควรรู้", "Ice  ·  comma-separate if several": "Ice  ·  คั่นด้วยจุลภาคถ้ามีหลายคน", "Monthly content package": "แพ็กเกจคอนเทนต์รายเดือน", "Optional": "ไม่บังคับ", "How many": "จำนวนเท่าไร", "Note (exactly what's needed)": "หมายเหตุ (ระบุสิ่งที่ต้องใช้ให้ชัด)", "IG post URL (https://instagram.com/…)": "ลิงก์โพสต์ IG (https://instagram.com/…)", "TikTok post URL (https://tiktok.com/…)": "ลิงก์โพสต์ TikTok (https://tiktok.com/…)", "Signing you in…": "กำลังเข้าสู่ระบบ…", "Checking with Orbit…": "กำลังตรวจสอบกับ Orbit…", "Signed out. Sign in again above.": "ออกจากระบบแล้ว เข้าสู่ระบบอีกครั้งด้านบน", "Main date is a Sunday — pick another day.": "วันหลักตรงกับวันอาทิตย์ กรุณาเลือกวันอื่น", "Saving…": "กำลังบันทึก…", "Saved.": "บันทึกแล้ว", "Loading…": "กำลังโหลด…", "0 posts today": "0 โพสต์วันนี้", "Nothing scheduled to publish today.": "ไม่มีงานที่กำหนดโพสต์วันนี้", "No pieces yet. Import a batch to get started.": "ยังไม่มีชิ้นงาน นำเข้าทั้งชุดเพื่อเริ่มต้น", "Nothing in the active pipeline.": "ไม่มีงานใน Pipeline ที่ทำอยู่", "Nothing needs attention right now.": "ยังไม่มีงานที่ต้องดูแลตอนนี้", "No activity yet.": "ยังไม่มีกิจกรรม", "Nothing here.": "ไม่มีข้อมูล", "No open requests.": "ไม่มีคำขอค้างอยู่", "Nothing pasted yet.": "ยังไม่ได้วางข้อมูล", "Validating…": "กำลังตรวจสอบ…", "Ready to save.": "พร้อมบันทึก", "Fix the blocking errors, then validate again.": "แก้ข้อผิดพลาดที่ค้างอยู่ แล้วตรวจสอบอีกครั้ง", "Text changed — validate again.": "ข้อความเปลี่ยนไป ตรวจสอบอีกครั้ง", "Nothing to generate for this client.": "ไม่มีข้อมูลให้สร้างสำหรับลูกค้ารายนี้", "Please sign in to continue.": "กรุณาเข้าสู่ระบบเพื่อดำเนินการต่อ", "Your session expired. Please sign in again.": "เซสชันหมดอายุ กรุณาเข้าสู่ระบบอีกครั้ง", "Please sign in again.": "กรุณาเข้าสู่ระบบอีกครั้ง", "Client name is required.": "ต้องระบุชื่อลูกค้า", "Pick at least one posting day.": "เลือกวันโพสต์อย่างน้อยหนึ่งวัน", "Piece ID is required.": "ต้องระบุรหัสชิ้นงาน", "Leave IG or TikTok blank to use the main publish date.": "เว้น IG หรือ TikTok ว่างไว้เพื่อใช้วันเผยแพร่หลัก", "URGENT": "ด่วน", "Edit dates": "แก้วันที่", "Received": "รับแล้ว", "Mark paid": "ทำเครื่องหมายชำระแล้ว", "Saved ": "บันทึกแล้ว ", " piece(s).": " ชิ้น", ", failed — ": ", ล้มเหลว: ", ", failed: ": ", ล้มเหลว: ", ". Try again.": " ลองอีกครั้ง", " — try again.": " ลองอีกครั้ง", "Failed: ": "ล้มเหลว: ", " post(s) today": " โพสต์วันนี้", " not ready": " ยังไม่พร้อม", " skipped (fix and retry)": " ที่ข้ามไป (แก้แล้วลองใหม่)", " row(s).": " แถว"};
+      var TH = {"Team Calendar": "ปฏิทินทีม", "Mark the days the team is not working. Sundays are always off. Production deadlines move off these days and work is spread out so nobody comes back to a pile-up. Publish dates never move.": "ทำเครื่องหมายวันที่ทีมไม่ทำงาน วันอาทิตย์หยุดเสมอ กำหนดส่งงานจะเลี่ยงวันเหล่านี้และกระจายงานออกไป เพื่อไม่ให้กลับมาเจองานกองพะเนิน วันโพสต์จะไม่เปลี่ยนแปลง", "Marking for": "ทำเครื่องหมายให้", "Everyone": "ทุกคน", "Click a day to mark it off. Click again to clear it. Shift-click to mark a range.": "คลิกวันที่เพื่อทำเครื่องหมายวันหยุด คลิกซ้ำเพื่อยกเลิก กด Shift ค้างแล้วคลิกเพื่อเลือกเป็นช่วง", "Rebalance deadlines": "จัดสมดุลกำหนดส่งงาน", "Rebalancing…": "กำลังจัดสมดุล…", "Could not rebalance.": "จัดสมดุลไม่สำเร็จ", "Every deadline already sits on a working day with room to spare.": "กำหนดส่งงานทุกชิ้นอยู่ในวันทำงานที่ยังรับงานไหวอยู่แล้ว", "Could not save.": "บันทึกไม่สำเร็จ", "How this board is worked out": "หลักการแสดงผลของบอร์ดนี้", "Saving…": "กำลังบันทึก…", "Share link": "ลิงก์แชร์", "Create share link": "สร้างลิงก์แชร์", "Rotate link": "เปลี่ยนลิงก์ใหม่", "Working…": "กำลังดำเนินการ…", "Creating…": "กำลังสร้าง…", "Rotating…": "กำลังเปลี่ยนลิงก์…", "Link copied.": "Copy ลิงก์แล้ว", "Share link created.": "สร้างลิงก์แชร์แล้ว", "New link created. Old links no longer work.": "สร้างลิงก์ใหม่แล้ว ลิงก์เดิมใช้ไม่ได้อีกต่อไป", "Could not create the link.": "สร้างลิงก์ไม่สำเร็จ", "No share link yet. Create one to share today and tomorrow with the team.": "ยังไม่มีลิงก์แชร์ กดสร้างเพื่อแชร์งานวันนี้และพรุ่งนี้ให้ทีม", "A no-login page showing today and tomorrow only. Anyone with the link can see it.": "หน้าสำหรับดูอย่างเดียว ไม่ต้องเข้าสู่ระบบ แสดงเฉพาะงานวันนี้และพรุ่งนี้ ใครก็ตามที่มีลิงก์จะเปิดดูได้", "Share link": "ลิงก์แชร์", "Copy link": "Copy ลิงก์", "Open": "เปิด", "Link copied.": "Copy ลิงก์แล้ว", "A no-login page showing today and tomorrow only. Anyone with the link can see it.": "หน้าสำหรับดูอย่างเดียว ไม่ต้องเข้าสู่ระบบ แสดงเฉพาะงานวันนี้และพรุ่งนี้ ใครก็ตามที่มีลิงก์จะเปิดดูได้", "No team link key yet. Add a \"Team link key\" row in the Settings tab.": "ยังไม่มี Team link key เพิ่มแถว \"Team link key\" ในแท็บ Settings ก่อน", " row(s)": " แถว", " ticked to import": " แถวที่ติ๊กไว้เพื่อนำเข้า", " need fixing": " แถวที่ต้องแก้", " with notes": " แถวมีหมายเหตุ", "Edit any cell, then tick the rows to import. Rows with a red issue cannot be ticked until fixed. Blank dates and links are fine, they get flagged in the pipeline.": "แก้ไขช่องไหนก็ได้ แล้วติ๊กแถวที่ต้องการนำเข้า แถวที่มีปัญหาสีแดงจะติ๊กไม่ได้จนกว่าจะแก้ ส่วนวันที่หรือลิงก์ที่เว้นว่างไว้ไม่เป็นไร ระบบจะขึ้นเครื่องหมายเตือนใน Pipeline ให้", " piece(s)": " ชิ้น", "Import ": "นำเข้า ", "Importing ": "กำลังนำเข้า ", " ready to import": " รายการพร้อมนำเข้า", " still need fixing": " รายการยังต้องแก้", " selected": " รายการที่เลือก", "Set stage on ": "ตั้งขั้นตอนแล้ว ", "Removed dates on ": "ลบวันที่แล้ว ", "Missing: ": "ขาด: ", " missing": " รายการที่ขาด", "Import past content": "นำเข้าคอนเทนต์ย้อนหลัง", "For back-filling content that already exists (e.g. a client's old Notion calendar). Generate this, paste it into your AI together with the client's existing list, and it converts their wording into Orbit's exact columns and Stage names, keeping the original dates. Then paste the result into Import → Validate → Save.": "ใช้สำหรับนำเข้าคอนเทนต์ที่มีอยู่แล้ว (เช่น ปฏิทิน Notion เดิมของลูกค้า) กด Generate แล้วนำไปวางใน AI พร้อมกับรายการเดิมของลูกค้า AI จะแปลงคำที่ลูกค้าใช้ให้เป็นคอลัมน์และชื่อ Stage ของ Orbit โดยคงวันที่เดิมไว้ จากนั้นนำผลลัพธ์ไปวางที่ นำเข้า → ตรวจสอบ → บันทึก", "This is the Import-batch prompt. Pick a client, fill in the Batch no., Generate, then paste it into your AI (Claude/ChatGPT). The AI assigns dates + Piece IDs and replies with a batch you paste straight into the Import tab → Validate → Save. Internal — not sent to the client.": "นี่คือ Prompt สำหรับนำเข้า Batch เลือกลูกค้า กรอกเลขชุด กด Generate แล้วนำไปวางใน AI (Claude/ChatGPT) AI จะกำหนดวันที่และรหัสชิ้นงาน แล้วส่งกลับมาเป็นชุดที่นำไปวางในแท็บนำเข้า → ตรวจสอบ → บันทึก ได้เลย ใช้ภายในทีม ไม่ได้ส่งให้ลูกค้า", "Tick all importable": "ติ๊กทั้งหมดที่นำเข้าได้", "Untick all": "ยกเลิกติ๊กทั้งหมด", "Re-check": "ตรวจสอบใหม่", "Re-checking…": "กำลังตรวจสอบใหม่…", "Issues": "ปัญหาที่พบ", "Nothing ticked to import.": "ยังไม่ได้ติ๊กรายการที่จะนำเข้า", "Tick the rows you want to import.": "ติ๊กแถวที่ต้องการนำเข้า", "Fix the red issues, then tick the rows.": "แก้ปัญหาสีแดงก่อน แล้วจึงติ๊กแถว", "Set stage…": "เลือกขั้นตอน…", "Set stage": "ตั้งขั้นตอน", "Apply": "ใช้", "Remove dates": "ลบวันที่", "Clear": "ล้าง", "Pick a stage first.": "เลือกขั้นตอนก่อน", "Nothing selected.": "ยังไม่ได้เลือกรายการ", "Removing…": "กำลังลบ…", "⚠ Needs info": "⚠ ข้อมูลไม่ครบ", "no publish date": "ไม่มีวันโพสต์", "no copy link": "ไม่มีลิงก์ Copy", "Dates": "วันที่", "Opens the same per-platform date editor used everywhere else.": "เปิดตัวแก้ไขวันที่แยกตามแพลตฟอร์ม ตัวเดียวกับที่ใช้ในหน้าอื่น", "No date set": "ยังไม่ได้กำหนดวันที่", "Post from": "โพสต์จาก", "Collab with (partner)": "Collab กับ (พาร์ทเนอร์)", "None (solo post)": "ไม่มี (โพสต์เดี่ยว)", "Invoice history": "ประวัติใบแจ้งหนี้", "This client only": "เฉพาะลูกค้ารายนี้", "All clients": "ลูกค้าทั้งหมด", "No invoices yet.": "ยังไม่มีใบแจ้งหนี้", "No invoices for this client yet.": "ยังไม่มีใบแจ้งหนี้ของลูกค้ารายนี้", "Rearranging…": "กำลังจัดเรียงใหม่…", "Nothing to rearrange — every unpublished piece already has a date that fits.": "ไม่มีอะไรต้องจัดเรียงใหม่ ทุกชิ้นที่ยังไม่เผยแพร่มีวันที่เหมาะสมอยู่แล้ว", "Pick a date first.": "เลือกวันที่ก่อน", "Could not reach the server. Check your connection and try again.": "เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ ตรวจสอบอินเทอร์เน็ตแล้วลองใหม่", "No response from the server.": "ไม่มีการตอบกลับจากเซิร์ฟเวอร์", "Unexpected reply from the server.": "การตอบกลับจากเซิร์ฟเวอร์ผิดรูปแบบ", "Import": "นำเข้า", "Content operations for WealthWise Atelier.": "ระบบจัดการงานคอนเทนต์ของ WealthWise Atelier", "Waiting for sign-in…": "กำลังรอการเข้าสู่ระบบ…", "Today": "วันนี้", "Pipeline": "Pipeline", "Assign Dates": "กำหนดวันโพสต์", "Import": "นำเข้า", "Prompts & Handoffs": "Prompt & ส่งต่องาน", "Invoices": "ใบแจ้งหนี้", "Onboard Client": "เพิ่มลูกค้าใหม่", "Client View": "มุมมองลูกค้า", "Activity Log": "บันทึกกิจกรรม", "Batch Progress": "ความคืบหน้า Batch", "Sign out": "ออกจากระบบ", "Today's posts": "โพสต์วันนี้", "Going live today. Not ready yet shows red. Change status or dates right here — it saves to the master.": "ที่จะโพสต์วันนี้ อันที่ยังไม่พร้อมจะขึ้นสีแดง แก้สถานะหรือวันได้ตรงนี้เลย ระบบจะบันทึกลงมาสเตอร์ให้", "Today's work": "งานวันนี้", "Pieces that need a hand — behind schedule, waiting on the client, or posting soon.": "ชิ้นงานที่ต้องดูแล ทั้งที่ล่าช้า รอลูกค้า หรือใกล้ถึงกำหนดโพสต์", "View as": "ดูในมุมมอง", "All": "ทั้งหมด", "Graphic Designer": "กราฟิกดีไซเนอร์", "Video Editor": "ตัดต่อวิดีโอ", "Piece ID": "รหัสชิ้นงาน", "Client": "ลูกค้า", "Format": "รูปแบบ", "Stage": "ขั้นตอน", "On Track": "ตามกำหนด", "Posting dates": "วันที่โพสต์", "Every piece across the production ladder. Click any row to update it.": "ทุกชิ้นงานในทุกขั้นตอนการผลิต คลิกที่แถวไหนก็ได้เพื่อแก้ไข", "View": "มุมมอง", "Table": "ตาราง", "Board": "Board", "Refresh": "Refresh", "★ Viral only": "★ เฉพาะ Viral", "Platform": "แพลตฟอร์ม", "Date": "วันที่", "Copy": "Copy", "Open Copy": "เปิด Copy", "Assign Publish Dates": "กำหนดวันเผยแพร่", "Pieces waiting for a posting date. Suggested dates follow each client's posting days and skip any day already taken — tick same-day to double up on purpose.": "ชิ้นงานที่รอกำหนดวันโพสต์ วันที่แนะนำจะอิงตามวันโพสต์ของลูกค้าแต่ละราย และข้ามวันที่มีคิวอยู่แล้ว ติ๊ก same-day ถ้าต้องการโพสต์ซ้อนวันเดียวกัน", "Posting style": "สไตล์การโพสต์", "Alternate formats (reel → carousel → reel)": "สลับรูปแบบ (reel → carousel → reel)", "Any format (same allowed)": "รูปแบบใดก็ได้ (ซ้ำกันได้)", "Save all suggested": "บันทึกที่แนะนำทั้งหมด", "Auto-rearrange whole board": "จัดเรียงทั้ง Board อัตโนมัติ", "Title": "ชื่อเรื่อง", "Suggested / chosen date": "วันที่แนะนำ / ที่เลือก", "Same-day": "วันเดียวกัน", "Import a batch": "นำเข้าทั้งชุด", "Paste Block A with its header row. Validate first — Save turns on only when nothing is blocking.": "วาง Block A พร้อมแถวหัวตาราง กด Validate ก่อน ปุ่ม Save จะเปิดใช้งานเมื่อไม่มีข้อผิดพลาดค้างอยู่", "Add one piece": "เพิ่มทีละชิ้น", "Add piece": "เพิ่มชิ้นงาน", "Paste a batch": "วางทั้งชุด", "Validate": "ตรวจสอบ", "Save to Sheet": "บันทึกลงชีต", "Ready-to-copy text built from the live schedule. Pick a client, pick what you need.": "ข้อความพร้อม Copy สร้างจากตารางงานล่าสุด เลือกลูกค้าและสิ่งที่ต้องการ", "Batch no.": "ชุดที่", "Scheduling prompt": "Prompt จัดตาราง", "Import batch prompt": "Prompt นำเข้า Batch", "Client reminder": "ข้อความเตือนลูกค้า", "Missing links": "ลิงก์ที่ขาด", "Generate": "สร้าง", "Generating…": "กำลังสร้าง…", "AI prompt to plan a batch. Fill in the Batch no., Generate, then paste it into your AI (Claude/ChatGPT) to draft the batch layout. Internal — not sent to the client.": "Prompt สำหรับวางแผนคอนเทนต์ทั้งชุด กรอกเลขชุด กด Generate แล้วนำไปวางใน AI (Claude/ChatGPT) เพื่อร่างแผนงาน ใช้ภายในทีม ไม่ได้ส่งให้ลูกค้า", "A ready-to-send message listing what the client still owes — approvals, input, footage. Send it to the client when you need to chase a decision.": "ข้อความพร้อมส่งให้ลูกค้า บอกสิ่งที่ยังรอจากลูกค้า เช่น การอนุมัติ ข้อมูล หรือฟุตเทจ ใช้เมื่อต้องการติดตามงานจากลูกค้า", "A checklist of pieces that still have no copy link. Use it internally to see which pieces need a Notion/Google-Doc page made.": "รายการชิ้นงานที่ยังไม่มีลิงก์ Copy ใช้ภายในทีมเพื่อดูว่าชิ้นไหนต้องสร้างหน้า Notion/Google Doc", "Copy to clipboard": "Copy", "Generate a client invoice from the stored fees. Mark it paid to turn it into a receipt.": "สร้างใบแจ้งหนี้ของลูกค้าจากค่าบริการที่บันทึกไว้ กดชำระแล้วเพื่อเปลี่ยนเป็นใบเสร็จ", "Currency": "สกุลเงิน", "Payment": "การชำระเงิน", "Version 1": "เวอร์ชัน 1", "Version 2": "เวอร์ชัน 2", "Refresh list": "Refresh รายการ", "Base description": "รายละเอียดหลัก", "Base ฿": "หลัก ฿", "Base S$": "หลัก S$", "Add-on description (leave blank if none)": "รายละเอียดเสริม (เว้นว่างถ้าไม่มี)", "Add-on ฿": "เสริม ฿", "Add-on S$": "เสริม S$", "Preview": "ดูตัวอย่าง", "Save & record invoice": "บันทึก & ลงใบแจ้งหนี้", "Invoice No": "เลขที่ใบแจ้งหนี้", "Total": "ยอดรวม", "Status": "สถานะ", "Issued": "วันที่ออก", "Paid": "ชำระแล้ว", "Onboard a client": "เพิ่มลูกค้าใหม่", "Fill this once and the client is set up everywhere: profile, posting rhythm, billing, dropdowns, and their private calendar link.": "กรอกครั้งเดียว ระบบจะตั้งค่าลูกค้าให้ครบทุกที่ ทั้งโปรไฟล์ จังหวะการโพสต์ การเรียกเก็บเงิน ตัวเลือกต่างๆ และลิงก์ปฏิทินส่วนตัวของลูกค้า", "The basics": "ข้อมูลพื้นฐาน", "Client name": "ชื่อลูกค้า", "Must match exactly what you'll use in Piece IDs and imports.": "ต้องตรงกับที่ใช้ในรหัสชิ้นงานและการนำเข้าทุกประการ", "Social handles": "บัญชีโซเชียล", "Founder(s)": "ผู้ก่อตั้ง", "Who on the client side must act. Blank uses the client name.": "ฝั่งลูกค้าที่ต้องเป็นคนดำเนินการ เว้นว่างจะใช้ชื่อลูกค้า", "Notes": "หมายเหตุ", "Content rhythm": "จังหวะคอนเทนต์", "Pieces per batch (quota)": "จำนวนชิ้นต่อชุด (Quota)", "Batch cadence": "รอบของชุดงาน", "Posting days": "วันที่โพสต์", "Days this client posts. Used to suggest dates and avoid double-booking.": "วันที่ลูกค้ารายนี้โพสต์ ใช้แนะนำวันและเลี่ยงการจองซ้อน", "Their Instagram is linked to Facebook": "Instagram ของลูกค้าเชื่อมกับ Facebook", "Tick if posting to IG also posts to FB — the calendar then shows \"IG & FB\" as one action.": "ติ๊กถ้าโพสต์ IG แล้วขึ้น FB ด้วย ปฏิทินจะแสดง \"IG & FB\" เป็นงานเดียว", "Billing": "การเรียกเก็บเงิน", "Package description": "รายละเอียดแพ็กเกจ", "Billing cycle": "รอบการเรียกเก็บ", "Base fee (THB)": "ค่าบริการหลัก (THB)", "Base fee (SGD)": "ค่าบริการหลัก (SGD)", "Add-on description": "รายละเอียดส่วนเสริม", "Primary currency": "สกุลเงินหลัก", "Add-on fee (THB)": "ค่าบริการเสริม (THB)", "Add-on fee (SGD)": "ค่าบริการเสริม (SGD)", "Create client": "สร้างลูกค้า", "Each client's private read-only calendar. Copy the link, open it, or share it — the client sees only their own pieces, and there's nothing for them to edit.": "ปฏิทินส่วนตัวแบบอ่านอย่างเดียวของลูกค้าแต่ละราย Copy ลิงก์ เปิด หรือแชร์ได้ ลูกค้าจะเห็นเฉพาะงานของตัวเองและแก้ไขอะไรไม่ได้", "Calendar link": "ลิงก์ปฏิทิน", "Every change made through the dashboard, newest first.": "ทุกการเปลี่ยนแปลงผ่าน Dashboard เรียงจากใหม่สุด", "When": "เมื่อ", "Who": "โดย", "Piece": "ชิ้นงาน", "Field": "ฟิลด์", "From": "จาก", "To": "เป็น", "Blocked": "ติดปัญหา", "★ Viral (mark once published)": "★ Viral (ทำเครื่องหมายเมื่อโพสต์แล้ว)", "Copy link": "ลิงก์ Copy", "Footage & photos needed": "ฟุตเทจ & รูปที่ต้องใช้", "Nothing requested yet.": "ยังไม่มีการขอ", "Add": "เพิ่ม", "Save": "บันทึก", "Close": "ปิด", "Platforms": "แพลตฟอร์ม", "Apply to the whole batch": "ใช้กับทั้งชุด", "Save platforms": "บันทึกแพลตฟอร์ม", "Cancel": "ยกเลิก", "Main publish date": "วันเผยแพร่หลัก", "IG date": "วันที่ IG", "(blank = same as main)": "(เว้นว่าง = ตามวันหลัก)", "TikTok date": "วันที่ TikTok", "Apply main date to all platforms": "ใช้วันหลักกับทุกแพลตฟอร์ม", "(clears IG/TikTok overrides)": "(ล้างค่าเฉพาะของ IG/TikTok)", "Save dates": "บันทึกวันที่", "Piece ID (e.g. C12.1)": "รหัสชิ้นงาน (เช่น C12.1)", "Platform (e.g. IG, TikTok)": "แพลตฟอร์ม (เช่น IG, TikTok)", "e.g. 3": "เช่น 3", "Generated text appears here…": "ข้อความที่สร้างจะแสดงที่นี่…", "e.g. Ice": "เช่น Ice", "Anything the team should know": "สิ่งที่ทีมควรรู้", "Ice  ·  comma-separate if several": "Ice  ·  คั่นด้วยจุลภาคถ้ามีหลายคน", "Monthly content package": "แพ็กเกจคอนเทนต์รายเดือน", "Optional": "ไม่บังคับ", "How many": "จำนวนเท่าไร", "Note (exactly what's needed)": "หมายเหตุ (ระบุสิ่งที่ต้องใช้ให้ชัด)", "IG post URL (https://instagram.com/…)": "ลิงก์โพสต์ IG (https://instagram.com/…)", "TikTok post URL (https://tiktok.com/…)": "ลิงก์โพสต์ TikTok (https://tiktok.com/…)", "Signing you in…": "กำลังเข้าสู่ระบบ…", "Checking with Orbit…": "กำลังตรวจสอบกับ Orbit…", "Signed out. Sign in again above.": "ออกจากระบบแล้ว เข้าสู่ระบบอีกครั้งด้านบน", "Main date is a Sunday — pick another day.": "วันหลักตรงกับวันอาทิตย์ กรุณาเลือกวันอื่น", "Saving…": "กำลังบันทึก…", "Saved.": "บันทึกแล้ว", "Loading…": "กำลังโหลด…", "0 posts today": "0 โพสต์วันนี้", "Nothing scheduled to publish today.": "ไม่มีงานที่กำหนดโพสต์วันนี้", "No pieces yet. Import a batch to get started.": "ยังไม่มีชิ้นงาน นำเข้าทั้งชุดเพื่อเริ่มต้น", "Nothing in the active pipeline.": "ไม่มีงานใน Pipeline ที่ทำอยู่", "Nothing needs attention right now.": "ยังไม่มีงานที่ต้องดูแลตอนนี้", "No activity yet.": "ยังไม่มีกิจกรรม", "Nothing here.": "ไม่มีข้อมูล", "No open requests.": "ไม่มีคำขอค้างอยู่", "Nothing pasted yet.": "ยังไม่ได้วางข้อมูล", "Validating…": "กำลังตรวจสอบ…", "Ready to save.": "พร้อมบันทึก", "Fix the blocking errors, then validate again.": "แก้ข้อผิดพลาดที่ค้างอยู่ แล้วตรวจสอบอีกครั้ง", "Text changed — validate again.": "ข้อความเปลี่ยนไป ตรวจสอบอีกครั้ง", "Nothing to generate for this client.": "ไม่มีข้อมูลให้สร้างสำหรับลูกค้ารายนี้", "Please sign in to continue.": "กรุณาเข้าสู่ระบบเพื่อดำเนินการต่อ", "Your session expired. Please sign in again.": "เซสชันหมดอายุ กรุณาเข้าสู่ระบบอีกครั้ง", "Please sign in again.": "กรุณาเข้าสู่ระบบอีกครั้ง", "Client name is required.": "ต้องระบุชื่อลูกค้า", "Pick at least one posting day.": "เลือกวันโพสต์อย่างน้อยหนึ่งวัน", "Piece ID is required.": "ต้องระบุรหัสชิ้นงาน", "Leave IG or TikTok blank to use the main publish date.": "เว้น IG หรือ TikTok ว่างไว้เพื่อใช้วันเผยแพร่หลัก", "URGENT": "ด่วน", "Edit dates": "แก้วันที่", "Received": "รับแล้ว", "Mark paid": "ทำเครื่องหมายชำระแล้ว", "Saved ": "บันทึกแล้ว ", " piece(s).": " ชิ้น", ", failed — ": ", ล้มเหลว: ", ", failed: ": ", ล้มเหลว: ", ". Try again.": " ลองอีกครั้ง", " — try again.": " ลองอีกครั้ง", "Failed: ": "ล้มเหลว: ", " post(s) today": " โพสต์วันนี้", " not ready": " ยังไม่พร้อม", " skipped (fix and retry)": " ที่ข้ามไป (แก้แล้วลองใหม่)", " row(s).": " แถว"};
       var SKIP_IDS = {invDocWrap:1, hoOut:1, report:1, invPreviewWrap:1};
       var tracked = [];      // {node, raw}
       var phTracked = [];    // {el, raw}
