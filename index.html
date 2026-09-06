@@ -492,7 +492,7 @@
           <div class="addgrid">
             <input type="text" id="acId" placeholder="Piece ID (e.g. C12.1)">
             <select id="acClient"><option>Ice</option><option>Lynn</option><option>Melissa</option><option>SRU</option><option>Dianna</option></select>
-            <select id="acFormat"><option>Carousel</option><option>VO Reels</option><option>On-camera Reels</option><option>Sit-down Reels</option><option>POV Reels</option></select>
+            <select id="acFormat"><option>Carousel</option><option>VO Reels</option><option>Sit-down Reels</option><option>POV Reels</option></select>
             <input type="text" id="acPlatform" placeholder="Platform (e.g. IG, TikTok)">
             <input type="text" id="acTitle" placeholder="Title">
             <input type="date" id="acDate">
@@ -1623,7 +1623,7 @@
     function todayISO(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
     function isReadyStage(s){ return /^(9 Ready to Publish|10 Published)/.test(s||''); }
     // Notion-style pastel chips (soft bg, muted ink) for Format and Client.
-    const FMT_TONE={ 'Carousel':'#dbeafe|#1e40af','VO Reels':'#ede9fe|#5b21b6','On-camera Reels':'#ffedd5|#9a3412','Sit-down Reels':'#dcfce7|#166534','POV Reels':'#fce7f3|#9d174d' };
+    const FMT_TONE={ 'Carousel':'#dbeafe|#1e40af','VO Reels':'#ede9fe|#5b21b6','Sit-down Reels':'#dcfce7|#166534','POV Reels':'#fce7f3|#9d174d' };
     const CLIENT_TONE={ 'Ice':'#e0f2fe|#075985','Lynn':'#fef9c3|#854d0e','Melissa':'#fae8ff|#86198f','SRU':'#dcfce7|#166534','Dianna':'#ffe4e6|#9f1239' };
     function toneChip(v, map){ const t=(map[v]||'#eef0ee|#5a635a').split('|'); return v? '<span class="tchip" style="background:'+t[0]+';color:'+t[1]+'">'+esc(v)+'</span>':'<span class="muted">—</span>'; }
     function fmtChip(f){ return toneChip(f, FMT_TONE); }
@@ -1877,7 +1877,7 @@
 'COLUMN RULES:',
 '  Piece ID      FORMAT-PERSON-BATCH.SEQ, e.g. C-ICE-12.1. Must be unique.',
 '  Client        exactly one of the Orbit client names.',
-'  Format        exactly one of: Carousel | VO Reels | On-camera Reels | Sit-down Reels | POV Reels',
+'  Format        exactly one of: Carousel | VO Reels | Sit-down Reels | POV Reels',
 '  Platform      comma-separated from: IG & FB, TikTok, LinkedIn, Website Article',
 '  Title         the post title.',
 '  Publish Date  YYYY-MM-DD. Never a Sunday.',
@@ -1911,7 +1911,7 @@ sched,
 'ORBIT OUTPUT RULES:',
 '1. Assign posting dates on a 4-week cycle counted from this batch’s first piece. Mon–Sat only — never a Sunday. Continue on from the last scheduled date above so posting stays consistent with no gaps or clashes. Stagger different pillars/series so they don’t clump. Set Ready By about 14 days before each posting date.',
 '2. Assign Piece IDs using ' + client + '’s prefix scheme and batch number ' + batch + ' typed into the ID (e.g. C' + (batch==='[BATCH NUMBER]'?'12':batch) + '.1). Do not invent a scheme. If an ID would collide or you’re unsure, stop and flag it — never guess an ID.',
-'3. Collabs: if a piece is a collaboration with another WWA account, put that account’s name in the Founder column (e.g. Dianna) — it then also shows on that account’s own calendar. Reflect it in the Piece ID as PERSON = poster+partner (e.g. OC-' + client + '+DIA-' + (batch==='[BATCH NUMBER]'?'12':batch) + '.1 means ' + client + ' posts, Dianna collabs). If a different account is the one actually posting, make THAT account the ID PERSON instead (e.g. VO-DIA-… posts from Dianna). A normal solo post leaves Founder blank and uses ' + client + ' as the ID PERSON.',
+'3. Collabs: if a piece is a collaboration with another WWA account, put that account’s name in the Founder column (e.g. Dianna) — it then also shows on that account’s own calendar. Reflect it in the Piece ID as PERSON = poster+partner (e.g. C-' + client + '+DIA-' + (batch==='[BATCH NUMBER]'?'12':batch) + '.1 means ' + client + ' posts, Dianna collabs). If a different account is the one actually posting, make THAT account the ID PERSON instead (e.g. VO-DIA-… posts from Dianna). A normal solo post leaves Founder blank and uses ' + client + ' as the ID PERSON.',
 '4. Titles: ' + (bilingual ? 'bilingual "Thai / English".' : 'English.'),
 '5. CREATE a Notion copy page for each piece in ' + client + '’s Notion space, and put its URL in the Copy Link column. Ask me for the parent page/folder to create them under if you don’t already know it. Do NOT leave Copy Link blank — the whole point is that you return the links so the team doesn’t fill them by hand.',
 '6. New pieces are Stage "1 Copywriting" unless you already know a piece is further along.',
@@ -1956,7 +1956,7 @@ sched,
         const when = d===null ? '' : (d<0 ? ' (this date has passed)' : d===0 ? ' (posting today)' : d===1 ? ' (posting tomorrow)' : ' (in ' + d + ' days)');
         const st = r['Stage']||'';
         const fmt = r['Format']||'';
-        const isVideo = /video|On-camera|Sit-down|POV/i.test(fmt);
+        const isVideo = /video|Sit-down|POV/i.test(fmt);
         let ask;
         if (/Required Client Input/.test(st)) ask = 'We need some information from you before we can start this one.';
         else if (/Waiting for Voiceover/.test(st)) ask = isVideo ? 'We need your video for this. Please record and send it.' : 'We need your voiceover for this. Please record and send it.';
