@@ -114,6 +114,7 @@
     .mgrid button:hover:not(:disabled) { background:#eef1ec; }
     .mgrid button.off { background:#fdeaea; color:#a02a2a; font-weight:600; }
     .mgrid button.sun { background:#f2f3f1; color:#a8aca6; cursor:not-allowed; }
+    .mgrid button.inh { background:#fbf1e3; color:#b08a4a; cursor:not-allowed; }
     .mgrid button.today { border-color:var(--brand); font-weight:700; }
     .mgrid .pad { visibility:hidden; }
     .expl { background:#f4f6f3; border:1px solid var(--line); border-radius:11px; padding:13px 15px; margin-bottom:14px; font-size:13px; line-height:1.65; }
@@ -982,7 +983,9 @@
       PREFS.tab=name; savePrefs();
       document.querySelectorAll('.navbtn[data-tab]').forEach(function(b){ b.classList.toggle('active', b.dataset.tab===name); });
       document.querySelectorAll('.mobtab[data-tab]').forEach(function(b){ b.classList.toggle('active', b.dataset.tab===name); });
-      ['today','batch','pipeline','assign','import','handoff','invoices','onboard','clientview','log'].forEach(function(t){ $('tab-'+t).classList.toggle('hidden', t!==name); });
+      // Derived from the DOM, so a new <section id="tab-…"> is picked up automatically.
+      document.querySelectorAll('section[id^="tab-"]').forEach(function(sec){
+        sec.classList.toggle('hidden', sec.id !== 'tab-'+name); });
       // META (client links, billing, posting days) is already loaded and cached — render from it now,
       // and refresh it silently in the background instead of blocking each tab open on a getMeta round-trip.
       const metaReady = !!(META && META.clients);
@@ -2290,13 +2293,17 @@ sched,
         for(var p=0;p<first.getDay();p++) cells+='<button class="pad" disabled></button>';
         for(var day=1;day<=dim;day++){
           var dt=new Date(DO_YEAR,m,day), iso=isoOf(dt), cls=[];
-          if(dt.getDay()===0) cls.push('sun');
+          var dis='';
+          if(dt.getDay()===0){ cls.push('sun'); dis=' disabled title="Sunday is always off"'; }
           else {
-            var marked=daysOffList().some(function(x){ return x.date===iso && (x.scope===scope || (scope!=='All' && x.scope==='All')); });
-            if(marked){ cls.push('off'); offCount++; }
+            // own = marked for the scope being viewed; inherited = an Everyone day seen from a role view
+            var own=daysOffList().some(function(x){ return x.date===iso && x.scope===scope; });
+            var inherited=(scope!=='All') && daysOffList().some(function(x){ return x.date===iso && x.scope==='All'; });
+            if(own){ cls.push('off'); offCount++; }
+            else if(inherited){ cls.push('inh'); offCount++;
+              dis=' disabled title="Off for everyone. Switch to Everyone to change it."'; }
           }
           if(iso===todayIso) cls.push('today');
-          var dis = dt.getDay()===0 ? ' disabled title="Sunday is always off"' : '';
           cells+='<button class="'+cls.join(' ')+'" data-d="'+iso+'"'+dis+'>'+day+'</button>';
         }
         html+='<div class="mon"><h4>'+MN[m]+(offCount?'<span class="offn">'+offCount+' off</span>':'')+'</h4>'+
@@ -2315,6 +2322,9 @@ sched,
           }
           lastClicked=iso;
           var turningOn = !b.classList.contains('off');
+          range=range.filter(function(d){ return !(($('doScope')&&$('doScope').value)!=='All' &&
+            daysOffList().some(function(x){ return x.date===d && x.scope==='All'; })); });
+          if(!range.length) return;
           saveDaysOff(range, turningOn, ($('doScope')&&$('doScope').value)||'All');
         };
       });
