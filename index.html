@@ -103,7 +103,19 @@
     .bulkbar { position:sticky; top:8px; z-index:6; display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:9px 12px; margin-bottom:10px; background:#eef4ff; border:1px solid var(--line); border-radius:10px; font-size:13px; }
     .bulkbar #bulkCount { font-weight:600; }
     .selcol { width:34px; } .selcell { width:34px; text-align:center; }
-    .stageinline { font:inherit; padding:4px 6px; border:1px solid var(--line); border-radius:8px; max-width:230px; background:#fff; }
+    .stagepop { position:absolute; z-index:60; background:#fff; border:1px solid var(--line); border-radius:12px; box-shadow:0 12px 34px rgba(0,0,0,.16); padding:6px; min-width:250px; max-width:320px; }
+    .stagepop .sp-head { font-size:11px; color:#777; padding:5px 8px 6px; }
+    .stagepop .sp-list { max-height:320px; overflow:auto; display:flex; flex-direction:column; gap:1px; }
+    .stagepop .sp-opt { display:flex; align-items:center; justify-content:space-between; gap:8px; width:100%; text-align:left; background:none; border:0; padding:6px 8px; border-radius:8px; cursor:pointer; font:inherit; }
+    .stagepop .sp-opt:hover { background:#f1f4f9; }
+    .stagepop .sp-opt.on { background:#eef4ff; }
+    .stagepop .sp-tick { color:#3a5a7a; font-size:12px; }
+    .stagepop.busy { opacity:.6; pointer-events:none; }
+    .needsinfo { display:block; width:fit-content; margin-top:4px; white-space:nowrap; font-size:10px; padding:1px 7px; border-radius:99px; background:#fff4e5; color:#8a5a00; font-weight:500; }
+    .imptable { font-size:12px; } .imptable th, .imptable td { white-space:nowrap; }
+    .imptable .impcell { font:inherit; width:120px; padding:4px 6px; border:1px solid var(--line); border-radius:6px; }
+    .imptable tr.imperr { background:#fdf2f2; } .imptable tr.impwarn { background:#fffbeb; }
+    .imptable .ierr { color:#9b1c1c; } .imptable .iwarn { color:#8a5a00; }
     .modal { position:fixed; inset:0; background:rgba(30,36,30,.34); display:flex; align-items:center; justify-content:center; z-index:60; }
     .modalcard { background:#fff; border-radius:14px; padding:22px 24px; width:min(94vw,420px); box-shadow:0 20px 50px rgba(0,0,0,.2); }
     .delab { display:block; font-size:12px; color:var(--ink-soft); margin-bottom:12px; }
@@ -398,6 +410,7 @@
           <label class="inline">View <span class="seg"><button id="viewTable" class="on">Table</button><button id="viewBoard">Board</button></span></label>
           <button id="refresh" class="small">Refresh</button>
           <label class="inline"><input type="checkbox" id="viralOnly"> ★ Viral only</label>
+          <label class="inline"><input type="checkbox" id="needsOnly"> ⚠ Needs info <span id="needsCount" class="muted"></span></label>
           <span class="count" id="pipeCount"></span>
           <label class="inline viewas">View as
             <select id="roleView"><option value="all">All</option><option value="designer">Graphic Designer</option><option value="editor">Video Editor</option></select>
@@ -603,7 +616,7 @@
       <div class="field"><label>Post from</label><select id="pPostFrom" style="font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;width:100%"></select><div class="muted" style="font-size:12px;margin-top:4px">The account that actually posts it (its quota). A different account than the client = collab: it also shows on that account\'s calendar.</div></div>
       <div class="field"><label>Collab with (partner)</label><select id="pCollab" style="font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;width:100%"></select><div class="muted" style="font-size:12px;margin-top:4px">Another account this post is a collab with. It also shows on that account\'s calendar. Leave as \u201cNone\u201d for a normal solo post.</div></div>
       <div class="field"><label>Stage</label><select id="pStage"></select></div>
-      <div class="field"><label>Publish date</label><input type="date" id="pDate" style="font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px"></div>
+      <div class="field"><label>Dates</label><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span id="pDateSummary" class="muted"></span><button type="button" class="small" id="pDateEdit">Edit dates</button></div><div class="muted" style="font-size:12px;margin-top:4px">Opens the same per-platform date editor used everywhere else.</div></div>
       <div class="field"><label>Reschedule</label><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
         <select id="pSwap" style="font:inherit;padding:7px 9px;border:1px solid var(--line);border-radius:8px;max-width:230px"></select>
         <button class="small" id="pSwapBtn" type="button">Swap dates</button>
@@ -779,21 +792,41 @@
     async function call(action, payload){
       const showProg = WRITE_ACT[action] && !PROG_SUPPRESS;
       if(showProg) Progress.begin('Saving…');
-      let data = await rawCall(action, payload);
-      // If the token expired mid-session, silently fetch a fresh one and retry once.
-      if (data && data.ok === false && /token|authoris|authoriz|expired|aud/i.test(data.error||'')) {
-        await refreshToken();
-        if (idToken) saveToken(idToken);
+      let data = null;
+      try {
         data = await rawCall(action, payload);
-        if (data && data.ok === false && /token|authoris|authoriz|expired|aud/i.test(data.error||'') && action!=='whoami') sessionLost();
+        // If the token expired mid-session, silently fetch a fresh one and retry once.
+        if (data && data.ok === false && /token|authoris|authoriz|expired|aud/i.test(data.error||'')) {
+          await refreshToken();
+          if (idToken) saveToken(idToken);
+          data = await rawCall(action, payload);
+          if (data && data.ok === false && /token|authoris|authoriz|expired|aud/i.test(data.error||'') && action!=='whoami') sessionLost();
+        }
+      } catch(e) {
+        // Network blip or a non-JSON reply: retry once, then report instead of leaving the UI hanging.
+        try {
+          await new Promise(function(r){ setTimeout(r, 900); });
+          data = await rawCall(action, payload);
+        } catch(e2) {
+          data = { ok:false, error:'Could not reach the server. Check your connection and try again. ('+((e2&&e2.message)||e2)+')' };
+        }
+      } finally {
+        // Always resolves the overlay, so a failed call can never leave it stuck.
+        if(showProg) Progress.end(!!(data && data.ok), (data && data.ok) ? 'Saved.' : 'Save failed');
       }
-      if(showProg) Progress.end(!!(data && data.ok), (data && data.ok) ? 'Saved.' : 'Save failed');
-      return data;
+      return data || { ok:false, error:'No response from the server.' };
     }
     async function rawCall(action, payload){
-      const res = await fetch(EXEC_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
-        body: JSON.stringify({ idToken:idToken, action:action, payload:payload||{} }) });
-      return res.json();
+      const ctrl = (typeof AbortController!=='undefined') ? new AbortController() : null;
+      const timer = ctrl ? setTimeout(function(){ try{ ctrl.abort(); }catch(e){} }, 45000) : null;
+      try {
+        const res = await fetch(EXEC_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+          body: JSON.stringify({ idToken:idToken, action:action, payload:payload||{} }),
+          signal: ctrl ? ctrl.signal : undefined });
+        const text = await res.text();
+        try { return JSON.parse(text); }
+        catch(e){ throw new Error(res.ok ? 'Unexpected reply from the server.' : ('Server error '+res.status)); }
+      } finally { if(timer) clearTimeout(timer); }
     }
     // Ask Google (silently) for a fresh ID token. Resolves when the callback fires.
     function refreshToken(){
@@ -976,6 +1009,8 @@
       };
     })();
     $('viralOnly').onchange = function(){ PREFS.viralOnly=$('viralOnly').checked; savePrefs(); PIPE_PAGE=0; renderPipe(); };
+    (function(){ var n=$('needsOnly'); if(!n) return; n.checked=!!PREFS.needsOnly;
+      n.onchange=function(){ PREFS.needsOnly=n.checked; savePrefs(); PIPE_PAGE=0; renderPipe(); }; })();
     (function(){
       var pa=$('pipeAll'); if(pa) pa.onchange=function(){ Array.prototype.slice.call(document.querySelectorAll('#pipeBody .selcell input')).forEach(function(b){ b.checked=pa.checked; if(pa.checked) SEL.add(b.dataset.id); else SEL.delete(b.dataset.id); }); renderBulkBar(); };
       function selUpdates(changes){ return Array.from(SEL).map(function(id){ var r=allRows.filter(function(x){ return x['Piece ID']===id; })[0]; return r?{row:r.row, pieceId:id, changes:changes}:null; }).filter(Boolean); }
@@ -1068,6 +1103,7 @@
           const sugg=suggestDatesForClient(cl, pieces, style);
           for(const p of pieces){ const ymd=sugg[p['Piece ID']]; if(ymd) jobs.push({row:p.row, pieceId:p['Piece ID'], changes:{ 'Publish Date':ymd, 'Ready By':minus14(ymd) }}); }
         }
+        if(!jobs.length){ b.disabled=false; setAssign('Nothing to rearrange — every unpublished piece already has a date that fits.','muted'); return; }
         const res=await savePieces(jobs);
         const fail=(res.ok?(res.errors||[]).length:jobs.length);
         b.disabled=false; renderAssign(); renderPipe(); renderToday();
@@ -1091,7 +1127,7 @@
     function roleMatches(fmt, role){ if(role==='designer') return !isVideoFormat(fmt); if(role==='editor') return isVideoFormat(fmt); return true; }
     function filtered(){
       const want=PREFS.client||''; const role=normRole(PREFS.role);
-      return allRows.filter(function(r){ return (!want||r['Client']===want) && roleMatches(r['Format'],role) && (!PREFS.viralOnly || r['Viral']==='TRUE'); })
+      return allRows.filter(function(r){ return (!want||r['Client']===want) && roleMatches(r['Format'],role) && (!PREFS.viralOnly || r['Viral']==='TRUE') && (!PREFS.needsOnly || needsInfo(r).length>0); })
         .sort(function(a,b){ return (a['Publish Date']||'').localeCompare(b['Publish Date']||''); });
     }
 
@@ -1101,7 +1137,7 @@
       if(!rows.length) tb.innerHTML='<tr><td colspan="9"><div class="empty">No pieces yet. Import a batch to get started.</div></td></tr>';
       function rowTr(r){
         const tr=document.createElement('tr'); tr.className='clickable'; tr.onclick=function(){ openPanel(r); };
-        tr.innerHTML='<td class="selcell"><input type="checkbox" data-id="'+esc(r['Piece ID'])+'"'+(SEL.has(r['Piece ID'])?' checked':'')+'></td><td>'+esc(r['Piece ID'])+reqMark(r)+viralMark(r)+'<div class="rowtitle">'+esc(r['Title']||'')+'</div>'+collabTag(r)+'</td><td>'+clientChip(r['Client'])+'</td><td>'+fmtChip(r['Format'])+'</td>'+
+        tr.innerHTML='<td class="selcell"><input type="checkbox" data-id="'+esc(r['Piece ID'])+'"'+(SEL.has(r['Piece ID'])?' checked':'')+'></td><td>'+esc(r['Piece ID'])+reqMark(r)+viralMark(r)+'<div class="rowtitle">'+esc(r['Title']||'')+'</div>'+collabTag(r)+infoMark(r)+'</td><td>'+clientChip(r['Client'])+'</td><td>'+fmtChip(r['Format'])+'</td>'+
           '<td class="cellbtn platcell">'+platLabel(r['PlatformList'],r['Client'])+'</td><td class="cellbtn stagecell">'+stagePill(r['Stage'])+'</td>'+
           '<td>'+onTrack(r['On Track'])+'</td><td class="cellbtn datecell">'+platDates(r)+'</td><td>'+copyLink(r['Copy Link'])+'</td>';
         const a=tr.querySelector('a.lnk'); if(a) a.onclick=function(e){ e.stopPropagation(); };
@@ -1127,6 +1163,11 @@
         if(nx) nx.onclick=function(){ if(PIPE_PAGE<pipePages-1){ PIPE_PAGE++; renderPipe(); var t=$('tableView'); if(t) t.scrollIntoView({behavior:'smooth',block:'start'}); } };
       })();
       $('pipeCount').textContent=active.length+' active';
+      (function(){ var el=$('needsCount'); if(!el) return;
+        var want=PREFS.client||'', role=normRole(PREFS.role);
+        var scope=allRows.filter(function(r){ return (!want||r['Client']===want) && roleMatches(r['Format'],role) && PARKED.indexOf(r['Stage'])===-1 && !/Published/.test(r['Stage']||''); });
+        var n=scope.filter(function(r){ return needsInfo(r).length>0; }).length;
+        el.textContent=n?('('+n+')'):''; })();
 
       const bv=$('boardView'); bv.innerHTML='';
       STAGES.filter(function(s){ return BOARD_HIDE.indexOf(s)===-1; }).forEach(function(stage){
@@ -1136,7 +1177,7 @@
         col.innerHTML='<div class="bh">'+stagePill(stage)+'<span class="n">'+inStage.length+'</span></div>';
         inStage.forEach(function(r){
           const c=document.createElement('div'); c.className='bcard'; c.onclick=function(){ openPanel(r); };
-          c.innerHTML='<div class="bt">'+esc(r['Title']||r['Piece ID'])+reqMark(r)+viralMark(r)+collabTag(r)+'</div>'+
+          c.innerHTML='<div class="bt">'+esc(r['Title']||r['Piece ID'])+reqMark(r)+viralMark(r)+collabTag(r)+infoMark(r)+'</div>'+
             '<div class="bm">'+esc(r['Piece ID'])+' '+clientChip(r['Client'])+' '+fmtChip(r['Format'])+'</div>'+
             '<div class="bplat">'+platLabel(r['PlatformList'],r['Client'])+'</div>'+
             '<div>'+onTrack(r['On Track'])+' · <span class="muted">'+esc(r['Publish Date'])+'</span></div>'+
@@ -1275,7 +1316,7 @@
       if(!rows.length) tb.innerHTML='<tr><td colspan="8"><div class="empty">Nothing needs attention right now.</div></td></tr>';
       rows.forEach(function(r){
         const tr=document.createElement('tr'); tr.className='clickable'; tr.onclick=function(){ openPanel(r); };
-        tr.innerHTML='<td>'+esc(r['Piece ID'])+'<div class="rowtitle">'+esc(r['Title']||'')+'</div>'+collabTag(r)+'</td><td>'+clientChip(r['Client'])+'</td><td>'+fmtChip(r['Format'])+'</td>'+
+        tr.innerHTML='<td>'+esc(r['Piece ID'])+'<div class="rowtitle">'+esc(r['Title']||'')+'</div>'+collabTag(r)+infoMark(r)+'</td><td>'+clientChip(r['Client'])+'</td><td>'+fmtChip(r['Format'])+'</td>'+
           '<td>'+platLabel(r['PlatformList'],r['Client'])+'</td>'+
           '<td class="cellbtn stagecell">'+stagePill(r['Stage'])+'</td>'+
           '<td>'+onTrack(r['On Track'])+'</td><td class="cellbtn datecell">'+platDates(r)+'</td><td>'+copyLink(r['Copy Link'])+'</td>';
@@ -1317,7 +1358,8 @@
       $('pTitle').textContent=r['Title']||r['Piece ID'];
       $('pMeta').innerHTML=esc(r['Piece ID']+' · '+r['Client']+' · '+r['Format']+(r['PlatformList'].length?' · '+r['PlatformList'].join(', '):''))+collabTag(r);
       $('pStage').value=r['Stage']||'1 Copywriting';
-      $('pDate').value=r['Publish Date']||'';
+      (function(){ var el=$('pDateSummary'); if(el) el.innerHTML=platDates(r)||'<span class="muted">No date set</span>';
+        var b=$('pDateEdit'); if(b) b.onclick=function(){ openDateEditor(current||r); }; })();
       $('pTitleEdit').value=r['Title']||'';
       (function(){ var sel=$('pPostFrom'); if(!sel) return; var cur=(r['Post From']||'').trim();
         var opts=['<option value="">'+esc(r['Client'])+' (own \u2014 not a collab)</option>'];
@@ -1384,11 +1426,6 @@
       const origPlat=PLAT_OPTIONS.filter(function(p){ return (current['PlatformList']||[]).some(function(t){ return PLAT_MATCH[p] && PLAT_MATCH[p].test(t); }); }).join(', ');
       const pickedPlat=Array.from($('pPlat').querySelectorAll('input:checked')).map(function(i){ return i.value; }).join(', ');
       if(pickedPlat!==origPlat) changes['Platform']=pickedPlat;
-      const newDate=($('pDate').value||'').trim(), curDate=(current['Publish Date']||'').trim();
-      if(newDate!==curDate){
-        if(newDate){ const dd=new Date(newDate+'T00:00:00'); if(dd.getDay()===0){ setPStatus('Publish date is a Sunday — pick another day.','err'); return; } }
-        changes['Publish Date']=newDate; changes['Ready By']=newDate?minus14(newDate):'';
-      }
       if(!Object.keys(changes).length){ setPStatus('No changes.','muted'); return; }
       $('pSave').disabled=true; setPStatus('Saving…','muted');
       const data=await call('updatePiece',{ row:current.row, pieceId:current['Piece ID'], changes:changes });
@@ -1460,19 +1497,47 @@
       const role = normRole(PREFS.role);
       return role!=='all' ? '<span class="reqbadge">'+n+' asset'+(n>1?'s':'')+'</span>' : '<span class="reqdot" title="'+n+' open asset request'+(n>1?'s':'')+'"></span>';
     }
+    // Notion-style stage picker: floating panel of coloured pills, click to set.
+    let STAGE_POP=null;
+    function closeStagePop(){ if(STAGE_POP){ STAGE_POP.remove(); STAGE_POP=null; document.removeEventListener('mousedown',stagePopAway,true); document.removeEventListener('keydown',stagePopKey,true); } }
+    function stagePopAway(e){ if(STAGE_POP && !STAGE_POP.contains(e.target)) closeStagePop(); }
+    function stagePopKey(e){ if(e.key==='Escape') closeStagePop(); }
     function openStageEditor(r, cell){
-      if(!cell) return;
+      closeStagePop();
       var opts=STAGES.slice(); if(r['Stage'] && opts.indexOf(r['Stage'])<0) opts.unshift(r['Stage']);
-      var sel=document.createElement('select'); sel.className='stageinline';
-      sel.innerHTML=opts.map(function(s){ return '<option value="'+esc(s)+'"'+(s===r['Stage']?' selected':'')+'>'+esc(s)+'</option>'; }).join('');
-      cell.innerHTML=''; cell.appendChild(sel); try{ sel.focus(); }catch(e){}
-      var done=false;
-      function revert(){ if(done) return; done=true; cell.innerHTML=stagePill(r['Stage']); }
-      sel.onclick=function(e){ e.stopPropagation(); };
-      sel.onblur=function(){ setTimeout(revert,150); };
-      sel.onchange=async function(){ var v=sel.value; if(v===(r['Stage']||'')){ revert(); return; } done=true; sel.disabled=true;
-        try{ await savePieces([{ row:r.row, pieceId:r['Piece ID'], changes:{ Stage:v } }]); }catch(e){}
-        renderPipe(); renderToday(); renderTodayPosts(); };
+      var pop=document.createElement('div'); pop.className='stagepop';
+      pop.innerHTML='<div class="sp-head">Set stage</div><div class="sp-list">'+
+        opts.map(function(sname){
+          return '<button class="sp-opt'+(sname===r['Stage']?' on':'')+'" data-s="'+esc(sname)+'">'+stagePill(sname)+(sname===r['Stage']?'<span class="sp-tick">\u2713</span>':'')+'</button>';
+        }).join('')+'</div>';
+      document.body.appendChild(pop); STAGE_POP=pop;
+      var rect=cell.getBoundingClientRect();
+      var top=rect.bottom+window.scrollY+4, left=rect.left+window.scrollX;
+      pop.style.top=top+'px'; pop.style.left=left+'px';
+      var pr=pop.getBoundingClientRect();
+      if(pr.right>window.innerWidth-10) pop.style.left=Math.max(10,window.innerWidth-pr.width-10+window.scrollX)+'px';
+      if(pr.bottom>window.innerHeight-10 && rect.top>pr.height+10) pop.style.top=(rect.top+window.scrollY-pr.height-4)+'px';
+      setTimeout(function(){ document.addEventListener('mousedown',stagePopAway,true); document.addEventListener('keydown',stagePopKey,true); },0);
+      Array.prototype.forEach.call(pop.querySelectorAll('.sp-opt'), function(b){
+        b.onclick=async function(e){
+          e.stopPropagation();
+          var v=b.dataset.s; if(v===(r['Stage']||'')){ closeStagePop(); return; }
+          pop.classList.add('busy');
+          try{ await savePieces([{ row:r.row, pieceId:r['Piece ID'], changes:{ Stage:v } }]); }catch(err){}
+          closeStagePop(); renderPipe(); renderToday(); renderTodayPosts();
+        };
+      });
+    }
+    // A piece is "incomplete" when it is missing information the team still needs to fill.
+    function needsInfo(r){
+      var out=[];
+      if(!String(r['Publish Date']||'').trim()) out.push('no publish date');
+      if(!String(r['Copy Link']||'').trim()) out.push('no copy link');
+      return out;
+    }
+    function infoMark(r){
+      var m=needsInfo(r); if(!m.length) return '';
+      return '<span class="needsinfo" title="Missing: '+esc(m.join(', '))+'">\u26a0 '+esc(m.length===1?m[0]:m.length+' missing')+'</span>';
     }
     function stagePill(s){ if(!s) return ''; return '<span class="pill '+(STAGE_COLOUR[s]||'st-off')+'">'+esc(s)+'</span>'; }
     function chips(list){ return (list||[]).map(function(p){ return '<span class="chip">'+esc(p)+'</span>'; }).join('')||'<span class="muted">—</span>'; }
@@ -1591,35 +1656,87 @@
     }
     function copyLink(u){ return u ? '<a class="lnk" href="'+esc(u)+'" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="Open copy page">Open Copy</a>' : '<span class="muted" title="No copy page yet">—</span>'; }
 
-    let lastValidatedTsv=null;
-    $('tsv').addEventListener('input', function(){ $('save').disabled=true; lastValidatedTsv=null; });
+    // ── Import: editable confirm grid ──
+    const IMP_COLS=['Piece ID','Client','Format','Platform','Title','Publish Date','Ready By','Stage','Founder','Copy Link'];
+    let IMP_ROWS=[];
+    $('tsv').addEventListener('input', function(){ $('save').disabled=true; IMP_ROWS=[]; $('report').innerHTML=''; });
     $('validate').onclick=async function(){
       const tsv=$('tsv').value; if(!tsv.trim()){ setImp('Nothing pasted yet.','muted'); return; }
       $('validate').disabled=true; $('save').disabled=true; setImp('Validating…','muted'); $('report').innerHTML='';
       const data=await call('validateBatch',{tsv:tsv}); $('validate').disabled=false;
       if(!data.ok){ setImp(data.error,'err'); return; }
-      renderReport(data.result);
-      if(data.result.canSave){ lastValidatedTsv=tsv; $('save').disabled=false; setImp('Ready to save.','muted'); }
-      else setImp('Fix the blocking errors, then validate again.','muted');
-    };
-    $('save').onclick=async function(){
-      const tsv=$('tsv').value; if(tsv!==lastValidatedTsv){ setImp('Text changed — validate again.','muted'); $('save').disabled=true; return; }
-      $('save').disabled=true; $('validate').disabled=true; setImp('Saving…','muted');
-      const data=await call('importBatch',{tsv:tsv}); $('validate').disabled=false;
-      if(!data.ok){ setImp(data.error,'err'); return; }
-      setImp(TT('Saved ')+data.result.total+TT(' row(s).'),'ok'); renderReport(data.result);
-      $('tsv').value=''; lastValidatedTsv=null; loadRows();
-    };
-    function renderReport(r){
-      const el=$('report'); el.innerHTML='<div class="rrow sum"><b>'+r.total+'</b> row(s) — <b>'+r.hardBlocks+'</b> blocking, <b>'+r.warnings+'</b> warning(s).</div>';
-      r.rows.forEach(function(row){
-        const cls=row.errors.length?'err':(row.warnings.length?'warn':'ok');
-        const items=row.errors.map(function(e){return '❌ '+esc(e);}).concat(row.warnings.map(function(w){return '⚠️ '+esc(w);}));
-        const div=document.createElement('div'); div.className='rrow '+cls;
-        div.innerHTML='<div class="idline">Row '+row.line+(row.id?' · '+esc(row.id):'')+'</div>'+(items.length?'<ul><li>'+items.join('</li><li>')+'</li></ul>':'<div class="muted">OK</div>');
-        el.appendChild(div);
+      IMP_ROWS=(data.result.rows||[]).map(function(row){
+        return { data:Object.assign({},row.data), errors:row.errors||[], warnings:row.warnings||[], line:row.line, include:(row.errors||[]).length===0 };
       });
+      renderImportGrid();
+    };
+    function impTsvFrom(rows){
+      return [IMP_COLS.join('\t')].concat(rows.map(function(r){
+        return IMP_COLS.map(function(c){ return String(r.data[c]==null?'':r.data[c]).replace(/[\t\n\r]+/g,' '); }).join('\t');
+      })).join('\n');
     }
+    async function impRecheck(){
+      if(!IMP_ROWS.length) return;
+      setImp('Re-checking…','muted');
+      const data=await call('validateBatch',{tsv:impTsvFrom(IMP_ROWS)});
+      if(!data.ok){ setImp(data.error,'err'); return; }
+      (data.result.rows||[]).forEach(function(row,i){
+        if(!IMP_ROWS[i]) return;
+        IMP_ROWS[i].data=Object.assign({},row.data);
+        IMP_ROWS[i].errors=row.errors||[]; IMP_ROWS[i].warnings=row.warnings||[];
+        if(IMP_ROWS[i].errors.length) IMP_ROWS[i].include=false;
+      });
+      renderImportGrid();
+    }
+    function renderImportGrid(){
+      const el=$('report'); if(!el) return;
+      if(!IMP_ROWS.length){ el.innerHTML=''; return; }
+      const chosen=IMP_ROWS.filter(function(r){ return r.include; });
+      const blocked=IMP_ROWS.filter(function(r){ return r.errors.length; }).length;
+      const warned=IMP_ROWS.filter(function(r){ return r.warnings.length; }).length;
+      var head='<div class="rrow sum"><b>'+IMP_ROWS.length+'</b> row(s) · <b>'+chosen.length+'</b> ticked to import'+
+        (blocked?' · <b>'+blocked+'</b> need fixing':'')+(warned?' · '+warned+' with notes':'')+
+        '<div class="muted" style="margin-top:4px;font-size:12px">Edit any cell, then tick the rows to import. Rows with a red issue can\'t be ticked until fixed. Blank dates and links are fine — they get flagged in the pipeline.</div></div>';
+      var h='<div class="controls" style="margin:8px 0"><button class="small" id="impAll">Tick all importable</button><button class="small" id="impNone">Untick all</button><button class="small" id="impRecheck">Re-check</button></div>'+
+        '<div class="tablewrap"><table class="imptable"><thead><tr><th style="width:34px"></th><th>#</th>'+
+        IMP_COLS.map(function(c){ return '<th>'+esc(c)+'</th>'; }).join('')+'<th>Issues</th></tr></thead><tbody>';
+      IMP_ROWS.forEach(function(r,i){
+        var cls=r.errors.length?'imperr':(r.warnings.length?'impwarn':'');
+        h+='<tr class="'+cls+'"><td><input type="checkbox" data-inc="'+i+'"'+(r.include?' checked':'')+(r.errors.length?' disabled':'')+'></td>'+
+          '<td class="muted">'+r.line+'</td>'+
+          IMP_COLS.map(function(c){
+            return '<td><input class="impcell" data-i="'+i+'" data-c="'+esc(c)+'" value="'+esc(String(r.data[c]==null?'':r.data[c]))+'"></td>';
+          }).join('')+
+          '<td>'+(r.errors.map(function(e){return '<div class="ierr">❌ '+esc(e)+'</div>';}).join('')+
+                  r.warnings.map(function(w){return '<div class="iwarn">⚠️ '+esc(w)+'</div>';}).join('')||'<span class="muted">—</span>')+'</td></tr>';
+      });
+      h+='</tbody></table></div>';
+      el.innerHTML=head+h;
+      Array.prototype.forEach.call(el.querySelectorAll('.impcell'), function(inp){
+        inp.onchange=function(){ IMP_ROWS[+inp.dataset.i].data[inp.dataset.c]=inp.value; };
+      });
+      Array.prototype.forEach.call(el.querySelectorAll('input[data-inc]'), function(cb){
+        cb.onchange=function(){ IMP_ROWS[+cb.dataset.inc].include=cb.checked; renderImportGrid(); };
+      });
+      var a=$('impAll'), n=$('impNone'), rc=$('impRecheck');
+      if(a) a.onclick=function(){ IMP_ROWS.forEach(function(r){ if(!r.errors.length) r.include=true; }); renderImportGrid(); };
+      if(n) n.onclick=function(){ IMP_ROWS.forEach(function(r){ r.include=false; }); renderImportGrid(); };
+      if(rc) rc.onclick=impRecheck;
+      var okCount=chosen.length;
+      $('save').disabled = okCount===0;
+      $('save').textContent = okCount? ('Import '+okCount+' piece'+(okCount===1?'':'s')) : 'Import';
+      if(okCount) setImp(okCount+' ready to import'+(blocked?' · '+blocked+' still need fixing':'')+'.','muted');
+      else setImp(blocked? 'Fix the red issues, then tick the rows.' : 'Tick the rows you want to import.','muted');
+    }
+    $('save').onclick=async function(){
+      const chosen=IMP_ROWS.filter(function(r){ return r.include && !r.errors.length; });
+      if(!chosen.length){ setImp('Nothing ticked to import.','err'); return; }
+      $('save').disabled=true; $('validate').disabled=true; setImp('Importing '+chosen.length+'…','muted');
+      const data=await call('importBatch',{tsv:impTsvFrom(chosen)}); $('validate').disabled=false;
+      if(!data.ok){ $('save').disabled=false; setImp(data.error,'err'); return; }
+      setImp(TT('Saved ')+data.result.total+TT(' row(s).'),'ok');
+      IMP_ROWS=[]; $('report').innerHTML=''; $('tsv').value=''; $('save').textContent='Import'; loadRows();
+    };
     function setImp(m,c){ $('impStatus').className='pstatus '+(c||'muted'); $('impStatus').textContent=m; }
     function setPStatus(m,c){ $('pStatus').className='pstatus '+(c||'muted'); $('pStatus').textContent=m; }
 
