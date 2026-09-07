@@ -1275,6 +1275,8 @@
       rows.forEach(function(r){
         const notReady=!isReadyStage(r['Stage']); if(notReady) urgent++;
         const tr=document.createElement('tr'); if(notReady) tr.className='notready';
+        if(r['Copy Link']) tr.className=(tr.className?tr.className+' ':'')+'clickable';
+        tr.title=r['Copy Link']?'Open copy page':'No copy page yet';
         tr.innerHTML='<td>'+esc(r['Piece ID'])+viralMark(r)+(notReady?'<span class="urg">URGENT</span>':'')+collabTag(r)+'</td>'+
           '<td>'+clientChip(r['Client'])+'</td><td>'+fmtChip(r['Format'])+'</td>'+
           '<td class="cellbtn platcell">'+platLabel(r['PlatformList'],r['Client'])+'</td>'+
@@ -1288,9 +1290,11 @@
           const res=await savePiece(r,{ 'Stage':sel.value }); sel.disabled=false;
           if(res.ok){ renderTodayPosts(); renderPipe(); renderToday(); }
         };
+        sel.onclick=function(e){ e.stopPropagation(); };
         tr.querySelector('.tpstagecell').appendChild(sel);
-        tr.querySelector('.platcell').onclick=function(){ openPlatformEditor(r); };
-        tr.querySelector('.tpdate').onclick=function(){ openDateEditor(r); };
+        tr.querySelector('.platcell').onclick=function(e){ e.stopPropagation(); openPlatformEditor(r); };
+        tr.querySelector('.tpdate').onclick=function(e){ e.stopPropagation(); openDateEditor(r); };
+        tr.onclick=function(){ if(r['Copy Link']) window.open(r['Copy Link'],'_blank','noopener'); };
         tb.appendChild(tr);
       });
       $('tpCount').textContent=rows.length+TT(' post(s) today')+(urgent?(' · '+urgent+TT(' not ready')):'');
