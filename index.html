@@ -109,6 +109,19 @@
     .bulkbar #bulkCount { font-weight:600; }
     .selcol { width:34px; } .selcell { width:34px; text-align:center; }
     .yeargrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:16px; }
+    .calgrid { display:grid; grid-template-columns:repeat(7,1fr); gap:6px; }
+    .calgrid.week .calcell { min-height:260px; }
+    .calhead { font-size:11px; color:var(--ink-soft); text-align:center; padding-bottom:6px; font-weight:600; letter-spacing:.02em; }
+    .calcell { border:1px solid var(--line); border-radius:10px; padding:7px; min-height:106px; background:#fff; display:flex; flex-direction:column; gap:4px; }
+    .calcell.off { background:#f6f5f2; }
+    .calcell.pad { visibility:hidden; border:none; }
+    .calcell .calnum { font-size:11px; color:var(--ink-soft); display:flex; justify-content:space-between; align-items:center; margin-bottom:1px; }
+    .calcell .calnum.today { color:var(--brand); font-weight:700; }
+    .calcard { font-size:10px; padding:3px 6px; border-radius:6px; background:#eef1ec; color:#3a423a; cursor:pointer;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:flex; align-items:center; gap:4px; }
+    .calcard:hover { background:#e2e6df; }
+    .calcard .dot { width:6px; height:6px; border-radius:50%; flex:none; }
+    .calmore { font-size:10px; color:var(--ink-soft); cursor:pointer; text-decoration:underline; background:none; border:none; padding:2px 2px 0; text-align:left; }
     .mon { border:1px solid var(--line); border-radius:11px; padding:10px 11px 12px; }
     .mon h4 { margin:0 0 8px; font-size:13px; font-weight:600; display:flex; justify-content:space-between; align-items:center; }
     .mon h4 .offn { font-size:11px; color:#8a5a00; font-weight:500; }
@@ -459,7 +472,7 @@
           <label class="inline">Client
             <select id="clientFilter"><option value="">All</option><option>Ice</option><option>Lynn</option><option>Melissa</option><option>SRU</option><option>Dianna</option></select>
           </label>
-          <label class="inline">View <span class="seg"><button id="viewTable" class="on">Table</button><button id="viewBoard">Board</button></span></label>
+          <label class="inline">View <span class="seg"><button id="viewTable" class="on">Table</button><button id="viewBoard">Board</button><button id="viewCalendar">Calendar</button></span></label>
           <button id="refresh" class="small">Refresh</button>
           <label class="inline"><input type="checkbox" id="viralOnly"> ★ Viral only</label>
           <label class="inline"><input type="checkbox" id="needsOnly"> ⚠ Needs info <span id="needsCount" class="muted"></span></label>
@@ -473,6 +486,24 @@
           <table><thead><tr><th class="selcol"><input type="checkbox" id="pipeAll" title="Select all on this page"></th><th>Piece ID</th><th>Client</th><th>Format</th><th>Platform</th><th>Stage</th><th>On Track</th><th>Date</th><th>Copy</th></tr></thead><tbody id="pipeBody"></tbody></table>
         </div><div id="pipePager" class="ppage" style="margin-top:12px"></div></div>
         <div id="boardView" class="board hidden"></div>
+        <div id="calendarView" class="hidden">
+          <div class="controls" style="margin-top:2px">
+            <span class="seg"><button id="calMonth" class="on">Month</button><button id="calWeek">Week</button></span>
+            <button class="small" id="calPrev">\u2190</button>
+            <strong id="calLabel" style="min-width:150px;text-align:center;display:inline-block"></strong>
+            <button class="small" id="calNext">\u2192</button>
+            <button class="small" id="calToday">Today</button>
+            <span class="pstatus muted">Shows what's due, by Ready By \u2014 not the publish date. Moves automatically when a day off changes.</span>
+          </div>
+          <div class="surface" style="padding:14px;margin-top:12px"><div id="calGrid" class="calgrid"></div></div>
+          <div id="calDayPanel" class="hidden" style="margin-top:16px">
+            <div class="head"><div><h3 id="calDayTitle" style="margin:0"></h3><p class="sub">Everything due this day, worst first.</p></div>
+              <button class="small ghost" id="calDayClose">Close</button></div>
+            <div class="surface" style="margin-top:8px"><div class="tablewrap">
+              <table><thead><tr><th>Piece ID</th><th>Client</th><th>Format</th><th>Platform</th><th>Stage</th><th>On Track</th><th>Posting dates</th><th>Copy</th></tr></thead><tbody id="calDayBody"></tbody></table>
+            </div></div>
+          </div>
+        </div>
         <div id="parkedArea" class="parked"></div>
       </section>
 
@@ -1113,6 +1144,7 @@
     $('clientFilter').onchange = function(){ PREFS.client=$('clientFilter').value; savePrefs(); PIPE_PAGE=0; renderPipe(); renderToday(); };
     $('viewTable').onclick=function(){ setView('table'); };
     $('viewBoard').onclick=function(){ setView('board'); };
+    $('viewCalendar').onclick=function(){ setView('calendar'); };
     function applyPipePrefs(){ $('clientFilter').value=PREFS.client||''; setView(PREFS.view||'table'); syncRoleSelects(); }
     function normRole(r){ return (r==='designer'||r==='editor')?r:'all'; }
     function syncRoleSelects(){ const v=normRole(PREFS.role); if($('roleView')) $('roleView').value=v; if($('todayRole')) $('todayRole').value=v; }
@@ -1184,8 +1216,9 @@
     })();
 
     function setView(v){ PREFS.view=v; savePrefs();
-      $('viewTable').classList.toggle('on',v==='table'); $('viewBoard').classList.toggle('on',v==='board');
-      $('tableView').classList.toggle('hidden',v!=='table'); $('boardView').classList.toggle('hidden',v!=='board'); }
+      $('viewTable').classList.toggle('on',v==='table'); $('viewBoard').classList.toggle('on',v==='board'); $('viewCalendar').classList.toggle('on',v==='calendar');
+      $('tableView').classList.toggle('hidden',v!=='table'); $('boardView').classList.toggle('hidden',v!=='board'); $('calendarView').classList.toggle('hidden',v!=='calendar');
+      if(v==='calendar') renderCalendar(); }
 
     async function loadRows(){
       if(!allRows.length) $('pipeCount').textContent='Loading…';
@@ -1260,7 +1293,104 @@
         bv.appendChild(col);
       });
       if(!bv.children.length) bv.innerHTML='<div class="empty">Nothing in the active pipeline.</div>';
+      renderCalendar();
     }
+
+    // ── Pipeline · Calendar view ──
+    // Plots each active piece on its Ready By day (the production deadline), never Publish Date —
+    // this is "what the team needs to do", not the posting schedule. Because Ready By is computed
+    // live from the working calendar, a piece's cell moves on its own the moment a day off changes;
+    // nothing here needs to be recalculated or re-saved by hand.
+    let CAL_MODE='month', CAL_CURSOR=new Date();
+    function roleLongName(pr){ return pr==='designer'?'Graphic Designer':(pr==='editor'?'Video Editor':null); }
+    function otDotColor(v){ v=v||''; if(v.indexOf('🟢')===0) return '#2f7a4c'; if(v.indexOf('🟠')===0) return '#9e5a2c';
+      if(v.indexOf('🔴')===0||v.indexOf('⛔')===0) return '#a24a52'; return '#9aa19a'; }
+    function calBucket(){
+      const rows=filtered().filter(function(r){ return PARKED.indexOf(r['Stage'])===-1 && !/^10 Published/.test(r['Stage']||''); });
+      const byDay={};
+      rows.forEach(function(r){ const d=readyByFor(r['Publish Date'], r['Format']); if(!d) return; (byDay[d]=byDay[d]||[]).push(r); });
+      Object.keys(byDay).forEach(function(k){
+        byDay[k].sort(function(a,b){ const d=otRank(a['On Track'])-otRank(b['On Track']); if(d) return d;
+          const da=daysTo(a['Publish Date']), db=daysTo(b['Publish Date']);
+          return (da===null?9999:da)-(db===null?9999:db); });
+      });
+      return byDay;
+    }
+    function calCellHtml(iso, inMonth, byDay, cap){
+      const list=byDay[iso]||[], role=roleLongName(normRole(PREFS.role));
+      const off=isDayOff(iso, role), isToday=iso===todayISO();
+      const dayNum=(new Date(iso+'T00:00:00')).getDate();
+      var cls='calcell'+(off?' off':'')+(inMonth===false?' pad':'');
+      var html='<div class="'+cls+'" data-d="'+iso+'"><div class="calnum'+(isToday?' today':'')+'"><span>'+dayNum+'</span></div>';
+      list.slice(0,cap).forEach(function(r){
+        html+='<div class="calcard" data-id="'+esc(r['Piece ID'])+'" title="'+esc(r['Piece ID']+' · '+(r['Title']||''))+'">'+
+          '<span class="dot" style="background:'+otDotColor(r['On Track'])+'"></span>'+esc(r['Piece ID'])+'</div>';
+      });
+      if(list.length>cap) html+='<button class="calmore" data-d="'+iso+'">+'+(list.length-cap)+' more</button>';
+      html+='</div>';
+      return html;
+    }
+    function calMonthHtml(byDay){
+      const y=CAL_CURSOR.getFullYear(), m=CAL_CURSOR.getMonth();
+      const first=new Date(y,m,1), days=new Date(y,m+1,0).getDate();
+      var html='';
+      ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach(function(d){ html+='<div class="calhead">'+d+'</div>'; });
+      for(var p=0;p<first.getDay();p++) html+='<div class="calcell pad"></div>';
+      for(var d=1;d<=days;d++){ html+=calCellHtml(isoOf(new Date(y,m,d)), true, byDay, 3); }
+      $('calLabel').textContent=CAL_CURSOR.toLocaleDateString('en-GB',{month:'long',year:'numeric'});
+      return html;
+    }
+    function calWeekHtml(byDay){
+      const d0=new Date(CAL_CURSOR); d0.setDate(d0.getDate()-d0.getDay());
+      var html=''; ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach(function(d){ html+='<div class="calhead">'+d+'</div>'; });
+      for(var i=0;i<7;i++){ const dt=new Date(d0); dt.setDate(d0.getDate()+i); html+=calCellHtml(isoOf(dt), true, byDay, 8); }
+      const d6=new Date(d0); d6.setDate(d0.getDate()+6);
+      $('calLabel').textContent=d0.toLocaleDateString('en-GB',{day:'numeric',month:'short'})+' \u2013 '+d6.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+      return html;
+    }
+    function renderCalendar(){
+      const host=$('calGrid'); if(!host) return;
+      const byDay=calBucket();
+      host.className='calgrid'+(CAL_MODE==='week'?' week':'');
+      host.innerHTML = CAL_MODE==='week' ? calWeekHtml(byDay) : calMonthHtml(byDay);
+      Array.prototype.forEach.call(host.querySelectorAll('.calcard'), function(el){
+        el.onclick=function(){ const r=allRows.filter(function(x){ return x['Piece ID']===el.dataset.id; })[0]; if(r) openPanel(r); };
+      });
+      Array.prototype.forEach.call(host.querySelectorAll('.calmore'), function(el){
+        el.onclick=function(){ openCalDay(el.dataset.d, byDay[el.dataset.d]||[]); };
+      });
+      Array.prototype.forEach.call(host.querySelectorAll('.calnum'), function(el){
+        el.style.cursor='pointer';
+        el.onclick=function(){ const d=el.closest('.calcell').dataset.d; openCalDay(d, byDay[d]||[]); };
+      });
+    }
+    function openCalDay(iso, rows){
+      const panel=$('calDayPanel'); if(!panel) return;
+      panel.classList.remove('hidden');
+      $('calDayTitle').textContent=niceDate(iso);
+      const tb=$('calDayBody'); tb.innerHTML='';
+      if(!rows.length){ tb.innerHTML='<tr><td colspan="8"><div class="empty">Nothing due this day.</div></td></tr>'; }
+      rows.forEach(function(r){
+        const tr=document.createElement('tr'); tr.className='clickable'; tr.onclick=function(){ openPanel(r); };
+        tr.innerHTML='<td>'+esc(r['Piece ID'])+'<div class="rowtitle">'+esc(r['Title']||'')+'</div>'+collabTag(r)+infoMark(r)+'</td><td>'+clientChip(r['Client'])+'</td><td>'+fmtChip(r['Format'])+'</td>'+
+          '<td>'+platLabel(r['PlatformList'],r['Client'])+'</td>'+
+          '<td class="cellbtn stagecell">'+stagePill(r['Stage'])+'</td>'+
+          '<td>'+onTrack(r['On Track'])+'</td><td class="cellbtn datecell">'+platDates(r)+'</td><td>'+copyLink(r['Copy Link'])+'</td>';
+        tr.querySelector('.datecell').onclick=function(e){ e.stopPropagation(); openDateEditor(r); };
+        tr.querySelector('.stagecell').onclick=function(e){ e.stopPropagation(); openStageEditor(r, tr.querySelector('.stagecell')); };
+        tb.appendChild(tr);
+      });
+      panel.scrollIntoView({behavior:'smooth',block:'nearest'});
+    }
+    (function(){
+      var mb=$('calMonth'), wb=$('calWeek'), pv=$('calPrev'), nx=$('calNext'), td=$('calToday'), cl=$('calDayClose');
+      if(mb) mb.onclick=function(){ CAL_MODE='month'; mb.classList.add('on'); if(wb) wb.classList.remove('on'); renderCalendar(); };
+      if(wb) wb.onclick=function(){ CAL_MODE='week'; wb.classList.add('on'); if(mb) mb.classList.remove('on'); renderCalendar(); };
+      if(pv) pv.onclick=function(){ CAL_CURSOR=new Date(CAL_CURSOR); if(CAL_MODE==='week') CAL_CURSOR.setDate(CAL_CURSOR.getDate()-7); else CAL_CURSOR.setMonth(CAL_CURSOR.getMonth()-1); renderCalendar(); };
+      if(nx) nx.onclick=function(){ CAL_CURSOR=new Date(CAL_CURSOR); if(CAL_MODE==='week') CAL_CURSOR.setDate(CAL_CURSOR.getDate()+7); else CAL_CURSOR.setMonth(CAL_CURSOR.getMonth()+1); renderCalendar(); };
+      if(td) td.onclick=function(){ CAL_CURSOR=new Date(); renderCalendar(); };
+      if(cl) cl.onclick=function(){ $('calDayPanel').classList.add('hidden'); };
+    })();
 
     function renderTodayPosts(){
       const iso=todayISO();
