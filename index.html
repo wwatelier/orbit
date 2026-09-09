@@ -133,9 +133,19 @@
     .calcell.collabday::after { content:''; position:absolute; }
     .calcell { position:relative; }
     .calcell .collabmark { position:absolute; top:6px; right:6px; width:7px; height:7px; border-radius:50%; background:#b8935a; }
-    .calcard.dragging { opacity:.4; }
+    .calcard.dragging { opacity:.35; }
     .calcard.pd-drag { touch-action:none; }
-    .calcell.dragover { outline:2px dashed var(--brand); outline-offset:-2px; }
+    .calcell.dragover { box-shadow:inset 0 0 0 2px var(--brand); background:var(--brand-soft); }
+    .pd-ghost { position:fixed; z-index:200; pointer-events:none; transform:rotate(-2deg); box-shadow:0 10px 24px rgba(20,20,15,.28);
+      border-radius:7px; opacity:.98; transition:transform .06s linear; }
+    .pd-toast { position:fixed; z-index:201; pointer-events:auto; cursor:pointer; background:#fff; border:1px solid var(--line);
+      border-radius:10px; padding:9px 14px; font-size:12.5px; font-weight:600; color:var(--ink); box-shadow:0 8px 22px rgba(20,20,15,.16);
+      display:flex; align-items:center; gap:8px; transition:opacity .25s ease, transform .25s ease; }
+    .pd-toast .sp { width:13px; height:13px; border-radius:50%; border:2px solid var(--line); border-top-color:var(--brand); flex:none;
+      animation:pdspin .7s linear infinite; }
+    .pd-toast.ok { color:#1f6b41; border-color:#cfe3d6; background:#eef6f0; }
+    .pd-toast.err { color:#a02a2a; border-color:#e8c8c8; background:#faeeee; }
+    @keyframes pdspin { to { transform:rotate(360deg); } }
     .legend { display:flex; gap:14px; flex-wrap:wrap; font-size:12px; color:var(--ink-soft); align-items:center; }
     .legend .sw { display:inline-block; width:12px; height:12px; border-radius:3px; margin-right:5px; vertical-align:-2px; }
     .mon { border:1px solid var(--line); border-radius:11px; padding:10px 11px 12px; }
@@ -3020,8 +3030,12 @@ sched,
       panel.scrollIntoView({behavior:'smooth',block:'nearest'});
     }
     // Pointer-events drag: works identically for mouse, touch, and pen — no separate mobile path.
+    // A floating ghost of the exact card follows the cursor, so with several pieces on one day
+    // there's never any doubt about which one is being moved — the destination cell just gets a
+    // soft inset highlight, never a hard box that could read as "the whole day is selected".
     function wirePdDrag(host){
-      var dragEl=null, dragId=null, fromCell=null, moved=false, startX=0, startY=0;
+      var dragEl=null, dragId=null, fromCell=null, moved=false, startX=0, startY=0, ghost=null;
+      function killGhost(){ if(ghost && ghost.parentNode) ghost.parentNode.removeChild(ghost); ghost=null; }
       host.onpointerdown=function(e){
         var card=e.target.closest('.pd-drag'); if(!card) return;
         dragEl=card; dragId=card.dataset.id; fromCell=card.closest('.calcell');
@@ -3031,8 +3045,15 @@ sched,
       host.onpointermove=function(e){
         if(!dragEl) return;
         var dx=e.clientX-startX, dy=e.clientY-startY;
-        if(!moved && Math.hypot(dx,dy)>8){ moved=true; dragEl.classList.add('dragging'); }
+        if(!moved && Math.hypot(dx,dy)>8){
+          moved=true; dragEl.classList.add('dragging');
+          var r=dragEl.getBoundingClientRect();
+          ghost=dragEl.cloneNode(true); ghost.className='calcard pd-ghost';
+          ghost.style.width=r.width+'px';
+          document.body.appendChild(ghost);
+        }
         if(moved){
+          if(ghost){ ghost.style.left=(e.clientX+14)+'px'; ghost.style.top=(e.clientY+10)+'px'; }
           var el=document.elementFromPoint(e.clientX, e.clientY);
           var cell=el&&el.closest?el.closest('.calcell:not(.pad)'):null;
           Array.prototype.forEach.call(document.querySelectorAll('.calcell.dragover'), function(c){ c.classList.remove('dragover'); });
@@ -3041,26 +3062,46 @@ sched,
       };
       host.onpointerup=function(e){
         if(!dragEl) return;
-        dragEl.classList.remove('dragging');
+        dragEl.classList.remove('dragging'); killGhost();
         Array.prototype.forEach.call(document.querySelectorAll('.calcell.dragover'), function(c){ c.classList.remove('dragover'); });
         if(moved){
           dragEl.dataset.dragged='1';
           var el=document.elementFromPoint(e.clientX, e.clientY);
           var cell=el&&el.closest?el.closest('.calcell:not(.pad)'):null;
-          if(cell && cell.dataset.d && cell!==fromCell) pdHandleDrop(dragId, cell.dataset.d);
+          if(cell && cell.dataset.d && cell!==fromCell) pdHandleDrop(dragId, cell.dataset.d, e.clientX, e.clientY);
         }
         dragEl=null; dragId=null; fromCell=null; moved=false;
       };
-      host.onpointercancel=function(){ if(dragEl) dragEl.classList.remove('dragging'); dragEl=null; moved=false; };
+      host.onpointercancel=function(){ if(dragEl) dragEl.classList.remove('dragging'); killGhost(); dragEl=null; moved=false; };
     }
-    async function pdHandleDrop(pieceId, newDate){
-      const r=allRows.filter(function(x){ return x['Piece ID']===pieceId; })[0]; if(!r) return;
+    // A small pill right at the drop point: spinner while saving, then a clear success or error
+    // state that either fades on its own or is dismissed with a click — never silent, never stuck.
+    function pdToast(x, y, html, cls){
+      var t=document.createElement('div'); t.className='pd-toast'+(cls?' '+cls:'');
+      t.style.left=Math.max(8, Math.min(window.innerWidth-260, x-20))+'px';
+      t.style.top=(y+16)+'px';
+      t.innerHTML=html;
+      t.onclick=function(){ t.style.opacity='0'; setTimeout(function(){ if(t.parentNode) t.parentNode.removeChild(t); }, 250); };
+      document.body.appendChild(t);
+      return t;
+    }
+    async function pdHandleDrop(pieceId, newDate, x, y){
+      const r=allRows.filter(function(x2){ return x2['Piece ID']===pieceId; })[0]; if(!r) return;
+      var toast=pdToast(x, y, '<span class="sp"></span>'+TT('Saving\u2026'));
       var res=await assignOne(pieceId, r.row, newDate, false);
       if(!res.ok && res.warn){
-        if(!confirm(humanAssignErr(res.error, newDate, res.clashAccount)+' '+TT('Move it anyway?'))) return;
+        toast.style.opacity='0'; setTimeout(function(){ if(toast.parentNode) toast.parentNode.removeChild(toast); }, 150);
+        if(!confirm(humanAssignErr(res.error, newDate, res.clashAccount)+' '+TT('Move it anyway?'))){ return; }
+        toast=pdToast(x, y, '<span class="sp"></span>'+TT('Saving\u2026'));
         res=await assignOne(pieceId, r.row, newDate, true);
       }
-      if(!res.ok){ alert(TT('Could not move it: ')+(res.error||TT('unknown error'))); return; }
+      if(!res.ok){
+        toast.className='pd-toast err'; toast.innerHTML='\u26a0 '+TT('Could not move it: ')+(res.error||TT('unknown error'));
+        setTimeout(function(){ if(toast.parentNode){ toast.style.opacity='0'; setTimeout(function(){ if(toast.parentNode) toast.parentNode.removeChild(toast); }, 250); } }, 3200);
+        return;
+      }
+      toast.className='pd-toast ok'; toast.innerHTML='\u2713 '+esc(pieceId)+' \u2192 '+niceDate(newDate);
+      setTimeout(function(){ if(toast.parentNode){ toast.style.opacity='0'; setTimeout(function(){ if(toast.parentNode) toast.parentNode.removeChild(toast); }, 250); } }, 2200);
       renderPdCalendar(); renderPdDated(); renderPipe(); renderToday();
     }
     function setPdView(v){
