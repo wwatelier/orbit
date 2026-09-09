@@ -1630,10 +1630,14 @@
       if(v.indexOf('🟠')===0) return 2; return 3; }
     function renderToday(){
       const pool=filtered().filter(function(r){
-        const ot=r['On Track']||'', st=r['Stage']||'';
+        const st=r['Stage']||'';
+        // Parked work (On Hold, Unselected, Rolled Over) already has its own section elsewhere —
+        // it shouldn't also show up here as something to act on. Published is done, not pending.
+        if(PARKED.indexOf(st)!==-1 || /^10 Published/.test(st)) return false;
+        const ot=r['On Track']||'';
         const clientCourt=/Required Client Input|Ready for Review|Waiting for Voiceover/.test(st);
         const behind=ot.indexOf('🔴')===0||ot.indexOf('🟠')===0||ot.indexOf('⛔')===0;
-        const soon=daysTo(r['Publish Date'])!==null && daysTo(r['Publish Date'])<=3 && st.indexOf('10 Published')!==0;
+        const soon=daysTo(r['Publish Date'])!==null && daysTo(r['Publish Date'])<=3;
         return clientCourt||behind||soon;
       });
       // Waiting on someone else: the ball is in the client's court — chasing them is the only action.
