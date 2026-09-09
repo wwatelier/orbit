@@ -233,6 +233,7 @@
       .hero { padding:18px 16px; }
       .hero-h { font-size:20px; }
       .tablewrap table { min-width:640px; }
+      .tablewrap .calgrid { min-width:910px; }
       .modalcard { width:min(94vw,420px); max-height:88vh; overflow-y:auto; }
       .peboxes { grid-template-columns:1fr; }
       .obgrid { grid-template-columns:1fr; }
@@ -525,7 +526,7 @@
             <span class="pstatus muted" id="calNote"></span>
           </div>
           <div class="pstatus" id="calSummary" style="margin-top:6px"></div>
-          <div class="surface" style="padding:14px;margin-top:12px"><div id="calGrid" class="calgrid"></div></div>
+          <div class="surface" style="padding:14px;margin-top:12px"><div class="tablewrap"><div id="calGrid" class="calgrid"></div></div></div>
           <div id="calDayPanel" class="hidden" style="margin-top:16px">
             <div class="head"><div><h3 id="calDayTitle" style="margin:0"></h3><p class="sub">Everything due this day, worst first.</p></div>
               <button class="small ghost" id="calDayClose">Close</button></div>
@@ -592,7 +593,7 @@
             <span class="pstatus muted" id="pdCalNote"></span>
           </div>
           <div class="legend" id="pdCalLegend" style="margin:8px 0"></div>
-          <div class="surface" style="padding:14px;margin-top:4px"><div id="pdCalGrid" class="calgrid"></div></div>
+          <div class="surface" style="padding:14px;margin-top:4px"><div class="tablewrap"><div id="pdCalGrid" class="calgrid"></div></div></div>
           <div id="pdCalDayPanel" class="hidden" style="margin-top:16px">
             <div class="head"><div><h3 id="pdCalDayTitle" style="margin:0"></h3><p class="sub">Everything publishing this day, across every client shown.</p></div>
               <button class="small ghost" id="pdCalDayClose">Close</button></div>
