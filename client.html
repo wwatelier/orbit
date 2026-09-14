@@ -170,9 +170,10 @@ window.__orbitBoot = (function(){
   /* ---------- tap-to-explain popover on status labels ---------- */
   .pill{cursor:pointer}
   .legend .pill{cursor:default}
-  #labelPop{position:fixed;z-index:60;max-width:260px;background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:13px;line-height:1.5;box-shadow:0 8px 24px rgba(0,0,0,.12)}
+  #labelPop{position:fixed;z-index:60;max-width:300px;background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:13px;line-height:1.5;box-shadow:0 8px 24px rgba(0,0,0,.12)}
   #labelPop[hidden]{display:none}
   #labelPop .lphead{font-weight:700;margin-bottom:3px}
+  #labelPop .odfig{color:#C0392B;font-weight:700}
 
   /* ---------- week strip (one day per row) ---------- */
   .week{display:flex;flex-direction:column;gap:6px}
@@ -529,6 +530,38 @@ function toneFor(row){ return classify(row.stage); }
 function isOverdue(row){
   return classify(row.stage).group === "waiting" && /Behind/i.test(row.onTrack||"");
 }
+/* One place builds the Overdue pill so the Waiting list and every table match, and each
+   carries the piece's dates + stage so the tap-card can explain THIS piece specifically. */
+function overduePill(r){
+  return '<span class="pill overdue" data-pub="'+esc(r.publishDate||"")+'" data-ready="'+esc(r.readyBy||"")+'" data-stage="'+esc(r.stage||"")+'">Overdue</span>';
+}
+function owedForStage(s){
+  s=s||"";
+  if(/^🚩/.test(s)||/Required Client Input/i.test(s))        return "your input";
+  if(/^2\b/.test(s)||/Copywriting Ready for Review/i.test(s)) return "your copy approval";
+  if(/^4\b/.test(s)||/Waiting for Voiceover/i.test(s))        return "your voiceover or video";
+  if(/^7\b/.test(s)||/Content Ready for Review/i.test(s))     return "your final approval";
+  return "your input";
+}
+function inDays(n){ if(n===0) return "today"; if(n===1) return "tomorrow"; if(n>0) return "in "+n+" days"; var a=Math.abs(n); return a+" day"+(a===1?"":"s")+" ago"; }
+/* Per-piece Overdue explanation. Figures are wrapped in .odfig (soft-red bold).
+   The count reads as time TO the posting date; the reason is the production lead time,
+   phrased client-centrically around what this stage still owes. */
+function overdueBody(pill){
+  var pub=pill.getAttribute("data-pub")||"", ready=pill.getAttribute("data-ready")||"", stage=pill.getAttribute("data-stage")||"";
+  var pd=parseDate(pub), rd=parseDate(ready), owed=owedForStage(stage);
+  function fig(t){ return '<span class="odfig">'+esc(t)+'</span>'; }
+  if(!pd) return "This is still waiting on "+esc(owed)+", and the time to produce it is getting short. A quick reply keeps it on track.";
+  if(daysAway(pd)<0) return "Was due "+fig(fmtShort(pd))+" \u00b7 "+fig(inDays(daysAway(pd)))+". This still needs you and its posting day has passed. A quick action lets us get it out.";
+  var head="Posting "+fig(fmtShort(pd))+" \u00b7 "+fig(inDays(daysAway(pd)))+". ";
+  if(rd){
+    var nr=daysAway(rd), s="To keep to that date, we needed "+esc(owed)+" by about "+fig(fmtShort(rd));
+    s += (nr<0) ? (" \u2014 that was "+fig(inDays(nr))+" \u2014 so the remaining production steps are getting tight.")
+                : (", so there is time for the remaining production steps.");
+    return head+s+" A quick reply keeps it on track.";
+  }
+  return head+"It is still waiting on "+esc(owed)+", and the time to produce it before that date is getting short. A quick reply keeps it on track.";
+}
 /* Pulled slot = a committed day whose piece was moved to Unselected but kept its Publish Date.
    Shown as a neutral "No post" marker on that day, only within the near-term window so far-future
    batch trims don't read as gaps. Unselected only (not Rolled Over / On Hold). Display-only —
@@ -693,7 +726,7 @@ function renderWaiting(){
       + '<span class="id">'+esc(r.pieceId)+'</span>'
       + '<span class="title">'+esc(r.title)+'</span>'
       + '<span class="pill '+c.tone+'">'+esc(c.label)+'</span>'
-      + (od?'<span class="pill overdue">Overdue</span>':'')+'</div>'
+      + (od?overduePill(r):'')+'</div>'
       + '<div class="meta"><span class="due '+soon+'">Posting '+fmtShort(parseDate(r.publishDate))
       + (n!==null?" ("+awayText(n)+")":"")+'</span>'+link+'</div></div>';
   }).join("");
@@ -738,7 +771,7 @@ function renderWeek(){
     + '</tbody></table></div>';
 }
 
-function pillFor(r){ const c = toneFor(r); return '<span class="pill '+c.tone+'">'+esc(c.label)+'</span>' + (isOverdue(r)?'<span class="pill overdue">Overdue</span>':''); }
+function pillFor(r){ const c = toneFor(r); return '<span class="pill '+c.tone+'">'+esc(c.label)+'</span>' + (isOverdue(r)?overduePill(r):''); }
 
 function renderTable(){
   const rows = STATE.rows.filter(r=>!isPublished(r)&&!isParkedRow(r)).sort((a,b)=> (parseDate(a.publishDate)||8e15) - (parseDate(b.publishDate)||8e15));
@@ -960,9 +993,13 @@ function orbitStart(){
     var label=(pill.textContent||'').trim(), desc=helpMap[label];
     if(!desc){ hide(); return; }
     ensurePop();
-    pop.innerHTML='<div class="lphead"></div><div class="lpbody"></div>';
-    pop.querySelector('.lphead').textContent=label;
-    pop.querySelector('.lpbody').textContent=desc;
+    if(label==='Overdue'){
+      pop.innerHTML='<div class="lphead">Overdue</div><div class="lpbody">'+overdueBody(pill)+'</div>';
+    } else {
+      pop.innerHTML='<div class="lphead"></div><div class="lpbody"></div>';
+      pop.querySelector('.lphead').textContent=label;
+      pop.querySelector('.lpbody').textContent=desc;
+    }
     pop.hidden=false;
     var r=pill.getBoundingClientRect(), pw=pop.offsetWidth, ph=pop.offsetHeight;
     var left=Math.min(Math.max(8,r.left), window.innerWidth-pw-8);
@@ -1035,7 +1072,7 @@ function startDemo(){
 
   render({ client:"Ice", rows:[
     { pieceId:"C12.1",  title:"\u0e17\u0e33\u0e44\u0e21\u0e19\u0e31\u0e01\u0e25\u0e07\u0e17\u0e38\u0e19\u0e44\u0e17\u0e22\u0e21\u0e2d\u0e07\u0e02\u0e49\u0e32\u0e21 Singapore REITs / Why Thai investors overlook Singapore REITs", format:"Carousel", platform:"IG", publishDate:wk(0), stage:"10 Published",                    copyLink:"https://notion.so/demo1" },
-    { pieceId:"VO12.2", title:"\u0e04\u0e27\u0e32\u0e21\u0e40\u0e02\u0e49\u0e32\u0e43\u0e08\u0e1c\u0e34\u0e14\u0e40\u0e23\u0e37\u0e48\u0e2d\u0e07 CPF \u0e17\u0e35\u0e48\u0e01\u0e34\u0e19\u0e1c\u0e25\u0e15\u0e2d\u0e1a\u0e41\u0e17\u0e19\u0e04\u0e38\u0e13 / The CPF misunderstanding costing you returns", format:"VO Reels", platform:"IG Reels", publishDate:wk(1), stage:"7 Content Ready for Review", onTrack:"\ud83d\udd34 Behind", copyLink:"https://notion.so/demo2" },
+    { pieceId:"VO12.2", title:"\u0e04\u0e27\u0e32\u0e21\u0e40\u0e02\u0e49\u0e32\u0e43\u0e08\u0e1c\u0e34\u0e14\u0e40\u0e23\u0e37\u0e48\u0e2d\u0e07 CPF \u0e17\u0e35\u0e48\u0e01\u0e34\u0e19\u0e1c\u0e25\u0e15\u0e2d\u0e1a\u0e41\u0e17\u0e19\u0e04\u0e38\u0e13 / The CPF misunderstanding costing you returns", format:"VO Reels", platform:"IG Reels", publishDate:wk(1), stage:"7 Content Ready for Review", onTrack:"\ud83d\udd34 Behind", readyBy: off(-5), copyLink:"https://notion.so/demo2" },
     { pieceId:"C12.3",  title:"3 \u0e04\u0e48\u0e32\u0e18\u0e23\u0e23\u0e21\u0e40\u0e19\u0e35\u0e22\u0e21\u0e17\u0e35\u0e48\u0e0b\u0e48\u0e2d\u0e19\u0e2d\u0e22\u0e39\u0e48\u0e43\u0e19\u0e01\u0e23\u0e21\u0e18\u0e23\u0e23\u0e21\u0e4c / Three fees hiding in your policy", format:"Carousel", platform:"IG", publishDate:wk(2), stage:"2 Copywriting Ready for Review",           copyLink:"https://notion.so/demo3" },
     { pieceId:"VO12.4", title:"\u0e04\u0e27\u0e32\u0e21\u0e1c\u0e34\u0e14\u0e1e\u0e25\u0e32\u0e14\u0e40\u0e23\u0e37\u0e48\u0e2d\u0e07\u0e40\u0e01\u0e29\u0e35\u0e22\u0e13\u0e17\u0e35\u0e48\u0e04\u0e19\u0e44\u0e17\u0e22\u0e2a\u0e48\u0e27\u0e19\u0e43\u0e2b\u0e0d\u0e48\u0e17\u0e33 / The retirement mistake most Thais make", format:"VO Reels", platform:"TikTok", publishDate:wk(3), stage:"5 Voiceover / Video Received", copyLink:"https://notion.so/demo4" },
     { pieceId:"C12.5",  title:"\u0e2d\u0e48\u0e32\u0e19\u0e04\u0e48\u0e32 expense ratio \u0e43\u0e2b\u0e49\u0e40\u0e1b\u0e47\u0e19\u0e43\u0e19 60 \u0e27\u0e34\u0e19\u0e32\u0e17\u0e35 / Reading an expense ratio in 60 seconds", format:"Carousel", platform:"IG", publishDate:wk(4), stage:"6 In Production",                copyLink:"https://notion.so/demo5" },
