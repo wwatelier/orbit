@@ -146,6 +146,25 @@ window.__orbitBoot = (function(){
   .wrow .meta .due.soon{color:var(--red-tx);font-weight:600}
   .allclear{border:1px solid var(--line);border-radius:var(--radius);padding:16px 16px;color:var(--text-soft);background:var(--hover)}
   .allclear b{color:var(--text);font-weight:600}
+  .wrow.overdue{border-left:3px solid var(--red-tx);padding-left:11px}
+
+  /* ---------- label legend (expandable) ---------- */
+  .legend{margin-top:14px;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg)}
+  .legend>summary{cursor:pointer;padding:12px 15px;font-weight:600;color:var(--text);list-style:none}
+  .legend>summary::-webkit-details-marker{display:none}
+  .legend>summary::before{content:"\25B8";display:inline-block;width:1.1em;color:var(--text-soft)}
+  .legend[open]>summary::before{content:"\25BE"}
+  .legend .lgbody{padding:0 15px 14px}
+  .legend h3{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--text-soft);margin:14px 0 6px}
+  .legend .lgrow{display:flex;gap:10px;align-items:baseline;padding:5px 0;font-size:14px;line-height:1.45;color:var(--text)}
+  .legend .lgrow .pill{flex:none;align-self:flex-start}
+
+  /* ---------- pulled slot ("No post" marker — neutral) ---------- */
+  .nopost{color:var(--text-soft);font-style:italic}
+  td.nopost{padding:12px 14px}
+  #today-body .nopost{border:1px dashed var(--line);border-radius:var(--radius);padding:16px 16px;background:var(--bg)}
+  .chip.nopost,.legend .lgrow .pill.nopost{background:transparent;border:1px dashed var(--line);color:var(--text-soft);font-style:italic}
+  .legend .lgnote{margin:2px 0 8px;color:var(--text-soft);font-size:13px;line-height:1.5}
 
   /* ---------- week strip (one day per row) ---------- */
   .week{display:flex;flex-direction:column;gap:6px}
@@ -390,6 +409,25 @@ table td:first-child{white-space:nowrap}
     <section class="sec" id="sec-waiting">
       <h2 class="sh">Waiting on you <span class="count" id="waiting-count"></span></h2>
       <div id="waiting-body"></div>
+      <details class="legend">
+        <summary>What these labels and colours mean</summary>
+        <div class="lgbody">
+          <p class="lgnote">These labels just show where each piece is in the process. They're prompts, not complaints. The first group is where a quick action from you keeps things moving; everything below is for information only. A red label only means a planned date has passed &mdash; acting on it clears the colour.</p>
+          <h3>Needs you</h3>
+          <div class="lgrow"><span class="pill pink">Your input needed</span><span>We need a decision or some information from you before we can start.</span></div>
+          <div class="lgrow"><span class="pill yellow">Copy to review</span><span>The written caption or script is ready for you to read and approve.</span></div>
+          <div class="lgrow"><span class="pill purple">Voiceover / video needed</span><span>We need your voiceover recording or a video clip before we can build the post.</span></div>
+          <div class="lgrow"><span class="pill orange">Content to review</span><span>The finished post is ready for your final review before we schedule it.</span></div>
+          <div class="lgrow"><span class="pill red">Overdue</span><span>A piece that&rsquo;s waiting on you has passed the date we planned around. Nothing is lost &mdash; a quick reply or approval gets it moving again.</span></div>
+          <h3>For your information</h3>
+          <div class="lgrow"><span class="pill blue">In progress</span><span>Your team is working on this. Nothing needed from you.</span></div>
+          <div class="lgrow"><span class="pill green">Ready to publish</span><span>Finished and scheduled to post on its date.</span></div>
+          <div class="lgrow"><span class="pill green">Published</span><span>It's live.</span></div>
+          <div class="lgrow"><span class="pill nopost">No post</span><span>A piece planned for this day was set aside, so nothing posts that day. We show the empty day rather than quietly filling it, so your calendar stays accurate.</span></div>
+          <div class="lgrow"><span class="pill gray">Not used</span><span>Set aside for now. Still counts toward your plan.</span></div>
+          <div class="lgrow"><span class="pill gray">Rolled over</span><span>Moved to a later batch.</span></div>
+        </div>
+      </details>
     </section>
 
     <section class="sec" id="sec-all">
@@ -477,6 +515,25 @@ function atRisk(row){
   return n!==null && n>=0 && n<=2 && stageRank(row.stage) < 9;
 }
 function toneFor(row){ return classify(row.stage); }
+/* Overdue = we're waiting on the client AND the Sheet's On Track says Behind.
+   Gated on the "waiting" group so a team-court Behind (e.g. In Production) never
+   shows on the client page. Matches the word "Behind" so a glyph change can't break it. */
+function isOverdue(row){
+  return classify(row.stage).group === "waiting" && /Behind/i.test(row.onTrack||"");
+}
+/* Pulled slot = a committed day whose piece was moved to Unselected but kept its Publish Date.
+   Shown as a neutral "No post" marker on that day, only within the near-term window so far-future
+   batch trims don't read as gaps. Unselected only (not Rolled Over / On Hold). Display-only —
+   the reflow is untouched, so if other content lands on the day it shows instead of the marker. */
+var COMMIT_HORIZON = 7;
+function pulledSlot(r){
+  if(!/Unselected/i.test(r.stage||"")) return false;
+  var n = daysAway(parseDate(r.publishDate));
+  return n!==null && n<=COMMIT_HORIZON;
+}
+function pulledOn(iso){
+  return STATE.rows.some(function(r){ if(!pulledSlot(r)) return false; var d=parseDate(r.publishDate); return d && isoOf(d)===iso; });
+}
 
 /* ============================================================
    RENDER
@@ -569,7 +626,12 @@ function renderTodayPosts(){
   });
   document.getElementById("today-count").textContent=items.length||"";
   sec.classList.remove("hidden");
-  if(!items.length){ body.innerHTML='<div class="empty">Nothing posting today.</div>'; return; }
+  if(!items.length){
+    body.innerHTML = pulledOn(iso)
+      ? '<div class="nopost">No post scheduled today.</div>'
+      : '<div class="empty">Nothing posting today.</div>';
+    return;
+  }
   body.innerHTML='<div class="tablewrap"><table class="ptable"><thead><tr><th>ID</th><th>Format</th><th>Title</th><th>Posting</th><th>Status</th><th>Copy</th></tr></thead><tbody>'+items.map(r=>{
     const link=r.copyLink?'<a href="'+esc(r.copyLink)+'" target="_blank" rel="noopener">Open Copy</a>':'\u2014';
     return '<tr><td>'+esc(r.pieceId)+viralStar(r)+collabTag(r)+'</td><td>'+fmtChip(r.format)+'</td>'
@@ -602,7 +664,11 @@ function renderViral(){
 function renderWaiting(){
   const items = STATE.rows
     .filter(r => classify(r.stage).group === "waiting")
-    .sort((a,b)=> (parseDate(a.publishDate)||8e15) - (parseDate(b.publishDate)||8e15));
+    .sort((a,b)=>{
+      const ao=isOverdue(a), bo=isOverdue(b);
+      if(ao!==bo) return ao?-1:1;                       // overdue first
+      return (parseDate(a.publishDate)||8e15) - (parseDate(b.publishDate)||8e15);
+    });
   document.getElementById("waiting-count").textContent = items.length || "";
   const body = document.getElementById("waiting-body");
   if(!items.length){
@@ -612,12 +678,14 @@ function renderWaiting(){
   const rows = items.map(r=>{
     const c = classify(r.stage);
     const n = daysAway(parseDate(r.publishDate));
-    const soon = (n!==null && n<=2) ? "soon" : "";
+    const od = isOverdue(r);
+    const soon = (od || (n!==null && n<=2)) ? "soon" : "";   // reuse the red due styling for overdue
     const link = r.copyLink ? '<a href="'+esc(r.copyLink)+'" target="_blank" rel="noopener">Open Copy</a>' : "";
-    return '<div class="wrow"><div class="top">'
+    return '<div class="wrow'+(od?' overdue':'')+'"><div class="top">'
       + '<span class="id">'+esc(r.pieceId)+'</span>'
       + '<span class="title">'+esc(r.title)+'</span>'
-      + '<span class="pill '+c.tone+'">'+esc(c.label)+'</span></div>'
+      + '<span class="pill '+c.tone+'">'+esc(c.label)+'</span>'
+      + (od?'<span class="pill red">Overdue</span>':'')+'</div>'
       + '<div class="meta"><span class="due '+soon+'">Posting '+fmtShort(parseDate(r.publishDate))
       + (n!==null?" ("+awayText(n)+")":"")+'</span>'+link+'</div></div>';
   }).join("");
@@ -633,13 +701,21 @@ function renderWeek(){
   for(let i=0;i<6;i++){
     const d = new Date(mon); d.setDate(mon.getDate()+i);
     const iso = isoOf(d);
-    STATE.rows.forEach(r=>{ if(isParkedRow(r)) return; const pd=parseDate(r.publishDate); if(pd && isoOf(pd)===iso) items.push({r:r,d:d,iso:iso}); });
+    let any=false;
+    STATE.rows.forEach(r=>{ if(isParkedRow(r)) return; const pd=parseDate(r.publishDate); if(pd && isoOf(pd)===iso){ items.push({r:r,d:d,iso:iso}); any=true; } });
+    if(!any && pulledOn(iso)) items.push({pulled:true,d:d,iso:iso});
   }
   const host = document.getElementById("week");
   if(!items.length){ host.innerHTML='<div class="empty">Nothing scheduled this week.</div>'; return; }
   host.innerHTML = '<div class="tablewrap"><table class="ptable weektable"><thead><tr>'
     + '<th>Date</th><th>ID</th><th>Format</th><th>Title</th><th>Status</th><th>Copy</th></tr></thead><tbody>'
     + items.map(o=>{
+        if(o.pulled){
+          const dc = DOW[o.d.getDay()]+' '+o.d.getDate()+' '+MON[o.d.getMonth()];
+          return '<tr'+(o.iso===todayIso?' class="wtoday"':'')+'>'
+            + '<td class="wdate">'+esc(dc)+'</td>'
+            + '<td colspan="5" class="nopost">No post scheduled</td></tr>';
+        }
         const r=o.r;
         const link = r.copyLink?'<a href="'+esc(r.copyLink)+'" target="_blank" rel="noopener">Open Copy</a>':'\u2014';
         const dcell = DOW[o.d.getDay()]+' '+o.d.getDate()+' '+MON[o.d.getMonth()];
@@ -700,6 +776,8 @@ function renderCalendar(){
   const y = CAL.y, m = CAL.m;
   const byDate = {};
   STATE.rows.forEach(r=>{ if(isParkedRow(r)) return; const d=parseDate(r.publishDate); if(d){ (byDate[isoOf(d)]=byDate[isoOf(d)]||[]).push(r); } });
+  const pulledByDate = {};
+  STATE.rows.forEach(r=>{ if(!pulledSlot(r)) return; const d=parseDate(r.publishDate); if(!d) return; const k=isoOf(d); if(!byDate[k]) pulledByDate[k]=true; });
 
   const first = new Date(y,m,1);
   const start = new Date(first);
@@ -717,13 +795,14 @@ function renderCalendar(){
     const out = cd.getMonth()!==m ? " out" : "";
     const isToday = iso===todayIso ? " today" : "";
     const list = byDate[iso] || [];
-    const chips = list.map(r=>{
+    let chips = list.map(r=>{
       const c = toneFor(r);
       const label = '<span class="cnum">'+esc(r.pieceId)+'</span> '+esc(r.title);
       return r.copyLink
         ? '<a class="chip '+c.tone+'" href="'+esc(r.copyLink)+'" target="_blank" rel="noopener" title="'+esc(r.title)+'">'+label+'</a>'
         : '<span class="chip '+c.tone+'" title="'+esc(r.title)+'">'+label+'</span>';
     }).join("");
+    if(!chips && pulledByDate[iso]) chips = '<span class="chip nopost">No post</span>';
     return '<div class="cell'+out+isToday+'"><div class="dn">'+cd.getDate()+'</div>'+chips+'</div>';
   }).join("");
 
@@ -901,7 +980,7 @@ function startDemo(){
 
   render({ client:"Ice", rows:[
     { pieceId:"C12.1",  title:"\u0e17\u0e33\u0e44\u0e21\u0e19\u0e31\u0e01\u0e25\u0e07\u0e17\u0e38\u0e19\u0e44\u0e17\u0e22\u0e21\u0e2d\u0e07\u0e02\u0e49\u0e32\u0e21 Singapore REITs / Why Thai investors overlook Singapore REITs", format:"Carousel", platform:"IG", publishDate:wk(0), stage:"10 Published",                    copyLink:"https://notion.so/demo1" },
-    { pieceId:"VO12.2", title:"\u0e04\u0e27\u0e32\u0e21\u0e40\u0e02\u0e49\u0e32\u0e43\u0e08\u0e1c\u0e34\u0e14\u0e40\u0e23\u0e37\u0e48\u0e2d\u0e07 CPF \u0e17\u0e35\u0e48\u0e01\u0e34\u0e19\u0e1c\u0e25\u0e15\u0e2d\u0e1a\u0e41\u0e17\u0e19\u0e04\u0e38\u0e13 / The CPF misunderstanding costing you returns", format:"VO Reels", platform:"IG Reels", publishDate:wk(1), stage:"7 Content Ready for Review", copyLink:"https://notion.so/demo2" },
+    { pieceId:"VO12.2", title:"\u0e04\u0e27\u0e32\u0e21\u0e40\u0e02\u0e49\u0e32\u0e43\u0e08\u0e1c\u0e34\u0e14\u0e40\u0e23\u0e37\u0e48\u0e2d\u0e07 CPF \u0e17\u0e35\u0e48\u0e01\u0e34\u0e19\u0e1c\u0e25\u0e15\u0e2d\u0e1a\u0e41\u0e17\u0e19\u0e04\u0e38\u0e13 / The CPF misunderstanding costing you returns", format:"VO Reels", platform:"IG Reels", publishDate:wk(1), stage:"7 Content Ready for Review", onTrack:"\ud83d\udd34 Behind", copyLink:"https://notion.so/demo2" },
     { pieceId:"C12.3",  title:"3 \u0e04\u0e48\u0e32\u0e18\u0e23\u0e23\u0e21\u0e40\u0e19\u0e35\u0e22\u0e21\u0e17\u0e35\u0e48\u0e0b\u0e48\u0e2d\u0e19\u0e2d\u0e22\u0e39\u0e48\u0e43\u0e19\u0e01\u0e23\u0e21\u0e18\u0e23\u0e23\u0e21\u0e4c / Three fees hiding in your policy", format:"Carousel", platform:"IG", publishDate:wk(2), stage:"2 Copywriting Ready for Review",           copyLink:"https://notion.so/demo3" },
     { pieceId:"VO12.4", title:"\u0e04\u0e27\u0e32\u0e21\u0e1c\u0e34\u0e14\u0e1e\u0e25\u0e32\u0e14\u0e40\u0e23\u0e37\u0e48\u0e2d\u0e07\u0e40\u0e01\u0e29\u0e35\u0e22\u0e13\u0e17\u0e35\u0e48\u0e04\u0e19\u0e44\u0e17\u0e22\u0e2a\u0e48\u0e27\u0e19\u0e43\u0e2b\u0e0d\u0e48\u0e17\u0e33 / The retirement mistake most Thais make", format:"VO Reels", platform:"TikTok", publishDate:wk(3), stage:"5 Voiceover / Video Received", copyLink:"https://notion.so/demo4" },
     { pieceId:"C12.5",  title:"\u0e2d\u0e48\u0e32\u0e19\u0e04\u0e48\u0e32 expense ratio \u0e43\u0e2b\u0e49\u0e40\u0e1b\u0e47\u0e19\u0e43\u0e19 60 \u0e27\u0e34\u0e19\u0e32\u0e17\u0e35 / Reading an expense ratio in 60 seconds", format:"Carousel", platform:"IG", publishDate:wk(4), stage:"6 In Production",                copyLink:"https://notion.so/demo5" },
