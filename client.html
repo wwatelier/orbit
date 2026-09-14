@@ -427,7 +427,7 @@ table td:first-child{white-space:nowrap}
           <div class="lgrow" data-label="Copy to review"><span class="pill yellow">Copy to review</span><span class="lgtext">The written caption or script is ready for you to read and approve.</span></div>
           <div class="lgrow" data-label="Voiceover / video needed"><span class="pill purple">Voiceover / video needed</span><span class="lgtext">We need your voiceover recording or a video clip before we can build the post.</span></div>
           <div class="lgrow" data-label="Content to review"><span class="pill orange">Content to review</span><span class="lgtext">The finished post is ready for your final review before we schedule it.</span></div>
-          <div class="lgrow" data-label="Overdue"><span class="pill overdue">Overdue</span><span class="lgtext">A piece that&rsquo;s waiting on you has passed the date we planned around. Nothing is lost. A quick reply or approval gets it moving again.</span></div>
+          <div class="lgrow" data-label="Overdue"><span class="pill overdue">Overdue</span><span class="lgtext">We aim to have every piece ready about 7 days before it posts, so there is time to finish and schedule it without a rush. When a piece is inside that window and still waiting on you, it shows here. A quick reply keeps it comfortable.</span></div>
           <h3>For your information</h3>
           <div class="lgrow" data-label="In progress"><span class="pill blue">In progress</span><span class="lgtext">Your team is working on this. Nothing needed from you.</span></div>
           <div class="lgrow" data-label="Ready to publish"><span class="pill green">Ready to publish</span><span class="lgtext">Finished and scheduled to post on its date.</span></div>
@@ -527,13 +527,16 @@ function toneFor(row){ return classify(row.stage); }
 /* Overdue = we're waiting on the client AND the Sheet's On Track says Behind.
    Gated on the "waiting" group so a team-court Behind (e.g. In Production) never
    shows on the client page. Matches the word "Behind" so a glyph change can't break it. */
+var OVERDUE_WINDOW = 7;   // a client-court piece flags once within this many days of posting (we aim to be ready ~7 days ahead)
 function isOverdue(row){
-  return classify(row.stage).group === "waiting" && /Behind/i.test(row.onTrack||"");
+  if(classify(row.stage).group !== "waiting") return false;
+  var n = daysAway(parseDate(row.publishDate));
+  return n!==null && n <= OVERDUE_WINDOW;
 }
 /* One place builds the Overdue pill so the Waiting list and every table match, and each
    carries the piece's dates + stage so the tap-card can explain THIS piece specifically. */
 function overduePill(r){
-  return '<span class="pill overdue" data-pub="'+esc(r.publishDate||"")+'" data-ready="'+esc(r.readyBy||"")+'" data-stage="'+esc(r.stage||"")+'">Overdue</span>';
+  return '<span class="pill overdue" data-pub="'+esc(r.publishDate||"")+'" data-stage="'+esc(r.stage||"")+'">Overdue</span>';
 }
 function owedForStage(s){
   s=s||"";
@@ -548,19 +551,13 @@ function inDays(n){ if(n===0) return "today"; if(n===1) return "tomorrow"; if(n>
    The count reads as time TO the posting date; the reason is the production lead time,
    phrased client-centrically around what this stage still owes. */
 function overdueBody(pill){
-  var pub=pill.getAttribute("data-pub")||"", ready=pill.getAttribute("data-ready")||"", stage=pill.getAttribute("data-stage")||"";
-  var pd=parseDate(pub), rd=parseDate(ready), owed=owedForStage(stage);
+  var pub=pill.getAttribute("data-pub")||"", stage=pill.getAttribute("data-stage")||"";
+  var pd=parseDate(pub), owed=owedForStage(stage);
   function fig(t){ return '<span class="odfig">'+esc(t)+'</span>'; }
-  if(!pd) return "This is still waiting on "+esc(owed)+", and the time to produce it is getting short. A quick reply keeps it on track.";
-  if(daysAway(pd)<0) return "Was due "+fig(fmtShort(pd))+" \u00b7 "+fig(inDays(daysAway(pd)))+". This still needs you and its posting day has passed. A quick action lets us get it out.";
-  var head="Posting "+fig(fmtShort(pd))+" \u00b7 "+fig(inDays(daysAway(pd)))+". ";
-  if(rd){
-    var nr=daysAway(rd), s="To keep to that date, we needed "+esc(owed)+" by about "+fig(fmtShort(rd));
-    s += (nr<0) ? (", which was "+fig(inDays(nr))+", so the remaining production steps are getting tight.")
-                : (", so there is time for the remaining production steps.");
-    return head+s+" A quick reply keeps it on track.";
-  }
-  return head+"It is still waiting on "+esc(owed)+", and the time to produce it before that date is getting short. A quick reply keeps it on track.";
+  if(!pd) return "This still needs "+esc(owed)+". Getting it back soon keeps it on track.";
+  var n=daysAway(pd);
+  if(n<0) return "The posting date ("+fig(fmtShort(pd))+", "+fig(inDays(n))+") has passed and this still needs "+esc(owed)+". Getting it back soon lets us publish it.";
+  return "Posting "+fig(fmtShort(pd))+", "+fig(inDays(n))+". We aim to have everything ready about "+fig(OVERDUE_WINDOW+" days")+" before it posts, so there is room to finish and schedule without a rush. This one is now inside that window and still needs "+esc(owed)+". Getting it back soon keeps the date comfortable.";
 }
 /* Pulled slot = a committed day whose piece was moved to Unselected but kept its Publish Date.
    Shown as a neutral "No post" marker on that day, only within the near-term window so far-future
@@ -1072,7 +1069,7 @@ function startDemo(){
 
   render({ client:"Ice", rows:[
     { pieceId:"C12.1",  title:"\u0e17\u0e33\u0e44\u0e21\u0e19\u0e31\u0e01\u0e25\u0e07\u0e17\u0e38\u0e19\u0e44\u0e17\u0e22\u0e21\u0e2d\u0e07\u0e02\u0e49\u0e32\u0e21 Singapore REITs / Why Thai investors overlook Singapore REITs", format:"Carousel", platform:"IG", publishDate:wk(0), stage:"10 Published",                    copyLink:"https://notion.so/demo1" },
-    { pieceId:"VO12.2", title:"\u0e04\u0e27\u0e32\u0e21\u0e40\u0e02\u0e49\u0e32\u0e43\u0e08\u0e1c\u0e34\u0e14\u0e40\u0e23\u0e37\u0e48\u0e2d\u0e07 CPF \u0e17\u0e35\u0e48\u0e01\u0e34\u0e19\u0e1c\u0e25\u0e15\u0e2d\u0e1a\u0e41\u0e17\u0e19\u0e04\u0e38\u0e13 / The CPF misunderstanding costing you returns", format:"VO Reels", platform:"IG Reels", publishDate:wk(1), stage:"7 Content Ready for Review", onTrack:"\ud83d\udd34 Behind", readyBy: off(-5), copyLink:"https://notion.so/demo2" },
+    { pieceId:"VO12.2", title:"\u0e04\u0e27\u0e32\u0e21\u0e40\u0e02\u0e49\u0e32\u0e43\u0e08\u0e1c\u0e34\u0e14\u0e40\u0e23\u0e37\u0e48\u0e2d\u0e07 CPF \u0e17\u0e35\u0e48\u0e01\u0e34\u0e19\u0e1c\u0e25\u0e15\u0e2d\u0e1a\u0e41\u0e17\u0e19\u0e04\u0e38\u0e13 / The CPF misunderstanding costing you returns", format:"VO Reels", platform:"IG Reels", publishDate:off(3), stage:"7 Content Ready for Review", copyLink:"https://notion.so/demo2" },
     { pieceId:"C12.3",  title:"3 \u0e04\u0e48\u0e32\u0e18\u0e23\u0e23\u0e21\u0e40\u0e19\u0e35\u0e22\u0e21\u0e17\u0e35\u0e48\u0e0b\u0e48\u0e2d\u0e19\u0e2d\u0e22\u0e39\u0e48\u0e43\u0e19\u0e01\u0e23\u0e21\u0e18\u0e23\u0e23\u0e21\u0e4c / Three fees hiding in your policy", format:"Carousel", platform:"IG", publishDate:wk(2), stage:"2 Copywriting Ready for Review",           copyLink:"https://notion.so/demo3" },
     { pieceId:"VO12.4", title:"\u0e04\u0e27\u0e32\u0e21\u0e1c\u0e34\u0e14\u0e1e\u0e25\u0e32\u0e14\u0e40\u0e23\u0e37\u0e48\u0e2d\u0e07\u0e40\u0e01\u0e29\u0e35\u0e22\u0e13\u0e17\u0e35\u0e48\u0e04\u0e19\u0e44\u0e17\u0e22\u0e2a\u0e48\u0e27\u0e19\u0e43\u0e2b\u0e0d\u0e48\u0e17\u0e33 / The retirement mistake most Thais make", format:"VO Reels", platform:"TikTok", publishDate:wk(3), stage:"5 Voiceover / Video Received", copyLink:"https://notion.so/demo4" },
     { pieceId:"C12.5",  title:"\u0e2d\u0e48\u0e32\u0e19\u0e04\u0e48\u0e32 expense ratio \u0e43\u0e2b\u0e49\u0e40\u0e1b\u0e47\u0e19\u0e43\u0e19 60 \u0e27\u0e34\u0e19\u0e32\u0e17\u0e35 / Reading an expense ratio in 60 seconds", format:"Carousel", platform:"IG", publishDate:wk(4), stage:"6 In Production",                copyLink:"https://notion.so/demo5" },
