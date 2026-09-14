@@ -366,7 +366,7 @@ table td:first-child{white-space:nowrap}
   .pdate.pd-today .pd, .pdate.pd-today .pdtag { color:#c07a2b; font-weight:600; }
   .pdate.pd-sched .pd { color:var(--text-soft); }
   .pdate { font-size:11px; line-height:1.5; margin-bottom:1px; white-space:nowrap; }
-  .ppl { display:inline-block; min-width:52px; color:var(--text-soft); font-size:10px; }
+  .ppl { display:inline-block; min-width:52px; margin-right:6px; color:var(--text-soft); font-size:10px; }
   .pdtag { margin-left:5px; font-size:8px; text-transform:uppercase; letter-spacing:.03em; opacity:.85; }
   .collabtag { display:block; width:fit-content; margin-top:4px; white-space:nowrap; font-size:10px; padding:1px 7px; border-radius:99px; background:#eaf0f6; color:#3a5a7a; font-weight:500; }
 </style>
@@ -421,13 +421,13 @@ table td:first-child{white-space:nowrap}
       <details class="legend">
         <summary>What these labels and colours mean</summary>
         <div class="lgbody">
-          <p class="lgnote">These labels just show where each piece is in the process &mdash; they're prompts, not complaints. The first group is where a quick action from you keeps things moving; everything below is for information only. A red label only means a planned date has passed. Tip: tap any label on a piece to see what it means.</p>
+          <p class="lgnote">These labels just show where each piece is in the process. They're prompts, not complaints. The first group is where a quick action from you keeps things moving; everything below is for information only. A red label only means a planned date has passed. Tip: tap any label on a piece to see what it means.</p>
           <h3>Needs you</h3>
           <div class="lgrow" data-label="Your input needed"><span class="pill pink">Your input needed</span><span class="lgtext">We need a decision or some information from you before we can start.</span></div>
           <div class="lgrow" data-label="Copy to review"><span class="pill yellow">Copy to review</span><span class="lgtext">The written caption or script is ready for you to read and approve.</span></div>
           <div class="lgrow" data-label="Voiceover / video needed"><span class="pill purple">Voiceover / video needed</span><span class="lgtext">We need your voiceover recording or a video clip before we can build the post.</span></div>
           <div class="lgrow" data-label="Content to review"><span class="pill orange">Content to review</span><span class="lgtext">The finished post is ready for your final review before we schedule it.</span></div>
-          <div class="lgrow" data-label="Overdue"><span class="pill overdue">Overdue</span><span class="lgtext">A piece that&rsquo;s waiting on you has passed the date we planned around. Nothing is lost &mdash; a quick reply or approval gets it moving again.</span></div>
+          <div class="lgrow" data-label="Overdue"><span class="pill overdue">Overdue</span><span class="lgtext">A piece that&rsquo;s waiting on you has passed the date we planned around. Nothing is lost. A quick reply or approval gets it moving again.</span></div>
           <h3>For your information</h3>
           <div class="lgrow" data-label="In progress"><span class="pill blue">In progress</span><span class="lgtext">Your team is working on this. Nothing needed from you.</span></div>
           <div class="lgrow" data-label="Ready to publish"><span class="pill green">Ready to publish</span><span class="lgtext">Finished and scheduled to post on its date.</span></div>
@@ -556,7 +556,7 @@ function overdueBody(pill){
   var head="Posting "+fig(fmtShort(pd))+" \u00b7 "+fig(inDays(daysAway(pd)))+". ";
   if(rd){
     var nr=daysAway(rd), s="To keep to that date, we needed "+esc(owed)+" by about "+fig(fmtShort(rd));
-    s += (nr<0) ? (" \u2014 that was "+fig(inDays(nr))+" \u2014 so the remaining production steps are getting tight.")
+    s += (nr<0) ? (", which was "+fig(inDays(nr))+", so the remaining production steps are getting tight.")
                 : (", so there is time for the remaining production steps.");
     return head+s+" A quick reply keeps it on track.";
   }
@@ -622,8 +622,8 @@ function collabTag(r){
   if(accounts.length<2) return '';
   var poster=pf||client, viewer=(STATE.client||'').trim();
   var others=accounts.filter(function(a){ return a!==viewer; });
-  if(viewer===poster) return '<span class="collabtag" title="Collab \u2014 you post this; it also shows on '+esc(others.join(', '))+'">collab with '+esc(others.join(', '))+'</span>';
-  return '<span class="collabtag" title="Collab \u2014 posted from '+esc(poster)+'">collab \u00b7 posted by '+esc(poster)+'</span>'; }
+  if(viewer===poster) return '<span class="collabtag" title="Collab: you post this; it also shows on '+esc(others.join(', '))+'">collab with '+esc(others.join(', '))+'</span>';
+  return '<span class="collabtag" title="Collab: posted from '+esc(poster)+'">collab \u00b7 posted by '+esc(poster)+'</span>'; }
 function platDates(r){
   const base=r.publishDate||"", ig=r.igDate||base, tt=r.ttDate||base;
   const list=String(r.platform||"").split(",").map(s=>s.trim()).filter(Boolean);
@@ -942,7 +942,7 @@ async function loadRows(key){
     const data = inflight ? await inflight
       : await (await fetch(WEB_APP_URL, { method:"POST", body: JSON.stringify({ action:"clientRows", key }) })).json();
     if(!data || data.ok===false){
-      if(hadCache){ markStale(false, "Couldn't refresh just now — showing your last view."); return; }
+      if(hadCache){ markStale(false, "Couldn't refresh just now. Showing your last view."); return; }
       if(data && data.error==="not_authorised"){
         showError("This link isn't recognised. Please ask WWA for your calendar link.");
         return;
@@ -953,7 +953,7 @@ async function loadRows(key){
     try { localStorage.setItem("orbitClient_"+key, JSON.stringify(data)); } catch(e){}
     render(data); markStale(false);
   } catch(err){
-    if(hadCache){ markStale(false, "Offline — showing your last view."); return; }
+    if(hadCache){ markStale(false, "Offline. Showing your last view."); return; }
     showError("Couldn't load your calendar. Please check your connection and try again.");
   }
 }
@@ -1028,7 +1028,7 @@ else orbitStart();
    DEMO DATA  (sample Ice rows, dated around today so the week + calendar fill)
    ============================================================ */
 function startDemo(){
-  document.getElementById("who").innerHTML = '<span class="demo-tag">Demo data \u2014 not live</span>';
+  document.getElementById("who").innerHTML = '<span class="demo-tag">Demo data \u00b7 not live</span>';
   const mon = today0(); mon.setDate(mon.getDate() - ((mon.getDay()+6)%7));
   const wk = i => { const d=new Date(mon); d.setDate(mon.getDate()+i); return isoOf(d); };
   const off = n => { const d=today0(); d.setDate(d.getDate()+n); return isoOf(d); };
