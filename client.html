@@ -738,7 +738,7 @@ function renderWeek(){
     + '</tbody></table></div>';
 }
 
-function pillFor(r){ const c = toneFor(r); return '<span class="pill '+c.tone+'">'+esc(c.label)+'</span>'; }
+function pillFor(r){ const c = toneFor(r); return '<span class="pill '+c.tone+'">'+esc(c.label)+'</span>' + (isOverdue(r)?'<span class="pill overdue">Overdue</span>':''); }
 
 function renderTable(){
   const rows = STATE.rows.filter(r=>!isPublished(r)&&!isParkedRow(r)).sort((a,b)=> (parseDate(a.publishDate)||8e15) - (parseDate(b.publishDate)||8e15));
