@@ -565,6 +565,7 @@
           <button id="assignRefresh" class="small">Refresh</button>
           <button class="primary" id="assignSaveAll">Save all suggested</button>
           <button id="rearrangeAll" class="small">Auto-rearrange whole board</button>
+          <button id="reflowFixed" class="small">Reflow from 28 Sep (fixed pattern)</button>
           <span class="pstatus muted" id="assignStatus"></span>
         </div>
 
@@ -1300,6 +1301,162 @@
         const fail=(res.ok?(res.errors||[]).length:jobs.length);
         b.disabled=false; renderAssign(); renderPipe(); renderToday();
         setAssign('Rearranged '+(res.ok?res.rows.length:0)+' piece(s)'+(fail?(' · '+fail+' skipped'):'')+'.', fail?'err':'ok');
+      };
+    })();
+
+    // ── Reflow from a fixed weekly pattern (SRU-anchored), decision #13 ──────────────
+    // Places the three accounts onto one repeating Mon–Sat template from the anchor date,
+    // pinning each collab type to its weekday and flowing solo around it with an even
+    // format spread. Feed-coverage is the hard constraint: if a role's queue is empty for
+    // a day, that day falls back to the same account's own solo queue so the feed never
+    // goes dark; when nothing eligible is left, the account is reported as a shortfall.
+    // Preview first — nothing is written until Apply.
+    (function(){
+      var btn=document.getElementById('reflowFixed'); if(!btn) return;
+      var FIXED_ANCHOR='2026-09-28';                       // Monday; decision #13, config §13
+      // weekday(1=Mon..6=Sat) -> slots; each slot = [queue role, [feeds it occupies]]
+      var TPL={
+        1:[['SRU-solo',['SRU']],['Ice-solo',['Ice']],['Dianna-solo',['Dianna']]],
+        2:[['Ice+SRU',['Ice','SRU']]],
+        3:[['Dianna+SRU',['Dianna','SRU']],['Ice-solo',['Ice']]],
+        4:[['SRU-solo',['SRU']],['Ice-solo',['Ice']],['Dianna-solo',['Dianna']]],
+        5:[['Ice+SRU',['Ice','SRU']]],
+        6:[['Dianna+SRU',['Dianna','SRU']],['Ice-solo',['Ice']]]
+      };
+      var SOLOQ={SRU:'SRU-solo',Ice:'Ice-solo',Dianna:'Dianna-solo'};
+      var ROLES=['SRU-solo','Ice-solo','Dianna-solo','Ice+SRU','Dianna+SRU'];
+      var FEEDS=['SRU','Ice','Dianna'];
+      function vid(r){ return isVideoFormat(r['Format']); }
+      // which fixed-pattern queue a piece belongs to (null = not part of the fixed system)
+      function fixedRole(r){
+        var cl=(r['Client']||'').trim(); var acc=accountsFor(r).accounts;
+        if(cl==='Ice' && acc.length===1) return 'Ice-solo';
+        if(cl==='Dianna' && acc.length===1) return 'Dianna-solo';
+        if(cl==='SRU'){
+          if(acc.indexOf('Ice')>=0) return 'Ice+SRU';
+          if(acc.indexOf('Dianna')>=0) return 'Dianna+SRU';
+          return 'SRU-solo';
+        }
+        return null;
+      }
+      function pidKey(id){ var m=String(id||'').match(/(\d+)\.(\d+)/); return m?[+m[1],+m[2]]:[9999,9999]; }
+      function byId(arr){ return arr.slice().sort(function(a,b){ var ka=pidKey(a['Piece ID']),kb=pidKey(b['Piece ID']);
+        return ka[0]-kb[0]||ka[1]-kb[1]||String(a['Piece ID']).localeCompare(b['Piece ID']); }); }
+      // spread the minority format evenly through the majority instead of clustering it
+      function evenSpread(items){
+        var V=items.filter(vid), S=items.filter(function(x){return !vid(x);});
+        var maj=V.length>=S.length?V:S, min=V.length>=S.length?S:V;
+        var n=maj.length, m=min.length, out=[], mi=0;
+        for(var i=0;i<n;i++){ out.push(maj[i]);
+          if(m>0 && Math.floor((i+1)*m/n)>Math.floor(i*m/n) && mi<m) out.push(min[mi++]); }
+        while(mi<m) out.push(min[mi++]);
+        return out;
+      }
+      function pool(anchor){
+        return allRows.filter(function(r){ var s=r['Stage']||'';
+          if(/^10 Published/.test(s) || /Rolled Over/.test(s) || PARKED.indexOf(s)!==-1) return false;
+          if(!fixedRole(r)) return false;
+          var pd=r['Publish Date']||''; return (!pd) || (pd>=anchor); });
+      }
+      function walk(anchor){
+        var Q={}; ROLES.forEach(function(rl){ Q[rl]=[]; });
+        pool(anchor).forEach(function(r){ Q[fixedRole(r)].push(r); });
+        ROLES.forEach(function(rl){ Q[rl]=evenSpread(byId(Q[rl])); });
+        var totalIn=ROLES.reduce(function(a,rl){ return a+Q[rl].length; },0);
+        function popAlt(rl,cls){ var q=Q[rl]; if(!q||!q.length) return null;
+          for(var i=0;i<q.length;i++){ if((vid(q[i])?'V':'S')!==cls) return q.splice(i,1)[0]; } return q.shift(); }
+        var byDate={}, last={SRU:'',Ice:'',Dianna:''}, placed={SRU:0,Ice:0,Dianna:0}, firstDark={}, jobs=[];
+        var d=new Date(anchor+'T00:00:00'), guard=0, HORIZON=53*7;
+        function record(r,ymd,feeds){ var cls=vid(r)?'V':'S';
+          feeds.forEach(function(f){ last[f]=cls; placed[f]++; });
+          (byDate[ymd]=byDate[ymd]||[]).push({feeds:feeds,cls:cls,id:r['Piece ID']});
+          jobs.push({row:r.row, pieceId:r['Piece ID'], changes:{'Publish Date':ymd,'Ready By':readyByFor(ymd,r['Format'])}}); }
+        while(ROLES.some(function(rl){return Q[rl].length;}) && guard++<HORIZON){
+          var dow=d.getDay();
+          if(dow!==0 && TPL[dow]){ var ymd=isoOf(d);
+            TPL[dow].forEach(function(slot){ var role=slot[0], feeds=slot[1];
+              var r=popAlt(role,last[feeds[0]]);
+              if(r){ record(r,ymd,feeds); return; }
+              // coverage fallback: cover each feed from its own solo queue
+              feeds.forEach(function(f){ var rr=popAlt(SOLOQ[f],last[f]);
+                if(rr) record(rr,ymd,[f]); else if(!firstDark[f]) firstDark[f]=ymd; });
+            });
+          }
+          d.setDate(d.getDate()+1);
+        }
+        // any feed that never placed a single post is dark from the anchor
+        FEEDS.forEach(function(f){ if(!placed[f] && !firstDark[f]) firstDark[f]=anchor; });
+        return {byDate:byDate, placed:placed, firstDark:firstDark, jobs:jobs, totalIn:totalIn, anchor:anchor};
+      }
+
+      // ---- preview modal (built once, reused) ----
+      var modal=null, lastRun=null;
+      function ensureModal(){
+        if(modal) return modal;
+        modal=document.createElement('div');
+        modal.style.cssText='position:fixed;inset:0;background:rgba(20,24,28,.45);z-index:9999;display:none;align-items:flex-start;justify-content:center;padding:32px 16px;overflow:auto;';
+        modal.innerHTML='<div style="background:#fff;border-radius:14px;max-width:760px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.25);padding:22px 24px;font:inherit">'
+          +'<h3 style="margin:0 0 2px">Reflow preview — fixed pattern from 28 Sep</h3>'
+          +'<p class="sub" id="rfSub" style="margin:0 0 14px"></p>'
+          +'<div id="rfShort"></div>'
+          +'<div id="rfGrid" style="max-height:340px;overflow:auto;border:1px solid var(--line,#e5e7eb);border-radius:10px;margin:12px 0"></div>'
+          +'<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px">'
+          +'<button id="rfCancel" class="small">Cancel</button>'
+          +'<button id="rfApply" class="primary">Apply — write these dates</button></div></div>';
+        document.body.appendChild(modal);
+        modal.addEventListener('click',function(e){ if(e.target===modal) close(); });
+        modal.querySelector('#rfCancel').onclick=close;
+        modal.querySelector('#rfApply').onclick=apply;
+        return modal;
+      }
+      function close(){ if(modal) modal.style.display='none'; }
+      function fmtD(ymd){ return niceDate(ymd); }
+      function render(run){
+        ensureModal();
+        var dates=Object.keys(run.byDate).sort();
+        modal.querySelector('#rfSub').textContent=
+          run.jobs.length+' piece(s) would be dated, '+dates.length+' posting day(s) from '+fmtD(run.anchor)+'. Nothing is saved until you click Apply.';
+        // shortfall
+        var sh='';
+        FEEDS.forEach(function(f){
+          if(run.firstDark[f]){ sh+='<div style="color:#b91c1c">⛔ <b>'+f+'</b> feed has no content from <b>'+fmtD(run.firstDark[f])+'</b> — placed '+run.placed[f]+' post(s). Produce more before this date.</div>'; }
+          else { sh+='<div style="color:#166534">🟢 <b>'+f+'</b> covered through the horizon — '+run.placed[f]+' post(s).</div>'; }
+        });
+        modal.querySelector('#rfShort').innerHTML='<div style="background:#f8fafc;border:1px solid var(--line,#e5e7eb);border-radius:10px;padding:10px 12px;line-height:1.7">'+sh+'</div>';
+        // grid (cap at first 8 weeks so the preview stays readable)
+        var rows='<table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr>'
+          +'<th style="text-align:left;padding:6px 10px;position:sticky;top:0;background:#fff">Date</th>'
+          +'<th style="text-align:left;padding:6px 10px;position:sticky;top:0;background:#fff">SRU</th>'
+          +'<th style="text-align:left;padding:6px 10px;position:sticky;top:0;background:#fff">Ice</th>'
+          +'<th style="text-align:left;padding:6px 10px;position:sticky;top:0;background:#fff">Dianna</th></tr></thead><tbody>';
+        dates.slice(0,48).forEach(function(ymd){
+          var cell={SRU:'—',Ice:'—',Dianna:'—'};
+          run.byDate[ymd].forEach(function(it){ var tag=(it.cls==='V'?'🎬':'🖼️')+' '+esc(it.id);
+            it.feeds.forEach(function(f){ cell[f]=tag; }); });
+          rows+='<tr><td style="padding:5px 10px;white-space:nowrap;border-top:1px solid #f1f5f9">'+esc(fmtD(ymd))
+            +'</td><td style="padding:5px 10px;border-top:1px solid #f1f5f9">'+cell.SRU
+            +'</td><td style="padding:5px 10px;border-top:1px solid #f1f5f9">'+cell.Ice
+            +'</td><td style="padding:5px 10px;border-top:1px solid #f1f5f9">'+cell.Dianna+'</td></tr>';
+        });
+        rows+='</tbody></table>';
+        modal.querySelector('#rfGrid').innerHTML=rows;
+        modal.style.display='flex';
+      }
+      async function apply(){
+        if(!lastRun || !lastRun.jobs.length){ close(); return; }
+        var ap=modal.querySelector('#rfApply'); ap.disabled=true; ap.textContent='Saving…';
+        setAssign('Applying fixed-pattern reflow…','muted');
+        var res=await savePieces(lastRun.jobs);
+        var fail=(res.ok?(res.errors||[]).length:lastRun.jobs.length);
+        ap.disabled=false; ap.textContent='Apply — write these dates';
+        close(); renderAssign(); renderPipe(); renderToday();
+        setAssign('Reflowed '+(res.ok?res.rows.length:0)+' piece(s)'+(fail?(' · '+fail+' skipped'):'')+'.', fail?'err':'ok');
+      }
+      btn.onclick=function(){
+        if(!allRows.length){ setAssign('Nothing loaded yet.','muted'); return; }
+        lastRun=walk(FIXED_ANCHOR);
+        if(!lastRun.totalIn){ setAssign('No eligible pieces to reflow from 28 Sep (all published, parked, or dated earlier).','muted'); return; }
+        render(lastRun);
       };
     })();
 
