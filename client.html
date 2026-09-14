@@ -167,13 +167,12 @@ window.__orbitBoot = (function(){
   .chip.nopost,.legend .pill.nopost{background:transparent;border:1px dashed var(--line);color:var(--text-soft);font-style:italic}
   .pill.overdue{background:var(--red-strong);color:#fff;font-weight:700}
   .legend .lgnote{margin:2px 0 8px;color:var(--text-soft);font-size:13px;line-height:1.5}
-  .legend .lgitem{border-top:1px solid var(--line)}
-  .legend .lgitem:first-of-type{border-top:none}
-  .legend .lgitem>summary{cursor:pointer;padding:9px 0;list-style:none;display:flex;align-items:center;gap:8px}
-  .legend .lgitem>summary::-webkit-details-marker{display:none}
-  .legend .lgitem>summary::after{content:"\25B8";margin-left:auto;color:var(--text-soft);font-size:12px}
-  .legend .lgitem[open]>summary::after{content:"\25BE"}
-  .legend .lgdesc{padding:0 0 10px 2px;color:var(--text-soft);font-size:14px;line-height:1.5}
+  /* ---------- tap-to-explain popover on status labels ---------- */
+  .pill{cursor:pointer}
+  .legend .pill{cursor:default}
+  #labelPop{position:fixed;z-index:60;max-width:260px;background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:13px;line-height:1.5;box-shadow:0 8px 24px rgba(0,0,0,.12)}
+  #labelPop[hidden]{display:none}
+  #labelPop .lphead{font-weight:700;margin-bottom:3px}
 
   /* ---------- week strip (one day per row) ---------- */
   .week{display:flex;flex-direction:column;gap:6px}
@@ -421,20 +420,20 @@ table td:first-child{white-space:nowrap}
       <details class="legend">
         <summary>What these labels and colours mean</summary>
         <div class="lgbody">
-          <p class="lgnote">These labels just show where each piece is in the process &mdash; they're prompts, not complaints. Tap any label to see what it means. The first group is where a quick action from you keeps things moving; everything below is for information only. A red label only means a planned date has passed.</p>
+          <p class="lgnote">These labels just show where each piece is in the process &mdash; they're prompts, not complaints. The first group is where a quick action from you keeps things moving; everything below is for information only. A red label only means a planned date has passed. Tip: tap any label on a piece to see what it means.</p>
           <h3>Needs you</h3>
-          <details class="lgitem"><summary><span class="pill pink">Your input needed</span></summary><div class="lgdesc">We need a decision or some information from you before we can start.</div></details>
-          <details class="lgitem"><summary><span class="pill yellow">Copy to review</span></summary><div class="lgdesc">The written caption or script is ready for you to read and approve.</div></details>
-          <details class="lgitem"><summary><span class="pill purple">Voiceover / video needed</span></summary><div class="lgdesc">We need your voiceover recording or a video clip before we can build the post.</div></details>
-          <details class="lgitem"><summary><span class="pill orange">Content to review</span></summary><div class="lgdesc">The finished post is ready for your final review before we schedule it.</div></details>
-          <details class="lgitem"><summary><span class="pill overdue">Overdue</span></summary><div class="lgdesc">A piece that&rsquo;s waiting on you has passed the date we planned around. Nothing is lost &mdash; a quick reply or approval gets it moving again.</div></details>
+          <div class="lgrow" data-label="Your input needed"><span class="pill pink">Your input needed</span><span class="lgtext">We need a decision or some information from you before we can start.</span></div>
+          <div class="lgrow" data-label="Copy to review"><span class="pill yellow">Copy to review</span><span class="lgtext">The written caption or script is ready for you to read and approve.</span></div>
+          <div class="lgrow" data-label="Voiceover / video needed"><span class="pill purple">Voiceover / video needed</span><span class="lgtext">We need your voiceover recording or a video clip before we can build the post.</span></div>
+          <div class="lgrow" data-label="Content to review"><span class="pill orange">Content to review</span><span class="lgtext">The finished post is ready for your final review before we schedule it.</span></div>
+          <div class="lgrow" data-label="Overdue"><span class="pill overdue">Overdue</span><span class="lgtext">A piece that&rsquo;s waiting on you has passed the date we planned around. Nothing is lost &mdash; a quick reply or approval gets it moving again.</span></div>
           <h3>For your information</h3>
-          <details class="lgitem"><summary><span class="pill blue">In progress</span></summary><div class="lgdesc">Your team is working on this. Nothing needed from you.</div></details>
-          <details class="lgitem"><summary><span class="pill green">Ready to publish</span></summary><div class="lgdesc">Finished and scheduled to post on its date.</div></details>
-          <details class="lgitem"><summary><span class="pill green">Published</span></summary><div class="lgdesc">It's live.</div></details>
-          <details class="lgitem"><summary><span class="pill nopost">No post</span></summary><div class="lgdesc">A piece planned for this day was set aside, so nothing posts that day. We show the empty day rather than quietly filling it, so your calendar stays accurate.</div></details>
-          <details class="lgitem"><summary><span class="pill gray">Not used</span></summary><div class="lgdesc">Set aside for now. Still counts toward your plan.</div></details>
-          <details class="lgitem"><summary><span class="pill gray">Rolled over</span></summary><div class="lgdesc">Moved to a later batch.</div></details>
+          <div class="lgrow" data-label="In progress"><span class="pill blue">In progress</span><span class="lgtext">Your team is working on this. Nothing needed from you.</span></div>
+          <div class="lgrow" data-label="Ready to publish"><span class="pill green">Ready to publish</span><span class="lgtext">Finished and scheduled to post on its date.</span></div>
+          <div class="lgrow" data-label="Published"><span class="pill green">Published</span><span class="lgtext">It's live.</span></div>
+          <div class="lgrow" data-label="No post"><span class="pill nopost">No post</span><span class="lgtext">A piece planned for this day was set aside, so nothing posts that day. We show the empty day rather than quietly filling it, so your calendar stays accurate.</span></div>
+          <div class="lgrow" data-label="Not used"><span class="pill gray">Not used</span><span class="lgtext">Set aside for now. Still counts toward your plan.</span></div>
+          <div class="lgrow" data-label="Rolled over"><span class="pill gray">Rolled over</span><span class="lgtext">Moved to a later batch.</span></div>
         </div>
       </details>
     </section>
@@ -938,6 +937,53 @@ function orbitStart(){
   if(!key){ showError("This link is missing its access code. Please open the link WWA sent you."); return; }
   loadRows(key);
 }
+/* Tap a status label to see what it means. Wording is read from the guide (.legend),
+   so descriptions live in one place. The guide's own swatches are excluded. */
+(function(){
+  var pop=null, curPill=null, helpMap=null;
+  function buildMap(){
+    helpMap={};
+    var rows=document.querySelectorAll('.legend .lgrow[data-label]');
+    Array.prototype.forEach.call(rows,function(row){
+      var t=row.querySelector('.lgtext');
+      if(t) helpMap[row.getAttribute('data-label')]=t.textContent.trim();
+    });
+  }
+  function ensurePop(){
+    if(pop) return pop;
+    pop=document.createElement('div'); pop.id='labelPop'; pop.hidden=true;
+    document.body.appendChild(pop); return pop;
+  }
+  function hide(){ if(pop) pop.hidden=true; curPill=null; }
+  function show(pill){
+    if(!helpMap) buildMap();
+    var label=(pill.textContent||'').trim(), desc=helpMap[label];
+    if(!desc){ hide(); return; }
+    ensurePop();
+    pop.innerHTML='<div class="lphead"></div><div class="lpbody"></div>';
+    pop.querySelector('.lphead').textContent=label;
+    pop.querySelector('.lpbody').textContent=desc;
+    pop.hidden=false;
+    var r=pill.getBoundingClientRect(), pw=pop.offsetWidth, ph=pop.offsetHeight;
+    var left=Math.min(Math.max(8,r.left), window.innerWidth-pw-8);
+    var top=r.bottom+6;
+    if(top+ph>window.innerHeight-8) top=Math.max(8, r.top-ph-6);   // flip above if no room below
+    pop.style.left=left+'px'; pop.style.top=top+'px';
+    curPill=pill;
+  }
+  document.addEventListener('click', function(e){
+    var pill=e.target.closest ? e.target.closest('.pill') : null;
+    if(pill && !pill.closest('.legend')){
+      e.stopPropagation();
+      if(curPill===pill) hide(); else show(pill);
+      return;
+    }
+    if(pop && !pop.hidden && !pop.contains(e.target)) hide();
+  }, true);
+  window.addEventListener('scroll', hide, true);
+  window.addEventListener('resize', hide);
+  document.addEventListener('keydown', function(e){ if(e.key==='Escape') hide(); });
+})();
 if(document.readyState==="loading") document.addEventListener("DOMContentLoaded", orbitStart);
 else orbitStart();
 
