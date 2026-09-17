@@ -411,6 +411,42 @@
     .pdtag { margin-left:6px; font-size:9px; text-transform:uppercase; letter-spacing:.04em; opacity:.9; }
     .collabtag { display:block; width:fit-content; margin-top:4px; white-space:nowrap; font-size:10px; padding:1px 7px; border-radius:99px; background:#eaf0f6; color:#3a5a7a; font-weight:500; }
     .collabtag.feat { background:#f5efe6; color:#8a6d3b; }
+
+    /* ===================== Apple-design pass — Tier 1 =====================
+       Additive only: response/press feedback, keyboard focus, and the
+       reduced-motion / contrast media queries. Press feedback excludes
+       .calcard so it never competes with the drag transform. */
+
+    /* §1 Response — ease hover/press instead of snapping. */
+    button, .seg button, .daychip, .mgrid button:not(:disabled), .calcountbox,
+    .calmore, .cellbtn, .sidefoot button, .bufc, .navbtn, .pitem, .phead {
+      transition: transform .11s ease-out, background-color .15s ease, border-color .15s ease, box-shadow .15s ease;
+    }
+    /* §1 Response — instant feedback on pointer-down. Compact controls press
+       inward; full-width rows flash a press background (scaling a wide row reads odd). */
+    button:not(:disabled):active, .seg button:active, .daychip:active,
+    .mgrid button:not(:disabled):active, .calcountbox:active, .calmore:active,
+    .cellbtn:active, .sidefoot button:active, .bufc:active { transform: scale(.97); }
+    .navbtn:active { background:#dbe0d7; }
+    .pitem:active { background:#eef1ec; }
+    .phead:active { background:#f1f2ee; }
+
+    /* §14/§16 Craft — visible keyboard focus (outline follows each element's radius). */
+    :focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+    /* §14 Accessibility — reduced motion: no transforms/springs, keep instant state. */
+    @media (prefers-reduced-motion: reduce) {
+      *, .pd-ghost, .pd-toast, .sp-bar { transition: none !important; }
+      button:active, .seg button:active, .daychip:active, .mgrid button:active,
+      .calcountbox:active, .calmore:active, .cellbtn:active, .sidefoot button:active,
+      .bufc:active, .calcard:hover { transform: none !important; }
+    }
+
+    /* §14 Accessibility — firmer borders when the user asks for more contrast. */
+    @media (prefers-contrast: more) {
+      :root { --line:#b3b8ae; --ink-soft:#565c56; }
+      :focus-visible { outline-width: 3px; }
+    }
   </style>
 </head>
 <body>
