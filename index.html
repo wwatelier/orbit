@@ -257,6 +257,7 @@
     th { background:#fafbf8; font-weight:600; color:#5b625b; font-size:12px; }
     tr.clickable { cursor:pointer; }
     tr.clickable:hover td { background:#f7f8f4; }
+    tr.clickable:active td { background:#eef1ec; }   /* §1 Response — feedback on press */
     tbody tr:last-child td { border-bottom:none; }
     .empty { padding:44px; text-align:center; color:var(--ink-soft); }
 
@@ -448,6 +449,34 @@
       :focus-visible { outline-width: 3px; }
     }
 
+    /* Today's posts — big daily count + row numbers (§16 hierarchy). */
+    .tpbig{ display:flex; align-items:baseline; gap:10px; margin:16px 0 2px; }
+    .tpbig-n{ font-size:clamp(30px,9vw,44px); font-weight:700; letter-spacing:-.03em; line-height:1; color:var(--ink); font-variant-numeric:tabular-nums; }
+    .tpbig-lbl{ font-size:13px; color:var(--ink-soft); }
+    .tpbig-lbl .nr{ color:#c0392b; font-weight:600; }
+    .tpnum, .tpnumh{ width:34px; color:var(--ink-soft); font-variant-numeric:tabular-nums; }
+    .tpnum{ font-size:12px; }
+
+    /* Published rows read as completed (§16 completion feedback) — green tint,
+       a check before the title, de-emphasised title, green status. */
+    .tptable tr.done{ background:#f4faf6; }
+    .tptable tr.done:hover td{ background:#eaf5ee; }
+    .tptable tr.done .tptitlecell{ color:var(--ink-soft); }
+    .tptable tr.done .tptitlecell::before{ content:"\2713  "; color:#2f8f5b; font-weight:700; }
+    .tptable tr.done .tpnum{ color:#2f8f5b; }
+    .tptable tr.done .tpstage{ color:#2f8f5b; font-weight:600; border-color:#cfe6d8; }
+
+    /* §1/§4/§16 — the completion moment on the just-published row (one-shot). */
+    @keyframes tpDoneFlash { from{ background:#d5efdf; } to{ background:#f4faf6; } }
+    @keyframes tpCheckPop { 0%{ transform:scale(0); opacity:0; } 60%{ transform:scale(1.25); } 100%{ transform:scale(1); opacity:1; } }
+    @keyframes tpNumPulse { 0%{ transform:scale(1); } 35%{ transform:scale(1.14); } 100%{ transform:scale(1); } }
+    .tptable tr.just-done td{ animation:tpDoneFlash .6s ease-out; }
+    .tptable tr.just-done .tptitlecell::before{ display:inline-block; animation:tpCheckPop .45s cubic-bezier(.2,.8,.2,1); }
+    .tpbig-n.pulse{ display:inline-block; animation:tpNumPulse .4s ease-out; }
+    @media (prefers-reduced-motion: reduce){
+      .tptable tr.just-done td, .tptable tr.just-done .tptitlecell::before, .tpbig-n.pulse{ animation:none !important; }
+    }
+
     /* Today's posts — compact LIST on phones (§6 Simplicity, §16 Craft).
        Light dividers instead of boxes; fields flow instead of one-per-line:
        title on top, details muted, status control at the end of the row.
@@ -462,7 +491,8 @@
       }
       table.tptable tr.notready{ border-left:3px solid #d64545; padding-left:9px; }
       table.tptable td{ border:none !important; padding:0; white-space:nowrap; font-size:12px; color:var(--ink-soft); }
-      table.tptable td:nth-child(5){ order:-1; flex:1 1 100%; white-space:normal; font-size:14px; font-weight:600; color:var(--ink); line-height:1.3; }
+      table.tptable .tpnum{ order:-2; flex:0 0 auto; width:auto; font-size:14px; font-weight:700; color:var(--ink); }
+      table.tptable .tptitlecell{ order:-1; flex:1 1 0; min-width:55%; white-space:normal; font-size:14px; font-weight:600; color:var(--ink); line-height:1.3; }
       table.tptable .tpstagecell{ margin-left:auto; }   /* status + edit sit at the end of the row */
       table.tptable .tpstage{ min-height:34px; max-width:100%; }
       table.tptable .tpdate{ min-height:34px; }
@@ -504,9 +534,9 @@
         <div class="hero">
           <div class="hero-date" id="heroDate"></div>
           <h2 class="hero-h">Today's posts</h2>
-          <p class="sub">Going live today. Not ready yet shows red. Change status or dates right here — it saves to the master.</p>
-          <div class="tablewrap" style="margin-top:16px"><table class="ptable tptable"><thead><tr><th>Piece ID</th><th>Client</th><th>Format</th><th>Platform</th><th>Title</th><th>Posting dates</th><th>Stage</th><th></th></tr></thead><tbody id="tpBody"></tbody></table></div>
-          <span class="count" id="tpCount"></span>
+          <p class="sub">Going live today. Not ready yet shows red. Change status or dates right here. It saves to the master.</p>
+          <div class="tpbig"><span class="tpbig-n" id="tpBigNum">0</span><div class="tpbig-lbl" id="tpBigLbl"></div></div>
+          <div class="tablewrap" style="margin-top:16px"><table class="ptable tptable"><thead><tr><th class="tpnumh">#</th><th>Piece ID</th><th>Client</th><th>Format</th><th>Platform</th><th>Title</th><th>Posting dates</th><th>Stage</th><th></th></tr></thead><tbody id="tpBody"></tbody></table></div>
           <div class="controls" style="margin-top:14px;padding-top:14px;border-top:1px solid var(--line)">
             <strong style="font-size:13px">Share link</strong>
             <select id="shareScope" style="font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:8px"><option value="">All clients</option></select>
@@ -1746,6 +1776,14 @@
       if(cl) cl.onclick=function(){ $('calDayPanel').classList.add('hidden'); };
     })();
 
+    // §16 Delight — a brief completion beat on the just-published row; one-shot, non-blocking.
+    function celebratePublish(pid){
+      try{
+        var row=document.querySelector('#tpBody tr[data-pid="'+String(pid).replace(/["\\]/g,'')+'"]');
+        if(row){ row.classList.add('just-done'); setTimeout(function(){ row.classList.remove('just-done'); },700); }
+        var n=$('tpBigNum'); if(n){ n.classList.remove('pulse'); void n.offsetWidth; n.classList.add('pulse'); setTimeout(function(){ n.classList.remove('pulse'); },450); }
+      }catch(e){}
+    }
     function renderTodayPosts(){
       const iso=todayISO();
       const hd=$('heroDate'); if(hd) hd.textContent=niceDate(iso)+' · '+new Date().getFullYear();
@@ -1754,25 +1792,26 @@
         const base=r['Publish Date']||'';
         return base===iso || (r['IG Date']||'')===iso || (r['TikTok Date']||'')===iso;
       }).sort(function(a,b){ return (a['Client']||'').localeCompare(b['Client']||''); });
-      if(!rows.length){ tb.innerHTML='<tr><td colspan="8"><div class="empty">Nothing scheduled to publish today.</div></td></tr>'; $('tpCount').textContent='0 posts today'; return; }
-      let urgent=0;
-      rows.forEach(function(r){
+      if(!rows.length){ tb.innerHTML='<tr><td colspan="9"><div class="empty">Nothing scheduled to publish today.</div></td></tr>'; $('tpBigNum').textContent='0'; $('tpBigLbl').textContent=TT('posts to publish today'); return; }
+      let urgent=0, pub=0;
+      rows.forEach(function(r,i){
         const notReady=!isReadyStage(r['Stage']); if(notReady) urgent++;
-        const tr=document.createElement('tr'); if(notReady) tr.className='notready';
+        const published=/^10 Published/.test(r['Stage']||''); if(published) pub++;
+        const tr=document.createElement('tr'); tr.className = notReady ? 'notready' : (published ? 'done' : ''); tr.dataset.pid=r['Piece ID'];
         if(r['Copy Link']) tr.className=(tr.className?tr.className+' ':'')+'clickable';
         tr.title=r['Copy Link']?'Open copy page':'No copy page yet';
-        tr.innerHTML='<td>'+esc(r['Piece ID'])+viralMark(r)+(notReady?'<span class="urg">URGENT</span>':'')+collabTag(r)+'</td>'+
+        tr.innerHTML='<td class="tpnum">#'+(i+1)+'</td><td>'+esc(r['Piece ID'])+viralMark(r)+(notReady?'<span class="urg">URGENT</span>':'')+collabTag(r)+'</td>'+
           '<td>'+clientChip(r['Client'])+'</td><td>'+fmtChip(r['Format'])+'</td>'+
           '<td class="cellbtn platcell">'+platLabel(r['PlatformList'],r['Client'])+'</td>'+
-          '<td>'+esc(r['Title']||'')+'</td>'+
+          '<td class="tptitlecell">'+esc(r['Title']||'')+'</td>'+
           '<td class="tpdatescol">'+platDates(r)+'</td>'+
           '<td class="tpstagecell"></td>'+
           '<td class="tpeditcol"><button class="small tpdate">Edit dates</button></td>';
         const sel=document.createElement('select'); sel.className='tpstage';
         sel.innerHTML=STAGES.map(function(s){ return '<option'+(s===r['Stage']?' selected':'')+'>'+esc(s)+'</option>'; }).join('');
-        sel.onchange=async function(){ sel.disabled=true;
+        sel.onchange=async function(){ var becamePub=/^10 Published/.test(sel.value); sel.disabled=true;
           const res=await savePiece(r,{ 'Stage':sel.value }); sel.disabled=false;
-          if(res.ok){ renderTodayPosts(); renderPipe(); renderToday(); }
+          if(res.ok){ renderTodayPosts(); renderPipe(); renderToday(); if(becamePub) celebratePublish(r['Piece ID']); }
         };
         sel.onclick=function(e){ e.stopPropagation(); };
         tr.querySelector('.tpstagecell').appendChild(sel);
@@ -1784,7 +1823,8 @@
         tr.onclick=function(){ if(r['Copy Link']) window.open(r['Copy Link'],'_blank','noopener'); };
         tb.appendChild(tr);
       });
-      $('tpCount').textContent=rows.length+TT(' post(s) today')+(urgent?(' · '+urgent+TT(' not ready')):'');
+      $('tpBigNum').textContent=pub+' / '+rows.length;
+      $('tpBigLbl').innerHTML=esc(TT('published today'))+(urgent?(' · <span class="nr">'+urgent+esc(TT(' not ready'))+'</span>'):'');
     }
 
     // Batch = pieces sharing the client + the batch number embedded in the Piece ID (e.g. C12.1 -> 12).
