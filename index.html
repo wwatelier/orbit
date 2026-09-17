@@ -447,6 +447,25 @@
       :root { --line:#b3b8ae; --ink-soft:#565c56; }
       :focus-visible { outline-width: 3px; }
     }
+
+    /* Today's posts — mobile card layout (§16 Flexibility, §10 tap targets).
+       On phones the wide scrolling table becomes stacked cards: no sideways
+       scroll, and the status control + Edit dates are full-width 44px targets.
+       Scoped to .tptable so the Batch-Progress .ptable keeps scrolling. */
+    @media (max-width:820px){
+      table.tptable{ min-width:0 !important; }
+      table.tptable thead{ display:none; }
+      table.tptable, table.tptable tbody, table.tptable tr, table.tptable td{ display:block; width:auto; }
+      table.tptable tr{ border:1px solid var(--line); border-radius:12px; background:#fff; padding:12px 14px; margin-bottom:12px; }
+      table.tptable tr.notready{ border-color:#e39b9b; background:#fdf6f6; }
+      table.tptable tr.notready td{ background:transparent !important; }
+      table.tptable td{ border:none !important; padding:3px 0; white-space:normal; }
+      table.tptable td:empty{ display:none; }
+      table.tptable .tpstagecell{ padding-top:10px; }
+      table.tptable .tpstage{ width:100%; min-height:44px; }
+      table.tptable .tpeditcol{ padding-top:8px; }
+      table.tptable .tpdate{ width:100%; min-height:44px; }
+    }
   </style>
 </head>
 <body>
@@ -485,7 +504,7 @@
           <div class="hero-date" id="heroDate"></div>
           <h2 class="hero-h">Today's posts</h2>
           <p class="sub">Going live today. Not ready yet shows red. Change status or dates right here — it saves to the master.</p>
-          <div class="tablewrap" style="margin-top:16px"><table class="ptable"><thead><tr><th>Piece ID</th><th>Client</th><th>Format</th><th>Platform</th><th>Title</th><th>Posting dates</th><th>Stage</th><th></th></tr></thead><tbody id="tpBody"></tbody></table></div>
+          <div class="tablewrap" style="margin-top:16px"><table class="ptable tptable"><thead><tr><th>Piece ID</th><th>Client</th><th>Format</th><th>Platform</th><th>Title</th><th>Posting dates</th><th>Stage</th><th></th></tr></thead><tbody id="tpBody"></tbody></table></div>
           <span class="count" id="tpCount"></span>
           <div class="controls" style="margin-top:14px;padding-top:14px;border-top:1px solid var(--line)">
             <strong style="font-size:13px">Share link</strong>
@@ -1745,9 +1764,9 @@
           '<td>'+clientChip(r['Client'])+'</td><td>'+fmtChip(r['Format'])+'</td>'+
           '<td class="cellbtn platcell">'+platLabel(r['PlatformList'],r['Client'])+'</td>'+
           '<td>'+esc(r['Title']||'')+'</td>'+
-          '<td>'+platDates(r)+'</td>'+
+          '<td class="tpdatescol">'+platDates(r)+'</td>'+
           '<td class="tpstagecell"></td>'+
-          '<td><button class="small tpdate">Edit dates</button></td>';
+          '<td class="tpeditcol"><button class="small tpdate">Edit dates</button></td>';
         const sel=document.createElement('select'); sel.className='tpstage';
         sel.innerHTML=STAGES.map(function(s){ return '<option'+(s===r['Stage']?' selected':'')+'>'+esc(s)+'</option>'; }).join('');
         sel.onchange=async function(){ sel.disabled=true;
@@ -1758,6 +1777,9 @@
         tr.querySelector('.tpstagecell').appendChild(sel);
         tr.querySelector('.platcell').onclick=function(e){ e.stopPropagation(); openPlatformEditor(r); };
         tr.querySelector('.tpdate').onclick=function(e){ e.stopPropagation(); openDateEditor(r); };
+        tr.querySelector('.tpdatescol').onclick=function(e){ e.stopPropagation(); };
+        tr.querySelector('.tpstagecell').onclick=function(e){ e.stopPropagation(); };
+        tr.querySelector('.tpeditcol').onclick=function(e){ e.stopPropagation(); };
         tr.onclick=function(){ if(r['Copy Link']) window.open(r['Copy Link'],'_blank','noopener'); };
         tb.appendChild(tr);
       });
