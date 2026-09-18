@@ -369,6 +369,18 @@ table td:first-child{white-space:nowrap}
   .ppl { display:inline-block; min-width:52px; margin-right:6px; color:var(--text-soft); font-size:10px; }
   .pdtag { margin-left:5px; font-size:8px; text-transform:uppercase; letter-spacing:.03em; opacity:.85; }
   .collabtag { display:block; width:fit-content; margin-top:4px; white-space:nowrap; font-size:10px; padding:1px 7px; border-radius:99px; background:#eaf0f6; color:#3a5a7a; font-weight:500; }
+    /* Open Post — read-only caption + downloadable assets (client) */
+    .openpost{ margin-left:10px; color:var(--brand,#3f5a49); font-weight:600; white-space:nowrap; }
+    .pm-overlay{ position:fixed; inset:0; background:rgba(30,32,30,.42); display:none; align-items:flex-start; justify-content:center; padding:40px 16px; z-index:80; overflow-y:auto; }
+    .pm-overlay.show{ display:flex; }
+    .pm-card{ background:var(--bg,#fff); border:1px solid var(--line); border-radius:14px; max-width:520px; width:100%; padding:20px; box-shadow:0 18px 50px rgba(0,0,0,.18); }
+    .pm-title{ font-weight:700; font-size:16px; margin-bottom:12px; color:var(--text); }
+    .pm-lbl{ font-size:12px; text-transform:uppercase; letter-spacing:.04em; color:var(--text-soft); margin-bottom:6px; }
+    .pm-cap{ width:100%; min-height:160px; font:inherit; line-height:1.5; padding:10px 12px; border:1px solid var(--line); border-radius:10px; background:#fbfbfa; color:var(--text); white-space:pre-wrap; resize:vertical; }
+    .pm-actions{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:12px; }
+    .pm-copy,.pm-download,.pm-close{ padding:9px 14px; border:1px solid var(--line); border-radius:10px; background:var(--bg,#fff); color:var(--text); font:inherit; font-weight:600; cursor:pointer; text-decoration:none; }
+    .pm-copy{ margin-top:8px; }
+    .pm-copy:active,.pm-download:active,.pm-close:active{ transform:scale(.97); }
 </style>
 </head>
 <body>
@@ -671,7 +683,7 @@ function renderTodayPosts(){
     return;
   }
   body.innerHTML='<div class="tablewrap"><table class="ptable"><thead><tr><th>ID</th><th>Format</th><th>Title</th><th>Posting</th><th>Status</th><th>Copy</th></tr></thead><tbody>'+items.map(r=>{
-    const link=r.copyLink?'<a href="'+esc(r.copyLink)+'" target="_blank" rel="noopener">Open Copy</a>':'\u2014';
+    const link=(r.copyLink?'<a href="'+esc(r.copyLink)+'" target="_blank" rel="noopener">Open Copy</a>':'\u2014') + postBtn(r);
     return '<tr><td>'+esc(r.pieceId)+viralStar(r)+collabTag(r)+'</td><td>'+fmtChip(r.format)+'</td>'
       +'<td>'+esc(r.title||'')+'</td>'
       +'<td>'+platDates(r)+'</td>'
@@ -718,7 +730,7 @@ function renderWaiting(){
     const n = daysAway(parseDate(r.publishDate));
     const od = isOverdue(r);
     const soon = (od || (n!==null && n<=2)) ? "soon" : "";   // reuse the red due styling for overdue
-    const link = r.copyLink ? '<a href="'+esc(r.copyLink)+'" target="_blank" rel="noopener">Open Copy</a>' : "";
+    const link = (r.copyLink ? '<a href="'+esc(r.copyLink)+'" target="_blank" rel="noopener">Open Copy</a>' : "") + postBtn(r);
     return '<div class="wrow'+(od?' overdue':'')+'"><div class="top">'
       + '<span class="id">'+esc(r.pieceId)+'</span>'
       + '<span class="title">'+esc(r.title)+'</span>'
@@ -755,7 +767,7 @@ function renderWeek(){
             + '<td colspan="5" class="nopost">No post scheduled</td></tr>';
         }
         const r=o.r;
-        const link = r.copyLink?'<a href="'+esc(r.copyLink)+'" target="_blank" rel="noopener">Open Copy</a>':'\u2014';
+        const link = (r.copyLink?'<a href="'+esc(r.copyLink)+'" target="_blank" rel="noopener">Open Copy</a>':'\u2014') + postBtn(r);
         const dcell = DOW[o.d.getDay()]+' '+o.d.getDate()+' '+MON[o.d.getMonth()];
         return '<tr'+(o.iso===todayIso?' class="wtoday"':'')+'>'
           + '<td class="wdate">'+esc(dcell)+'</td>'
@@ -773,7 +785,7 @@ function pillFor(r){ const c = toneFor(r); return '<span class="pill '+c.tone+'"
 function renderTable(){
   const rows = STATE.rows.filter(r=>!isPublished(r)&&!isParkedRow(r)).sort((a,b)=> (parseDate(a.publishDate)||8e15) - (parseDate(b.publishDate)||8e15));
   const body = rows.map(r=>{
-    const link = r.copyLink ? '<a href="'+esc(r.copyLink)+'" target="_blank" rel="noopener">Open Copy</a>' : '<span class="fmt">\u2014</span>';
+    const link = (r.copyLink ? '<a href="'+esc(r.copyLink)+'" target="_blank" rel="noopener">Open Copy</a>' : '<span class="fmt">\u2014</span>') + postBtn(r);
     return '<tr><td class="id">'+esc(r.pieceId)+'</td>'
       + '<td class="title">'+esc(r.title)+'<div class="fmt">'+esc(r.format||"")+(r.platform?" \u00b7 "+esc(r.platform):"")+'</div></td>'
       + '<td class="date">'+fmtShort(parseDate(r.publishDate))+'</td>'
@@ -796,7 +808,7 @@ function renderBoard(){
       .filter(r=>!isParkedRow(r) && classify(r.stage).group===col.key)
       .sort((a,b)=> (parseDate(a.publishDate)||8e15) - (parseDate(b.publishDate)||8e15));
     const cards = items.map(r=>{
-      const link = r.copyLink ? '<a href="'+esc(r.copyLink)+'" target="_blank" rel="noopener">Open Copy</a>' : "";
+      const link = (r.copyLink ? '<a href="'+esc(r.copyLink)+'" target="_blank" rel="noopener">Open Copy</a>' : "") + postBtn(r);
       return '<div class="card"><div class="cid">'+esc(r.pieceId)+viralStar(r)+'</div>'
         + '<div class="ctitle">'+esc(r.title)+'</div>'
         + '<div class="cplat">'+fmtChip(r.format)+'</div><div class="tpdates">'+platDates(r)+'</div>'
@@ -879,7 +891,7 @@ function renderParked(){
     if(open){
       body = g.items.length ? '<div class="tablewrap"><table class="ptable"><thead><tr><th>ID</th><th>Format</th><th>Title</th><th>Status</th><th>Date</th><th>Copy</th></tr></thead><tbody>'
         + slice.map(r=>{
-            const link=r.copyLink?'<a href="'+esc(r.copyLink)+'" target="_blank" rel="noopener">Open Copy</a>':'<span class="fmt">\u2014</span>';
+            const link=(r.copyLink?'<a href="'+esc(r.copyLink)+'" target="_blank" rel="noopener">Open Copy</a>':'<span class="fmt">\u2014</span>') + postBtn(r);
             return '<tr><td class="id">'+esc(r.pieceId)+viralStar(r)+'</td><td>'+fmtChip(r.format)+'</td>'
               +'<td class="title">'+esc(r.title||"")+'</td><td>'+pillFor(r)+'</td>'
               +'<td class="date">'+fmtShort(parseDate(r.publishDate))+'</td><td>'+link+'</td></tr>';
@@ -1018,6 +1030,33 @@ function orbitStart(){
   window.addEventListener('resize', hide);
   document.addEventListener('keydown', function(e){ if(e.key==='Escape') hide(); });
 })();
+/* Open Post (read-only): the publish caption to copy + the assets folder to download. */
+function ensurePostModal_(){
+  var ov=document.getElementById('postModal'); if(ov) return ov;
+  ov=document.createElement('div'); ov.id='postModal'; ov.className='pm-overlay';
+  ov.innerHTML='<div class="pm-card"><div class="pm-title"></div>'
+    +'<div class="pm-capwrap"><div class="pm-lbl">Caption</div><textarea class="pm-cap" readonly></textarea><div><button type="button" class="pm-copy">Copy caption</button></div></div>'
+    +'<div class="pm-actions"><a class="pm-download" href="#" target="_blank" rel="noopener">Download files</a><button type="button" class="pm-close">Close</button></div></div>';
+  document.body.appendChild(ov);
+  ov.addEventListener('click', function(e){ if(e.target===ov) ov.classList.remove('show'); });
+  ov.querySelector('.pm-close').onclick=function(){ ov.classList.remove('show'); };
+  ov.querySelector('.pm-copy').onclick=function(){ var ta=ov.querySelector('.pm-cap'), b=ov.querySelector('.pm-copy'), t=ta.value||'';
+    if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(t); } else { ta.select(); try{document.execCommand('copy');}catch(e){} }
+    var o=b.textContent; b.textContent='Copied'; setTimeout(function(){ b.textContent=o; },1200); };
+  return ov;
+}
+function postBtn(r){ return (r.caption||r.assetsLink) ? ' <a href="#" class="openpost" data-post="'+esc(r.pieceId)+'">Open Post</a>' : ''; }
+function openPost(r){
+  var ov=ensurePostModal_();
+  ov.querySelector('.pm-title').textContent=(r.pieceId||'')+(r.title?' \u00b7 '+r.title:'');
+  var cw=ov.querySelector('.pm-capwrap'), cap=ov.querySelector('.pm-cap');
+  if(r.caption){ cap.value=r.caption; cw.style.display=''; } else { cw.style.display='none'; }
+  var dl=ov.querySelector('.pm-download'); if(r.assetsLink){ dl.href=r.assetsLink; dl.style.display=''; } else { dl.style.display='none'; }
+  ov.classList.add('show');
+}
+document.addEventListener('click', function(e){ var a=e.target.closest?e.target.closest('.openpost'):null; if(!a) return;
+  e.preventDefault(); e.stopPropagation(); var pid=a.getAttribute('data-post');
+  var r=(STATE&&STATE.rows||[]).filter(function(x){return x.pieceId===pid;})[0]; if(r) openPost(r); }, true);
 if(document.readyState==="loading") document.addEventListener("DOMContentLoaded", orbitStart);
 else orbitStart();
 
