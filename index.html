@@ -953,19 +953,21 @@
     window.__orbitBoot = (function(){
       try {
         var t = localStorage.getItem('orbitTok');
-        if (!t || (tokenExp(t) - Date.now() < 60000)) return null;   // no usable token: normal sign-in handles it
+        var s = localStorage.getItem('orbitSess');
+        if (!t || (tokenExp(t) - Date.now() < 60000)) t = null;      // don't boot with an expiring id token
+        if (!t && !s) return null;                                    // nothing to boot with
         function fire(action){
           return fetch(EXEC_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
-            body: JSON.stringify({ idToken:t, action:action, payload:{} }) })
+            body: JSON.stringify({ idToken:t, sess:s, action:action, payload:{} }) })
             .then(function(r){ return r.json(); }).catch(function(){ return null; });
         }
-        return { token:t, whoami:fire('whoami'), getMeta:fire('getMeta'), listRows:fire('listRows') };
+        return { token:t, sess:s, whoami:fire('whoami'), getMeta:fire('getMeta'), listRows:fire('listRows') };
       } catch(e){ return null; }
     })();
     // Consume a booted response once, only if it was fired for the token we're now using.
     function bootTake(action){
       var b = window.__orbitBoot;
-      if (!b || b.token !== idToken || !b[action]) return null;
+      if (!b || (b.sess !== sessTok && b.token !== idToken) || !b[action]) return null;
       var p = b[action]; b[action] = null; return p;
     }
     async function callBooted(action){
@@ -987,7 +989,7 @@
     const PARKED = ['On Hold','⏸️ On Hold','◼️ Unselected'];
 
     const PREFS = loadPrefs();
-    let idToken = null, allRows = [], current = null, pendingRefresh = null, keepaliveStarted = false, myEmail = '';
+    let idToken = null, sessTok = null, allRows = [], current = null, pendingRefresh = null, keepaliveStarted = false, myEmail = '';
     let reqTypes = ['working-in-action','daily activities','HD scenic','specific'];
     let reqKinds = ['B-Rolls','Pictures'], curReqs = [];
     const $ = function (id){ return document.getElementById(id); };
@@ -1033,11 +1035,13 @@
       $('signin').style.display='none';
       $('whoami').className='muted'; $('whoami').textContent='Signing you in…';
 
-      // 1) Reuse the stored token if it hasn't expired — this is what makes a refresh keep you signed in.
+      // 1) A saved server session (or a still-valid Google token) keeps you signed in without re-prompting Google.
+      sessTok = loadSess();
       const saved = loadToken();
-      if (saved) { idToken = saved; startSession(); return; }
+      if (saved) idToken = saved;
+      if (sessTok || saved) { startSession(); return; }
 
-      // 2) No usable token: ask Google to re-issue one silently.
+      // 2) Nothing stored: ask Google to sign in (silently first).
       trySilentSignIn();
     };
 
@@ -1061,6 +1065,10 @@
       } catch(e){ return null; }
     }
     function clearToken(){ try { localStorage.removeItem('orbitTok'); } catch(e){} }
+    // Long-lived server session (30-day sliding window) — this is what keeps the team signed in.
+    function saveSess(s){ sessTok=s; try { localStorage.setItem('orbitSess', s); } catch(e){} }
+    function loadSess(){ try { return localStorage.getItem('orbitSess') || null; } catch(e){ return null; } }
+    function clearSess(){ sessTok=null; try { localStorage.removeItem('orbitSess'); } catch(e){} }
 
     async function call(action, payload){
       const showProg = WRITE_ACT[action] && !PROG_SUPPRESS;
@@ -1094,7 +1102,7 @@
       const timer = ctrl ? setTimeout(function(){ try{ ctrl.abort(); }catch(e){} }, 45000) : null;
       try {
         const res = await fetch(EXEC_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
-          body: JSON.stringify({ idToken:idToken, action:action, payload:payload||{} }),
+          body: JSON.stringify({ idToken:idToken, sess:sessTok, action:action, payload:payload||{} }),
           signal: ctrl ? ctrl.signal : undefined });
         const text = await res.text();
         try { return JSON.parse(text); }
@@ -1113,7 +1121,7 @@
     }
     // If a call still fails after a silent renewal, the session is genuinely gone — ask for a real sign-in.
     function sessionLost(){
-      clearToken(); idToken=null; clearSnapshot();
+      clearToken(); idToken=null; clearSess(); clearSnapshot();
       $('app').classList.add('hidden'); $('signScreen').classList.remove('hidden');
       revealSignIn('Your session expired. Please sign in again.');
     }
@@ -1129,11 +1137,13 @@
       if (!keepaliveStarted) { keepaliveStarted = true;
         // Renew a few minutes before the token actually expires, so long sessions never drop.
         setInterval(function(){
+          if (sessTok) return;                 // long-lived server session — no need to re-prompt Google
           const left = tokenExp(idToken||'') - Date.now();
           if (left < 6*60*1000) { try { google.accounts.id.prompt(); } catch(e){} }
         }, 4*60*1000);
         // Coming back to the tab after sleep: re-check immediately rather than waiting for the timer.
         document.addEventListener('visibilitychange', function(){
+          if (sessTok) return;
           if(document.visibilityState==='visible' && idToken && tokenExp(idToken)-Date.now() < 6*60*1000){
             try { google.accounts.id.prompt(); } catch(e){}
           }
@@ -1143,12 +1153,13 @@
       if(!painted){ $('whoami').className='muted'; $('whoami').textContent='Checking with Orbit…'; }
       const data = await callBooted('whoami');
       if(!data || !data.ok){
-        clearToken(); idToken=null; clearSnapshot();
+        clearToken(); idToken=null; clearSess(); clearSnapshot();
         if(painted){ $('app').classList.add('hidden'); $('signScreen').classList.remove('hidden'); }
         $('whoami').className='err'; $('whoami').textContent=(data&&data.error)||'Sign-in rejected.';
         revealSignIn((data&&data.error)||'Please sign in again.');
         return;
       }
+      if (data.sess) saveSess(data.sess);        // store/refresh the long-lived session
       myEmail = data.result.email;
       $('signScreen').classList.add('hidden'); $('app').classList.remove('hidden');
       $('whoamiMin').textContent = data.result.email;
