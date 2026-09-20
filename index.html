@@ -260,6 +260,17 @@
     tr.clickable:active td { background:#eef1ec; }   /* §1 Response — feedback on press */
     tbody tr:last-child td { border-bottom:none; }
     .empty { padding:44px; text-align:center; color:var(--ink-soft); }
+    /* Activity Log: compact, content-hugging table (was stretching full width with tall rows) */
+    #tab-log .surface{ display:inline-block; max-width:100%; }
+    #tab-log table{ width:auto; }
+    #tab-log th, #tab-log td{ padding:6px 12px; font-size:12px; }
+    #tab-log th{ font-size:11px; }
+    #tab-log .empty{ padding:20px 28px; }
+    @media (max-width:820px){
+      #tab-log .surface{ display:block; }
+      #tab-log .tablewrap table{ min-width:0; }
+      #tab-log th, #tab-log td{ padding:5px 9px; font-size:11px; }
+    }
 
     .pill { display:inline-block; padding:3px 11px; border-radius:999px; font-size:12px; font-weight:600; line-height:1.4; white-space:nowrap; }
     .chip { display:inline-block; padding:2px 8px; margin:1px 3px 1px 0; border-radius:7px; font-size:11px; background:#eef1ec; color:#5b625b; font-weight:500; white-space:nowrap; }
