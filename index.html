@@ -3886,7 +3886,8 @@ sched,
       ]
     };
     function renderHelp(){
-      var L=(typeof LANG!=='undefined' && LANG==='th')?'th':'en', H=HELP_CONTENT;
+      var L='en'; try{ if(document.documentElement.getAttribute('lang')==='th' || localStorage.getItem('orbitLang')==='th') L='th'; }catch(e){}
+      var H=HELP_CONTENT;
       var tt=document.getElementById('helpTitle'); if(tt) tt.textContent=H.title[L];
       var tabsEl=document.getElementById('helpTabs');
       if(tabsEl) tabsEl.innerHTML=H.tabs.map(function(t){ return '<button type="button" class="help-tab'+(t.id===HELP_TAB?' on':'')+'" data-tab="'+t.id+'">'+esc(t.label[L])+'</button>'; }).join('');
