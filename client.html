@@ -380,6 +380,19 @@ table td:first-child{white-space:nowrap}
     .chooser-btn:active{ transform:scale(.97); }
     .chooser-cancel{ display:block; width:100%; padding:12px; margin-top:4px; border:none; background:none; color:var(--text-soft); font:inherit; cursor:pointer; }
     @media (prefers-reduced-motion: reduce){ .chooser-card{ animation:none; } .chooser-btn:active{ transform:none; } }
+    .chist{ margin:28px 0 8px; border-top:1px solid var(--line); padding-top:16px; }
+    .chist>summary{ cursor:pointer; font-weight:600; color:var(--text); list-style:none; }
+    .chist>summary::-webkit-details-marker{ display:none } .chist>summary::before{ content:"\25B8 "; color:var(--text-soft); }
+    .chist[open]>summary::before{ content:"\25BE "; }
+    .chist-note{ color:var(--text-soft); font-size:13px; margin:6px 0 10px; }
+    .chist-row{ font-size:13px; color:var(--text); padding:6px 0; border-top:1px solid var(--line); line-height:1.5; }
+    .chist-ev{ display:inline-block; font-size:11px; font-weight:600; color:var(--text-soft); background:#f2f3f0; border-radius:99px; padding:1px 8px; margin-right:6px; }
+    /* ---- apple-design polish (client): materials, motion, press ---- */
+    .chooser-overlay{ backdrop-filter:saturate(140%) blur(8px); -webkit-backdrop-filter:saturate(140%) blur(8px); }
+    #labelPop{ animation:chIn .16s ease-out; }
+    .chist>summary{ transition:color .15s ease; } .chist>summary:active{ transform:scale(.99); display:inline-block; }
+    @media (prefers-reduced-transparency: reduce){ .chooser-overlay{ backdrop-filter:none; -webkit-backdrop-filter:none; background:rgba(30,32,30,.6); } }
+    @media (prefers-reduced-motion: reduce){ #labelPop{ animation:none; } .chist>summary:active{ transform:none; } }
 </style>
 </head>
 <body>
@@ -959,11 +972,26 @@ async function loadRows(key){
       return;
     }
     try { localStorage.setItem("orbitClient_"+key, JSON.stringify(data)); } catch(e){}
-    render(data); markStale(false);
+    render(data); markStale(false); renderHistory(key);
   } catch(err){
     if(hadCache){ markStale(false, "Offline. Showing your last view."); return; }
     showError("Couldn't load your calendar. Please check your connection and try again.");
   }
+}
+async function renderHistory(key){
+  try{
+    var res = await (await fetch(WEB_APP_URL, { method:"POST", body: JSON.stringify({ action:"clientLog", key:key }) })).json();
+    var wrap = document.querySelector('#app .wrap'); if(!wrap) return;
+    var old = document.getElementById('clientHistory'); if(old) old.remove();
+    if(!res || res.ok===false || !res.rows || !res.rows.length) return;
+    var rows = res.rows.map(function(r){
+      var bits=[r.ts, r.pieceId, r.reason].filter(Boolean).map(esc).join(' \u00b7 ');
+      return '<div class="chist-row"><span class="chist-ev">'+esc(r.event||'')+'</span> '+bits+(r.note?' ('+esc(r.note)+')':'')+'</div>';
+    }).join('');
+    var d=document.createElement('details'); d.id='clientHistory'; d.className='chist';
+    d.innerHTML='<summary>History</summary><div class="chist-note">A record of timing that affected this batch.</div>'+rows;
+    wrap.appendChild(d);
+  }catch(e){}
 }
 function markStale(on, msg){
   const el = document.getElementById("staleBar");
