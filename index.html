@@ -1600,11 +1600,11 @@
         }
         return null;
       }
-      // frozen = never moved by the reflow
+      // frozen = never moved by the reflow: Published, or an imminent post (today/tomorrow) we won't yank.
       function frozen(r){ var s=r['Stage']||'';
-        if(/Published|Ready to Publish/.test(s)) return true;
+        if(/Published/.test(s)) return true;
         var pd=r['Publish Date']||''; if(!pd) return false;
-        return pd <= isoOf(addDays(today,7)); }
+        return pd===isoOf(today) || pd===isoOf(addDays(today,1)); }
       function pidKey(id){ var m=String(id||'').match(/(\d+)\.(\d+)/); return m?[+m[1],+m[2]]:[9999,9999]; }
       function byId(arr){ return arr.slice().sort(function(a,b){ var ka=pidKey(a['Piece ID']),kb=pidKey(b['Piece ID']);
         return ka[0]-kb[0]||ka[1]-kb[1]||String(a['Piece ID']).localeCompare(b['Piece ID']); }); }
@@ -1617,69 +1617,80 @@
         while(mi<m) out.push(min[mi++]);
         return out;
       }
-      function reflowable(){ return allRows.filter(function(r){ var s=r['Stage']||'';
+      function scopeClient(){ var el=document.getElementById('assignClient'); return el?el.value:''; }
+      function reflowable(){ var sc=scopeClient(); return allRows.filter(function(r){ var s=r['Stage']||'';
         if(PARKED.indexOf(s)!==-1 || /Rolled Over/.test(s)) return false;
-        if(!fixedRole(r)) return false; return !frozen(r); }); }
-      // per-feed resume date (day after its last frozen post) + the dates each feed is already locked on
-      function anchors(){
-        var start=PATTERN_START, tomorrow=isoOf(addDays(today,1)); if(tomorrow>start) start=tomorrow;
-        var resume={SRU:start,Ice:start,Dianna:start}, occ={SRU:{},Ice:{},Dianna:{}};
+        if(!fixedRole(r)) return false; if(frozen(r)) return false;
+        if(sc && accountsFor(r).accounts.indexOf(sc)===-1) return false;       // only the client you're viewing
+        if(RF_MODE==='ready' && !/Ready to Publish/.test(s)) return false;      // "Only what's ready" pool
+        return true; }); }
+      // dates each feed is already locked on by a frozen (published or imminent) piece
+      function frozenOcc(){
+        var occ={SRU:{},Ice:{},Dianna:{}};
         allRows.forEach(function(r){ if(!fixedRole(r) || !frozen(r)) return;
           var pd=r['Publish Date']||''; if(!pd) return;
-          accountsFor(r).accounts.forEach(function(f){ if(!(f in resume)) return;
-            occ[f][pd]=1; var nx=isoOf(addDays(new Date(pd+'T00:00:00'),1)); if(nx>resume[f]) resume[f]=nx; }); });
-        return {resume:resume, occ:occ, start:start};
+          accountsFor(r).accounts.forEach(function(f){ if(f in occ) occ[f][pd]=1; }); });
+        return occ;
       }
       function walk(){
-        var A=anchors();
+        var occ=frozenOcc(), sc=scopeClient();
         var Q={}; ROLES.forEach(function(rl){ Q[rl]=[]; });
         reflowable().forEach(function(r){ Q[fixedRole(r)].push(r); });
-        ROLES.forEach(function(rl){ Q[rl]=evenSpread(byId(Q[rl])); });
+        // Ready-to-Publish first (priority fill), then everything else; format-alternate within each group.
+        ROLES.forEach(function(rl){
+          var rdy=Q[rl].filter(function(r){ return /Ready to Publish/.test(r['Stage']||''); });
+          var rest=Q[rl].filter(function(r){ return !/Ready to Publish/.test(r['Stage']||''); });
+          Q[rl]=evenSpread(byId(rdy)).concat(evenSpread(byId(rest)));
+        });
         var totalIn=ROLES.reduce(function(a,rl){ return a+Q[rl].length; },0);
         function popAlt(rl,cls){ var q=Q[rl]; if(!q||!q.length) return null;
           for(var i=0;i<q.length;i++){ if((vid(q[i])?'V':'S')!==cls) return q.splice(i,1)[0]; } return q.shift(); }
-        var byDate={}, last={SRU:'',Ice:'',Dianna:''}, placed={SRU:0,Ice:0,Dianna:0}, firstDark={}, jobs=[];
+        var byDate={}, last={SRU:'',Ice:'',Dianna:''}, placed={SRU:0,Ice:0,Dianna:0}, jobs=[];
         function record(r,ymd,feeds){ var cls=vid(r)?'V':'S';
-          feeds.forEach(function(f){ last[f]=cls; placed[f]++; });
+          feeds.forEach(function(f){ last[f]=cls; placed[f]++; occ[f][ymd]=1; });
           (byDate[ymd]=byDate[ymd]||[]).push({feeds:feeds,cls:cls,id:r['Piece ID']});
           jobs.push({row:r.row, pieceId:r['Piece ID'], changes:{'Publish Date':ymd,'Ready By':readyByFor(ymd,r['Format'])}}); }
-        var startIso=[A.resume.SRU,A.resume.Ice,A.resume.Dianna].sort()[0];
-        var d=new Date(startIso+'T00:00:00'), guard=0, HORIZON=60*7;
+        // Fill the earliest open cadence slots from tomorrow forward — gaps within the next 7 days included.
+        var d=new Date(isoOf(addDays(today,1))+'T00:00:00'), guard=0, HORIZON=60*7;
         while(ROLES.some(function(rl){return Q[rl].length;}) && guard++<HORIZON){
           var dow=d.getDay(), ymd=isoOf(d);
           if(dow!==0 && TPL[dow]){
             TPL[dow].forEach(function(slot){ var role=slot[0], feeds=slot[1];
-              var ready=feeds.every(function(f){ return ymd>=A.resume[f] && !A.occ[f][ymd]; });
-              if(!ready) return;
+              if(sc && feeds.indexOf(sc)===-1) return;                    // scoped: only this client's slots
+              var open=feeds.every(function(f){ return !occ[f][ymd]; });
+              if(!open) return;
               var r=popAlt(role,last[feeds[0]]);
               if(r){ record(r,ymd,feeds); return; }
-              feeds.forEach(function(f){ if(ymd<A.resume[f] || A.occ[f][ymd]) return;
-                var rr=popAlt(SOLOQ[f],last[f]); if(rr) record(rr,ymd,[f]); else if(!firstDark[f]) firstDark[f]=ymd; });
+              if(!sc){ feeds.forEach(function(f){ if(occ[f][ymd]) return;  // unscoped: keep each feed covered
+                var rr=popAlt(SOLOQ[f],last[f]); if(rr) record(rr,ymd,[f]); }); }
             });
           }
           d.setDate(d.getDate()+1);
         }
-        FEEDS.forEach(function(f){ if(!placed[f] && !firstDark[f]) firstDark[f]=A.resume[f]; });
-        return {byDate:byDate, placed:placed, firstDark:firstDark, jobs:jobs, totalIn:totalIn, resume:A.resume, start:startIso};
+        var leftover=ROLES.reduce(function(a,rl){ return a+Q[rl].length; },0);
+        return {byDate:byDate, placed:placed, jobs:jobs, totalIn:totalIn, leftover:leftover, scope:sc, mode:RF_MODE};
       }
 
-      var modal=null, lastRun=null;
+      var modal=null, lastRun=null, RF_MODE='ready';
       function ensureModal(){
         if(modal) return modal;
         modal=document.createElement('div');
         modal.style.cssText='position:fixed;inset:0;background:rgba(20,24,28,.45);z-index:9999;display:none;align-items:flex-start;justify-content:center;padding:32px 16px;overflow:auto;';
         modal.innerHTML='<div style="background:#fff;border-radius:14px;max-width:760px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.25);padding:22px 24px;font:inherit">'
-          +'<h3 style="margin:0 0 2px">Reflow preview — fixed pattern</h3>'
-          +'<p class="sub" id="rfSub" style="margin:0 0 14px"></p>'
+          +'<h3 style="margin:0 0 2px" id="rfTitle">Reflow preview</h3>'
+          +'<p class="sub" id="rfSub" style="margin:0 0 12px"></p>'
+          +'<div class="seg" style="margin:0 0 14px"><button id="rfModeReady" class="on">Only what\u2019s ready</button><button id="rfModeAll">All (incl. not ready)</button></div>'
           +'<div id="rfShort"></div>'
           +'<div id="rfGrid" style="max-height:340px;overflow:auto;border:1px solid var(--line,#e5e7eb);border-radius:10px;margin:12px 0"></div>'
           +'<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px">'
           +'<button id="rfCancel" class="small">Cancel</button>'
-          +'<button id="rfApply" class="primary">Apply — write these dates</button></div></div>';
+          +'<button id="rfApply" class="primary">Apply \u2014 write these dates</button></div></div>';
         document.body.appendChild(modal);
         modal.addEventListener('click',function(e){ if(e.target===modal) close(); });
         modal.querySelector('#rfCancel').onclick=close;
         modal.querySelector('#rfApply').onclick=apply;
+        modal.querySelector('#rfModeReady').onclick=function(){ RF_MODE='ready'; lastRun=walk(); render(lastRun); };
+        modal.querySelector('#rfModeAll').onclick=function(){ RF_MODE='all'; lastRun=walk(); render(lastRun); };
         return modal;
       }
       function close(){ if(modal) modal.style.display='none'; }
@@ -1687,27 +1698,32 @@
       function render(run){
         ensureModal();
         var dates=Object.keys(run.byDate).sort();
+        var who=run.scope||'all fixed-pattern feeds';
+        modal.querySelector('#rfTitle').textContent='Reflow preview \u2014 '+who;
+        modal.querySelector('#rfModeReady').classList.toggle('on', run.mode==='ready');
+        modal.querySelector('#rfModeAll').classList.toggle('on', run.mode==='all');
         modal.querySelector('#rfSub').textContent=
-          run.jobs.length+' piece(s) would be re-dated, '+dates.length+' posting day(s). Committed pieces (published, ready, or within 7 days) stay put; each feed resumes the day after its last committed post. Nothing is saved until Apply.';
+          run.jobs.length+' piece(s) would be re-dated onto the earliest open slots from tomorrow, '+dates.length+' posting day(s). '
+          +(run.mode==='all'
+             ? 'Not-ready pieces get pulled up too and will read Behind \u2014 the lateness sits with the client. '
+             : 'Only Ready-to-Publish pieces are placed; days with no ready content stay empty. ')
+          +'Published and today/tomorrow posts stay put. Nothing is saved until Apply.';
         var sh='';
-        FEEDS.forEach(function(f){
-          if(run.firstDark[f]) sh+='<div style="color:#b91c1c">⛔ <b>'+f+'</b> feed has no content from <b>'+fmtD(run.firstDark[f])+'</b> — placed '+run.placed[f]+' post(s). Produce more before this date.</div>';
-          else sh+='<div style="color:#166534">🟢 <b>'+f+'</b> covered through the horizon — '+run.placed[f]+' post(s).</div>';
-        });
+        var feeds=run.scope?[run.scope]:FEEDS;
+        feeds.forEach(function(f){ sh+='<div style="color:#166534">\uD83D\uDFE2 <b>'+f+'</b> \u2014 '+run.placed[f]+' post(s) placed.</div>'; });
+        if(run.leftover) sh+='<div style="color:#b45309">\u26A0 '+run.leftover+' piece(s) had no open slot in range \u2014 there isn\u2019t enough content to fill every day.</div>';
+        if(!run.jobs.length) sh+='<div style="color:#6b7280">Nothing to place in this mode'+(run.mode==='ready'?' \u2014 try \u201CAll\u201D to pull not-ready pieces up.':'.')+'</div>';
         modal.querySelector('#rfShort').innerHTML='<div style="background:#f8fafc;border:1px solid var(--line,#e5e7eb);border-radius:10px;padding:10px 12px;line-height:1.7">'+sh+'</div>';
-        var rows='<table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr>'
-          +'<th style="text-align:left;padding:6px 10px;position:sticky;top:0;background:#fff">Date</th>'
-          +'<th style="text-align:left;padding:6px 10px;position:sticky;top:0;background:#fff">SRU</th>'
-          +'<th style="text-align:left;padding:6px 10px;position:sticky;top:0;background:#fff">Ice</th>'
-          +'<th style="text-align:left;padding:6px 10px;position:sticky;top:0;background:#fff">Dianna</th></tr></thead><tbody>';
-        dates.slice(0,48).forEach(function(ymd){
-          var cell={SRU:'—',Ice:'—',Dianna:'—'};
-          run.byDate[ymd].forEach(function(it){ var tag=(it.cls==='V'?'🎬':'🖼️')+' '+esc(it.id);
-            it.feeds.forEach(function(f){ cell[f]=tag; }); });
-          rows+='<tr><td style="padding:5px 10px;white-space:nowrap;border-top:1px solid #f1f5f9">'+esc(fmtD(ymd))
-            +'</td><td style="padding:5px 10px;border-top:1px solid #f1f5f9">'+cell.SRU
-            +'</td><td style="padding:5px 10px;border-top:1px solid #f1f5f9">'+cell.Ice
-            +'</td><td style="padding:5px 10px;border-top:1px solid #f1f5f9">'+cell.Dianna+'</td></tr>';
+        var cols=run.scope?[run.scope]:['SRU','Ice','Dianna'];
+        var head='<th style="text-align:left;padding:6px 10px;position:sticky;top:0;background:#fff">Date</th>'
+          +cols.map(function(c){ return '<th style="text-align:left;padding:6px 10px;position:sticky;top:0;background:#fff">'+esc(c)+'</th>'; }).join('');
+        var rows='<table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr>'+head+'</tr></thead><tbody>';
+        dates.slice(0,60).forEach(function(ymd){
+          var cell={}; cols.forEach(function(c){ cell[c]='\u2014'; });
+          run.byDate[ymd].forEach(function(it){ var tag=(it.cls==='V'?'\uD83C\uDFAC':'\uD83D\uDDBC\uFE0F')+' '+esc(it.id);
+            it.feeds.forEach(function(f){ if(f in cell) cell[f]=tag; }); });
+          rows+='<tr><td style="padding:5px 10px;white-space:nowrap;border-top:1px solid #f1f5f9">'+esc(fmtD(ymd))+'</td>'
+            +cols.map(function(c){ return '<td style="padding:5px 10px;border-top:1px solid #f1f5f9">'+cell[c]+'</td>'; }).join('')+'</tr>';
         });
         rows+='</tbody></table>';
         modal.querySelector('#rfGrid').innerHTML=rows;
@@ -1725,8 +1741,8 @@
       }
       btn.onclick=function(){
         if(!allRows.length){ setAssign('Nothing loaded yet.','muted'); return; }
+        RF_MODE='ready';
         lastRun=walk();
-        if(!lastRun.totalIn){ setAssign('Nothing to reflow — every fixed-pattern piece is already committed or parked.','muted'); return; }
         render(lastRun);
       };
     })();
