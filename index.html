@@ -1756,9 +1756,19 @@
         .sort(function(a,b){ return (a['Publish Date']||'').localeCompare(b['Publish Date']||''); });
     }
 
+    // A piece marked "10 Published" is only truly finished once every platform leg has gone out.
+    // With per-platform dates, one leg can still be ahead (e.g. TikTok posted, IG & FB not yet).
+    // Until a real per-platform "posted" flag exists, treat "a leg still dated today or later" as
+    // not-yet-out, so the piece stays visible for planning instead of hiding in Published Work while
+    // still holding a slot on the calendar. Derived from the dates already on the row — no schema change.
+    function hasPendingLeg(r){
+      if(!/^10 Published/.test(r['Stage']||'')) return false;
+      var t=todayISO();
+      return pdSlots(r).some(function(s){ return s.iso >= t; });
+    }
     function renderPipe(){
       const rows=filtered(); const tb=$('pipeBody'); tb.innerHTML='';
-      const active=rows.filter(function(r){ return PARKED.indexOf(r['Stage'])===-1 && !/^10 Published/.test(r['Stage']||''); });
+      const active=rows.filter(function(r){ return PARKED.indexOf(r['Stage'])===-1 && (!/^10 Published/.test(r['Stage']||'') || hasPendingLeg(r)); });
       if(!rows.length) tb.innerHTML='<tr><td colspan="9"><div class="empty">No pieces yet. Import a batch to get started.</div></td></tr>';
       function rowTr(r){
         const tr=document.createElement('tr'); tr.className='clickable'; tr.onclick=function(){ openPanel(r); };
@@ -2364,7 +2374,7 @@
     function renderParked(rows){
       const host=$('parkedArea'); if(!host) return;
       const groups={
-        pub:{ label:'Published Work', items:rows.filter(function(r){ return /^10 Published/.test(r['Stage']||''); }) },
+        pub:{ label:'Published Work', items:rows.filter(function(r){ return /^10 Published/.test(r['Stage']||'') && !hasPendingLeg(r); }) },
         hold:{ label:'⏸️ On Hold',       items:rows.filter(function(r){ var st=r['Stage']||''; return st==='On Hold'||st==='⏸️ On Hold'; }) },
         uns:{ label:'Unselected',     items:rows.filter(function(r){ return /Unselected/.test(r['Stage']||''); }) }
       };
