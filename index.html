@@ -125,6 +125,8 @@
     .calcard:hover { box-shadow:0 2px 6px rgba(20,20,15,.1); transform:translateY(-1px); }
     .calcard-id { font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .calcard-tags { margin-top:3px; display:flex; flex-wrap:wrap; gap:3px; }
+    .calcard-plat { margin-top:3px; }
+    .calplat { display:inline-block; font-size:9px; font-weight:700; letter-spacing:.02em; padding:1px 6px; border-radius:5px; background:#eef1ee; color:#55605a; white-space:nowrap; }
     .calcard .tchip { font-size:9px; padding:1px 6px; }
     .calcard.rich .calcard-id { font-size:11.5px; }
     .calmore { font-size:10.5px; color:var(--ink-soft); cursor:pointer; text-decoration:underline; background:none; border:none; padding:2px 2px 0; text-align:left; }
@@ -3437,7 +3439,7 @@ sched,
     let PD_PAGE=0;
     function pdActiveRows(client){
       return allRows.filter(function(r){
-        if(!r['Publish Date']) return false;
+        if(!r['Publish Date'] && !r['IG Date'] && !r['TikTok Date']) return false;
         if(PARKED.indexOf(r['Stage']||'')!==-1) return false;
         if(client && accountsFor(r).accounts.indexOf(client)===-1) return false;
         return true;
@@ -3477,18 +3479,42 @@ sched,
     // workload plan (that's Pipeline's Calendar; this one answers "what's going out, and where
     // are the holes," not "what should I work on"). Cards are draggable to reschedule directly.
     let PD_CAL_MODE='month', PD_CAL_CURSOR=new Date();
+    /* Effective posting days for a piece: IG&FB and TikTok can post on different days;
+       a blank platform date falls back to Publish Date (Code.gs: "blank means that platform
+       uses Publish Date"). Each slot carries the date column(s) it owns, so a drag moves the
+       right column instead of always Publish Date. Same-day platforms merge into one slot. */
+    function pdSlots(r){
+      const base=r['Publish Date']||'', igOv=r['IG Date']||'', ttOv=r['TikTok Date']||'';
+      const list=(r['PlatformList']||[]).map(function(s){return String(s).trim().toLowerCase();});
+      const has=function(re){ return list.some(function(x){ return re.test(x); }); };
+      const pairs=[];
+      if(has(/ig|instagram|reel|story/)) pairs.push([igFbOn(r['Client'])?'IG & FB':'IG', igOv||base, igOv?'IG Date':'Publish Date']);
+      else if(has(/fb|facebook/)) pairs.push(['FB', igOv||base, igOv?'IG Date':'Publish Date']);
+      if(has(/tiktok|tt/)) pairs.push(['TikTok', ttOv||base, ttOv?'TikTok Date':'Publish Date']);
+      if(has(/linkedin/)) pairs.push(['LinkedIn', base, 'Publish Date']);
+      if(has(/website|web/)) pairs.push(['Website', base, 'Publish Date']);
+      if(!pairs.length) pairs.push(['Publish', base, 'Publish Date']);
+      const byIso={};
+      pairs.forEach(function(p){ if(!p[1]) return; var slot=byIso[p[1]]||(byIso[p[1]]={iso:p[1], plats:[], fields:[]});
+        slot.plats.push(p[0]); if(slot.fields.indexOf(p[2])<0) slot.fields.push(p[2]); });
+      const slots=Object.keys(byIso).map(function(k){ return byIso[k]; });
+      const split=slots.length>1; slots.forEach(function(s){ s.split=split; });
+      return slots;
+    }
     function pdBucket(client){
       const rows=pdActiveRows(client);
       const byDay={};
-      rows.forEach(function(r){ (byDay[r['Publish Date']]=byDay[r['Publish Date']]||[]).push(r); });
+      rows.forEach(function(r){ pdSlots(r).forEach(function(s){ (byDay[s.iso]=byDay[s.iso]||[]).push({r:r, slot:s}); }); });
       return byDay;
     }
-    function pdCard(r, rich){
+    function pdCard(o, rich){
+      const r=o.r, slot=o.slot;
       const dot = /^10 Published/.test(r['Stage']||'') ? '#9aa19a' : otDotColor(r['On Track']);
       var pills=toneChip(r['Client'], CLIENT_TONE);
       if(rich) pills+=toneChip(r['Format'], FMT_TONE);
-      return '<div class="calcard pd-drag" data-id="'+esc(r['Piece ID'])+'" style="border-left-color:'+dot+'" title="'+esc(r['Piece ID']+' \u00b7 '+(r['Title']||''))+'">'+
-        '<div class="calcard-id">\uD83D\uDCC4 '+esc(r['Piece ID'])+'</div>'+
+      const badge = slot.split ? '<div class="calcard-plat"><span class="calplat">'+esc(slot.plats.join(' \u00b7 '))+'</span></div>' : '';
+      return '<div class="calcard pd-drag" data-id="'+esc(r['Piece ID'])+'" data-fields="'+esc(slot.fields.join('|'))+'" style="border-left-color:'+dot+'" title="'+esc(r['Piece ID']+' \u00b7 '+(r['Title']||'')+(slot.split?' \u2014 '+slot.plats.join(', '):''))+'">'+
+        '<div class="calcard-id">\uD83D\uDCC4 '+esc(r['Piece ID'])+'</div>'+badge+
         '<div class="calcard-tags">'+pills+'</div></div>';
     }
     function pdCellHtml(iso, byDay, cap, client, rich){
@@ -3501,7 +3527,7 @@ sched,
       var cls='calcell'+(isOff?' off':'')+(isPostDay?' postday':'');
       var html='<div class="'+cls+'" data-d="'+iso+'">'+(isCollabDay?'<span class="collabmark" title="Recurring collab day"></span>':'')+
         '<div class="calnum'+(isToday?' today':'')+'">'+d.getDate()+'</div>';
-      list.slice(0,cap).forEach(function(r){ html+=pdCard(r, rich); });
+      list.slice(0,cap).forEach(function(o){ html+=pdCard(o, rich); });
       if(list.length>cap) html+='<button class="calmore" data-d="'+iso+'">+'+(list.length-cap)+' more</button>';
       html+='</div>';
       return html;
@@ -3556,7 +3582,7 @@ sched,
       $('pdCalDayTitle').textContent=niceDate(iso);
       const tb=$('pdCalDayBody'); tb.innerHTML='';
       if(!rows.length){ tb.innerHTML='<tr><td colspan="8"><div class="empty">Nothing scheduled this day.</div></td></tr>'; }
-      rows.forEach(function(r){
+      rows.forEach(function(o){ var r=o.r;
         const tr=document.createElement('tr'); tr.className='clickable'; tr.onclick=function(){ openPanel(r); };
         tr.innerHTML='<td>'+esc(r['Piece ID'])+'<div class="rowtitle">'+esc(r['Title']||'')+'</div>'+collabTag(r)+infoMark(r)+'</td><td>'+clientChip(r['Client'])+'</td><td>'+fmtChip(r['Format'])+'</td>'+
           '<td>'+platLabel(r['PlatformList'],r['Client'])+'</td>'+
@@ -3573,11 +3599,11 @@ sched,
     // there's never any doubt about which one is being moved — the destination cell just gets a
     // soft inset highlight, never a hard box that could read as "the whole day is selected".
     function wirePdDrag(host){
-      var dragEl=null, dragId=null, fromCell=null, moved=false, startX=0, startY=0, ghost=null;
+      var dragEl=null, dragId=null, dragFields=null, fromCell=null, moved=false, startX=0, startY=0, ghost=null;
       function killGhost(){ if(ghost && ghost.parentNode) ghost.parentNode.removeChild(ghost); ghost=null; }
       host.onpointerdown=function(e){
         var card=e.target.closest('.pd-drag'); if(!card) return;
-        dragEl=card; dragId=card.dataset.id; fromCell=card.closest('.calcell');
+        dragEl=card; dragId=card.dataset.id; dragFields=card.dataset.fields||'Publish Date'; fromCell=card.closest('.calcell');
         startX=e.clientX; startY=e.clientY; moved=false;
         try{ card.setPointerCapture(e.pointerId); }catch(err){}
       };
@@ -3607,9 +3633,9 @@ sched,
           dragEl.dataset.dragged='1';
           var el=document.elementFromPoint(e.clientX, e.clientY);
           var cell=el&&el.closest?el.closest('.calcell:not(.pad)'):null;
-          if(cell && cell.dataset.d && cell!==fromCell) pdHandleDrop(dragId, cell.dataset.d, e.clientX, e.clientY);
+          if(cell && cell.dataset.d && cell!==fromCell) pdHandleDrop(dragId, dragFields, cell.dataset.d, e.clientX, e.clientY);
         }
-        dragEl=null; dragId=null; fromCell=null; moved=false;
+        dragEl=null; dragId=null; dragFields=null; fromCell=null; moved=false;
       };
       host.onpointercancel=function(){ if(dragEl) dragEl.classList.remove('dragging'); killGhost(); dragEl=null; moved=false; };
     }
@@ -3624,15 +3650,16 @@ sched,
       document.body.appendChild(t);
       return t;
     }
-    async function pdHandleDrop(pieceId, newDate, x, y){
+    async function pdHandleDrop(pieceId, fields, newDate, x, y){
       const r=allRows.filter(function(x2){ return x2['Piece ID']===pieceId; })[0]; if(!r) return;
+      const fieldArr=String(fields||'Publish Date').split('|');
       var toast=pdToast(x, y, '<span class="sp"></span>'+TT('Saving\u2026'));
-      var res=await assignOne(pieceId, r.row, newDate, false);
+      var res=await assignOne(pieceId, r.row, newDate, false, fieldArr);
       if(!res.ok && res.warn){
         toast.style.opacity='0'; setTimeout(function(){ if(toast.parentNode) toast.parentNode.removeChild(toast); }, 150);
         if(!confirm(humanAssignErr(res.error, newDate, res.clashAccount)+' '+TT('Move it anyway?'))){ return; }
         toast=pdToast(x, y, '<span class="sp"></span>'+TT('Saving\u2026'));
-        res=await assignOne(pieceId, r.row, newDate, true);
+        res=await assignOne(pieceId, r.row, newDate, true, fieldArr);
       }
       if(!res.ok){
         toast.className='pd-toast err'; toast.innerHTML='\u26a0 '+TT('Could not move it: ')+(res.error||TT('unknown error'));
@@ -3712,7 +3739,7 @@ sched,
         };
       });
     }
-    async function assignOne(pieceId, row, ymd, override){
+    async function assignOne(pieceId, row, ymd, override, fields){
       if(!ymd) return {ok:false,error:'no date'};
       const d=new Date(ymd+'T00:00:00'); if(isNaN(d)) return {ok:false,error:'bad date'};
       if(d.getDay()===0) return {ok:false,error:'Sunday'};
@@ -3729,7 +3756,13 @@ sched,
         const clash=accountClashOnDay(ymd, myAccounts, row);
         if(clash) return {ok:false, warn:true, error:'day-taken', clashAccount:clash};
       }
-      const data=await call('updatePiece',{ row:row, pieceId:pieceId, changes:{ 'Publish Date':ymd, 'Ready By':readyByFor(ymd, me?me['Format']:'') } });
+      // Which date column(s) this move writes. A per-platform card writes only its own column;
+      // Ready By (the production deadline) is anchored on Publish Date, so it only follows when
+      // Publish Date itself moves.
+      const cols=(fields&&fields.length)?fields:['Publish Date'];
+      const changes={}; cols.forEach(function(f){ changes[f]=ymd; });
+      if(changes['Publish Date']!==undefined) changes['Ready By']=readyByFor(ymd, me?me['Format']:'');
+      const data=await call('updatePiece',{ row:row, pieceId:pieceId, changes:changes });
       if(!data.ok) return {ok:false,error:data.error};
       const fresh=data.result.row; const idx=allRows.findIndex(function(x){ return x.row===fresh.row; }); if(idx>=0) allRows[idx]=fresh;
       return {ok:true};

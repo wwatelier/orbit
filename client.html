@@ -265,6 +265,8 @@ window.__orbitBoot = (function(){
   .chip.red{background:var(--red-bg);color:var(--red-tx)}
   .chip.gray{background:var(--gray-bg);color:var(--gray-tx)}
   .chip .cnum{font-weight:600;font-variant-numeric:tabular-nums}
+  .chip .cbadge{display:inline-block;font-size:9.5px;font-weight:700;line-height:1.4;padding:0 4px;border-radius:4px;margin-right:5px;vertical-align:1px;letter-spacing:.02em;background:color-mix(in srgb,currentColor 15%,transparent)}
+  .wplat{font-size:10px;font-weight:600;color:var(--text-soft);margin-left:6px;font-variant-numeric:tabular-nums}
 
   .hidden{display:none !important}
   .err{background:var(--red-bg);color:var(--red-tx);border:1px solid #EBC9C4;border-radius:var(--radius);padding:16px 18px;margin-top:12vh}
@@ -594,7 +596,7 @@ function pulledSlot(r){
   return n!==null && n<=COMMIT_HORIZON;
 }
 function pulledOn(iso){
-  return STATE.rows.some(function(r){ if(!pulledSlot(r)) return false; var d=parseDate(r.publishDate); return d && isoOf(d)===iso; });
+  return STATE.rows.some(function(r){ if(!pulledSlot(r)) return false; return rowSlots(r).some(function(s){ return s.iso===iso; }); });
 }
 
 /* ============================================================
@@ -663,6 +665,31 @@ function platDates(r){
   return out.map(p=>{ const s=_stat(p[1]);
     return '<div class="pdate '+s[0]+'"><span class="ppl">'+esc(p[0])+'</span><span class="pd">'+esc(niceDate(p[1]))+'</span>'+(s[1]?'<span class="pdtag">'+s[1]+'</span>':'')+'</div>';
   }).join("");
+}
+/* Effective posting days for a row, one entry per distinct day the piece goes out.
+   IG&FB and TikTok can post on different days; a blank platform date falls back to
+   Publish Date (Code.gs: "blank means that platform uses Publish Date"). Platforms
+   that share a day merge into one entry, so a cross-posted piece shows once and a
+   split piece shows on each of its days. The calendar and week read this, so they
+   agree with the per-platform dates the piece detail already shows. */
+function rowSlots(r){
+  const base=r.publishDate||"";
+  const list=String(r.platform||"").split(",").map(s=>s.trim()).filter(Boolean);
+  const low=list.map(s=>s.toLowerCase()); const has=re=>low.some(x=>re.test(x));
+  const pairs=[];
+  if(has(/ig|instagram|reel|story/)) pairs.push([STATE.igFb?"IG & FB":"IG", r.igDate||base]);
+  else if(has(/fb|facebook/)) pairs.push(["FB", r.igDate||base]);
+  if(has(/tiktok|tt/)) pairs.push(["TikTok", r.ttDate||base]);
+  if(has(/linkedin/)) pairs.push(["LinkedIn", base]);
+  if(has(/website|web/)) pairs.push(["Website", base]);
+  if(!pairs.length) pairs.push(["Publish", base]);
+  const byIso={};
+  pairs.forEach(function(pair){ const d=parseDate(pair[1]); if(!d) return; const iso=isoOf(d);
+    (byIso[iso]=byIso[iso]||{iso:iso,dt:d,plats:[]}).plats.push(pair[0]); });
+  const slots=Object.keys(byIso).map(function(k){ return byIso[k]; });
+  const split=slots.length>1;
+  slots.forEach(function(s){ s.split=split; });
+  return slots;
 }
 function clientPlat(platform){
   const list=String(platform||"").split(",").map(s=>s.trim()).filter(Boolean);
@@ -764,7 +791,7 @@ function renderWeek(){
     const d = new Date(mon); d.setDate(mon.getDate()+i);
     const iso = isoOf(d);
     let any=false;
-    STATE.rows.forEach(r=>{ if(isParkedRow(r)) return; const pd=parseDate(r.publishDate); if(pd && isoOf(pd)===iso){ items.push({r:r,d:d,iso:iso}); any=true; } });
+    STATE.rows.forEach(r=>{ if(isParkedRow(r)) return; rowSlots(r).forEach(s=>{ if(s.iso===iso){ items.push({r:r,d:d,iso:iso,slot:s}); any=true; } }); });
     if(!any && pulledOn(iso)) items.push({pulled:true,d:d,iso:iso});
   }
   const host = document.getElementById("week");
@@ -781,8 +808,9 @@ function renderWeek(){
         const r=o.r;
         const link = (r.copyLink?'<a href="'+esc(r.copyLink)+'" class="pieceopen" data-pid="'+esc(r.pieceId)+'" target="_blank" rel="noopener">Open Copy</a>':'\u2014');
         const dcell = DOW[o.d.getDay()]+' '+o.d.getDate()+' '+MON[o.d.getMonth()];
+        const wplat = (o.slot&&o.slot.split)?' <span class="wplat">'+esc(o.slot.plats.join(" \u00b7 "))+'</span>':'';
         return '<tr'+(o.iso===todayIso?' class="wtoday"':'')+'>'
-          + '<td class="wdate">'+esc(dcell)+'</td>'
+          + '<td class="wdate">'+esc(dcell)+wplat+'</td>'
           + '<td>'+esc(r.pieceId)+viralStar(r)+collabTag(r)+'</td>'
           + '<td>'+fmtChip(r.format)+'</td>'
           + '<td>'+esc(r.title||'')+'</td>'
@@ -795,12 +823,13 @@ function renderWeek(){
 function pillFor(r){ const c = toneFor(r); return '<span class="pill '+c.tone+'">'+esc(c.label)+'</span>' + (isOverdue(r)?overduePill(r):''); }
 
 function renderTable(){
-  const rows = STATE.rows.filter(r=>!isPublished(r)&&!isParkedRow(r)).sort((a,b)=> (parseDate(a.publishDate)||8e15) - (parseDate(b.publishDate)||8e15));
+  const skey=r=>{ const s=rowSlots(r); return s.length?Math.min.apply(null,s.map(x=>x.dt.getTime())):8e15; };
+  const rows = STATE.rows.filter(r=>!isPublished(r)&&!isParkedRow(r)).sort((a,b)=> skey(a)-skey(b));
   const body = rows.map(r=>{
     const link = (r.copyLink ? '<a href="'+esc(r.copyLink)+'" class="pieceopen" data-pid="'+esc(r.pieceId)+'" target="_blank" rel="noopener">Open Copy</a>' : '<span class="fmt">\u2014</span>');
     return '<tr><td class="id">'+esc(r.pieceId)+'</td>'
       + '<td class="title">'+esc(r.title)+'<div class="fmt">'+esc(r.format||"")+(r.platform?" \u00b7 "+esc(r.platform):"")+'</div></td>'
-      + '<td class="date">'+fmtShort(parseDate(r.publishDate))+'</td>'
+      + '<td class="date"><div class="tpdates">'+platDates(r)+'</div></td>'
       + '<td>'+pillFor(r)+'</td><td>'+link+'</td></tr>';
   }).join("");
   document.getElementById("view-table").innerHTML =
@@ -837,9 +866,9 @@ function renderBoard(){
 function renderCalendar(){
   const y = CAL.y, m = CAL.m;
   const byDate = {};
-  STATE.rows.forEach(r=>{ if(isParkedRow(r)) return; const d=parseDate(r.publishDate); if(d){ (byDate[isoOf(d)]=byDate[isoOf(d)]||[]).push(r); } });
+  STATE.rows.forEach(r=>{ if(isParkedRow(r)) return; rowSlots(r).forEach(s=>{ (byDate[s.iso]=byDate[s.iso]||[]).push({r:r,slot:s}); }); });
   const pulledByDate = {};
-  STATE.rows.forEach(r=>{ if(!pulledSlot(r)) return; const d=parseDate(r.publishDate); if(!d) return; const k=isoOf(d); if(!byDate[k]) pulledByDate[k]=true; });
+  STATE.rows.forEach(r=>{ if(!pulledSlot(r)) return; rowSlots(r).forEach(s=>{ if(!byDate[s.iso]) pulledByDate[s.iso]=true; }); });
 
   const first = new Date(y,m,1);
   const start = new Date(first);
@@ -857,12 +886,14 @@ function renderCalendar(){
     const out = cd.getMonth()!==m ? " out" : "";
     const isToday = iso===todayIso ? " today" : "";
     const list = byDate[iso] || [];
-    let chips = list.map(r=>{
-      const c = toneFor(r);
-      const label = '<span class="cnum">'+esc(r.pieceId)+'</span> '+esc(r.title);
+    let chips = list.map(o=>{
+      const r=o.r, c = toneFor(r);
+      const badge = o.slot.split ? '<span class="cbadge">'+esc(o.slot.plats.join(" \u00b7 "))+'</span>' : '';
+      const label = badge+'<span class="cnum">'+esc(r.pieceId)+'</span> '+esc(r.title);
+      const ttl = esc(r.title)+(o.slot.split?" \u2014 "+esc(o.slot.plats.join(", ")):"");
       return r.copyLink
-        ? '<a class="chip pieceopen '+c.tone+'" href="'+esc(r.copyLink)+'" data-pid="'+esc(r.pieceId)+'" target="_blank" rel="noopener" title="'+esc(r.title)+'">'+label+'</a>'
-        : '<span class="chip '+c.tone+'" title="'+esc(r.title)+'">'+label+'</span>';
+        ? '<a class="chip pieceopen '+c.tone+'" href="'+esc(r.copyLink)+'" data-pid="'+esc(r.pieceId)+'" target="_blank" rel="noopener" title="'+ttl+'">'+label+'</a>'
+        : '<span class="chip '+c.tone+'" title="'+ttl+'">'+label+'</span>';
     }).join("");
     if(!chips && pulledByDate[iso]) chips = '<span class="chip nopost">No post</span>';
     return '<div class="cell'+out+isToday+'"><div class="dn">'+cd.getDate()+'</div>'+chips+'</div>';
