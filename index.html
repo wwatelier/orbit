@@ -1,8 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" translate="no">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="google" content="notranslate">
   <title>Orbit</title>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <style>
@@ -3871,10 +3872,20 @@ sched,
           phTracked.forEach(function(o){ try{ o.el.setAttribute('placeholder', o.raw); }catch(e){} });
         } finally { tracked=[]; phTracked=[]; muted=false; }
       }
+      var _obsHits=0, _obsWin=0;
       function startObs(){
         if(obs || !window.MutationObserver) return;
         obs = new MutationObserver(function(muts){
           if(muted || LANG!=='th') return;
+          // Responsiveness backstop. Orbit's own translation and a browser/extension translator can,
+          // in rare cases, rewrite the same text back and forth. Rather than ever let that peg the main
+          // thread, if the observer is driven far past any normal render rate we stop observing and leave
+          // the text as-is. The <meta notranslate> guard already prevents the usual trigger (Chrome);
+          // this makes a freeze structurally impossible even if something else drives the DOM. Re-toggling
+          // TH re-arms it.
+          var now=Date.now();
+          if(now-_obsWin>2000){ _obsWin=now; _obsHits=0; }
+          if(++_obsHits>300){ stopObs(); return; }
           muted=true;
           try{
             muts.forEach(function(m){
