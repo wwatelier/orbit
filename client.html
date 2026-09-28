@@ -395,6 +395,21 @@ table td:first-child{white-space:nowrap}
     .chist>summary{ transition:color .15s ease; } .chist>summary:active{ transform:scale(.99); display:inline-block; }
     @media (prefers-reduced-transparency: reduce){ .chooser-overlay{ backdrop-filter:none; -webkit-backdrop-filter:none; background:rgba(30,32,30,.6); } }
     @media (prefers-reduced-motion: reduce){ #labelPop{ animation:none; } .chist>summary:active{ transform:none; } }
+    /* ---- publish kit: Open Copy / Final work / Copy caption (Ready to Publish + Published) ---- */
+    .pkit{ display:flex; flex-wrap:wrap; gap:6px; }
+    .pk{ flex:1 1 auto; display:inline-flex; flex-direction:column; align-items:center; justify-content:center; min-height:40px; padding:6px 12px; border:1px solid var(--line); border-radius:10px; background:var(--bg); color:var(--text); font:inherit; font-size:13px; font-weight:600; line-height:1.2; text-decoration:none; cursor:pointer; white-space:nowrap; transition:transform .1s ease-out, background .15s ease; }
+    .pk:hover{ background:var(--hover); text-decoration:none; }
+    .pk:active{ transform:scale(.97); }
+    .pk-off, .chooser-btn.pk-off{ color:var(--text-faint); background:#FBFBFA; border-style:dashed; cursor:default; }
+    .pk-off:hover{ background:#FBFBFA; } .pk-off:active{ transform:none; }
+    .pk-off small{ font-size:10px; font-weight:500; margin-top:1px; }
+    .pk-done{ background:var(--green-bg); color:var(--green-tx); border-color:transparent; }
+    .kitchip{ cursor:pointer; }
+    td .pkit{ flex-direction:column; flex-wrap:nowrap; min-width:132px; }
+    td .pk{ flex:0 0 auto; }
+    .capsheet textarea{ width:100%; min-height:180px; font:inherit; font-size:16px; line-height:1.5; padding:10px 12px; border:1px solid var(--line); border-radius:10px; resize:vertical; white-space:pre-wrap; }
+    .capsheet .rs-sub{ font-size:13px; color:var(--text-soft); margin:0 4px 10px; line-height:1.5; }
+    @media (prefers-reduced-motion: reduce){ .pk{ transition:none; } .pk:active{ transform:none; } }
 </style>
 </head>
 <body>
@@ -722,7 +737,7 @@ function renderTodayPosts(){
     return;
   }
   body.innerHTML='<div class="tablewrap"><table class="ptable"><thead><tr><th>ID</th><th>Format</th><th>Title</th><th>Posting</th><th>Status</th><th>Copy</th></tr></thead><tbody>'+items.map(r=>{
-    const link=(r.copyLink?'<a href="'+esc(r.copyLink)+'" class="pieceopen" data-pid="'+esc(r.pieceId)+'" target="_blank" rel="noopener">Open Copy</a>':'\u2014');
+    const link=copyCell(r,'\u2014');
     return '<tr><td>'+esc(r.pieceId)+viralStar(r)+collabTag(r)+'</td><td>'+fmtChip(r.format)+'</td>'
       +'<td>'+esc(r.title||'')+'</td>'
       +'<td>'+platDates(r)+'</td>'
@@ -769,7 +784,7 @@ function renderWaiting(){
     const n = daysAway(parseDate(r.publishDate));
     const od = isOverdue(r);
     const soon = (od || (n!==null && n<=2)) ? "soon" : "";   // reuse the red due styling for overdue
-    const link = (r.copyLink ? '<a href="'+esc(r.copyLink)+'" class="pieceopen" data-pid="'+esc(r.pieceId)+'" target="_blank" rel="noopener">Open Copy</a>' : "");
+    const link = copyCell(r,"");
     return '<div class="wrow'+(od?' overdue':'')+'"><div class="top">'
       + '<span class="id">'+esc(r.pieceId)+'</span>'
       + '<span class="title">'+esc(r.title)+'</span>'
@@ -806,7 +821,7 @@ function renderWeek(){
             + '<td colspan="5" class="nopost">No post scheduled</td></tr>';
         }
         const r=o.r;
-        const link = (r.copyLink?'<a href="'+esc(r.copyLink)+'" class="pieceopen" data-pid="'+esc(r.pieceId)+'" target="_blank" rel="noopener">Open Copy</a>':'\u2014');
+        const link = copyCell(r,'\u2014');
         const dcell = DOW[o.d.getDay()]+' '+o.d.getDate()+' '+MON[o.d.getMonth()];
         const wplat = (o.slot&&o.slot.split)?' <span class="wplat">'+esc(o.slot.plats.join(" \u00b7 "))+'</span>':'';
         return '<tr'+(o.iso===todayIso?' class="wtoday"':'')+'>'
@@ -826,7 +841,7 @@ function renderTable(){
   const skey=r=>{ const s=rowSlots(r); return s.length?Math.min.apply(null,s.map(x=>x.dt.getTime())):8e15; };
   const rows = STATE.rows.filter(r=>!isPublished(r)&&!isParkedRow(r)).sort((a,b)=> skey(a)-skey(b));
   const body = rows.map(r=>{
-    const link = (r.copyLink ? '<a href="'+esc(r.copyLink)+'" class="pieceopen" data-pid="'+esc(r.pieceId)+'" target="_blank" rel="noopener">Open Copy</a>' : '<span class="fmt">\u2014</span>');
+    const link = copyCell(r,'<span class="fmt">\u2014</span>');
     return '<tr><td class="id">'+esc(r.pieceId)+'</td>'
       + '<td class="title">'+esc(r.title)+'<div class="fmt">'+esc(r.format||"")+(r.platform?" \u00b7 "+esc(r.platform):"")+'</div></td>'
       + '<td class="date"><div class="tpdates">'+platDates(r)+'</div></td>'
@@ -849,11 +864,12 @@ function renderBoard(){
       .filter(r=>!isParkedRow(r) && classify(r.stage).group===col.key)
       .sort((a,b)=> (parseDate(a.publishDate)||8e15) - (parseDate(b.publishDate)||8e15));
     const cards = items.map(r=>{
-      const link = (r.copyLink ? '<a href="'+esc(r.copyLink)+'" class="pieceopen" data-pid="'+esc(r.pieceId)+'" target="_blank" rel="noopener">Open Copy</a>' : "");
+      const link = hasKit(r) ? "" : copyCell(r,"");
       return '<div class="card"><div class="cid">'+esc(r.pieceId)+viralStar(r)+'</div>'
         + '<div class="ctitle">'+esc(r.title)+'</div>'
         + '<div class="cplat">'+fmtChip(r.format)+'</div><div class="tpdates">'+platDates(r)+'</div>'
         + '<div class="cfoot"><span class="date">'+fmtShort(parseDate(r.publishDate))+'</span>'+link+'</div>'
+        + (hasKit(r) ? '<div style="margin-top:8px">'+pubKit(r)+'</div>' : '')
         + viralLinks(r)
         + '<div style="margin-top:8px">'+pillFor(r)+'</div></div>';
     }).join("");
@@ -891,6 +907,7 @@ function renderCalendar(){
       const badge = o.slot.split ? '<span class="cbadge">'+esc(o.slot.plats.join(" \u00b7 "))+'</span>' : '';
       const label = badge+'<span class="cnum">'+esc(r.pieceId)+'</span> '+esc(r.title);
       const ttl = esc(r.title)+(o.slot.split?" \u2014 "+esc(o.slot.plats.join(", ")):"");
+      if(hasKit(r)) return '<span class="chip kitchip '+c.tone+'" role="button" tabindex="0" data-pid="'+esc(r.pieceId)+'" title="'+ttl+'">'+label+'</span>';
       return r.copyLink
         ? '<a class="chip pieceopen '+c.tone+'" href="'+esc(r.copyLink)+'" data-pid="'+esc(r.pieceId)+'" target="_blank" rel="noopener" title="'+ttl+'">'+label+'</a>'
         : '<span class="chip '+c.tone+'" title="'+ttl+'">'+label+'</span>';
@@ -934,7 +951,7 @@ function renderParked(){
     if(open){
       body = g.items.length ? '<div class="tablewrap"><table class="ptable"><thead><tr><th>ID</th><th>Format</th><th>Title</th><th>Status</th><th>Date</th><th>Copy</th></tr></thead><tbody>'
         + slice.map(r=>{
-            const link=(r.copyLink?'<a href="'+esc(r.copyLink)+'" class="pieceopen" data-pid="'+esc(r.pieceId)+'" target="_blank" rel="noopener">Open Copy</a>':'<span class="fmt">\u2014</span>');
+            const link=copyCell(r,'<span class="fmt">\u2014</span>');
             return '<tr><td class="id">'+esc(r.pieceId)+viralStar(r)+'</td><td>'+fmtChip(r.format)+'</td>'
               +'<td class="title">'+esc(r.title||"")+'</td><td>'+pillFor(r)+'</td>'
               +'<td class="date">'+fmtShort(parseDate(r.publishDate))+'</td><td>'+link+'</td></tr>';
@@ -1088,40 +1105,106 @@ function orbitStart(){
   window.addEventListener('resize', hide);
   document.addEventListener('keydown', function(e){ if(e.key==='Escape') hide(); });
 })();
-/* Stage-aware open: Ready to Publish shows a chooser (Open Copy / final work / caption).
-   Other stages let the Open Copy link open normally. */
-function isReadyToPub(r){ return /Ready to Publish/i.test((r&&r.stage)||''); }
+/* Publish kit. Ready to Publish and Published pieces show three actions everywhere:
+   Open Copy / Final work / Copy caption. A missing field shows greyed as "not added yet".
+   Tables, board and lists render the row inline; calendar chips (too small) open the same
+   three actions in a sheet. Other stages keep the single Open Copy link. */
+function hasKit(r){ var s=(r&&r.stage)||''; return /Ready to Publish/i.test(s) || /^10\b/.test(s.trim()) || /\bPublished\b/i.test(s); }
+function rowById_(pid){ return (STATE&&STATE.rows||[]).filter(function(x){ return x.pieceId===pid; })[0]; }
+function pubKit(r){
+  function lnk(url, label){ url=(url||'').trim();
+    return url ? '<a class="pk" href="'+esc(url)+'" target="_blank" rel="noopener">'+label+'</a>'
+               : '<span class="pk pk-off" aria-disabled="true">'+label+'<small>not added yet</small></span>'; }
+  var cap = (r.caption||'').trim()
+    ? '<button type="button" class="pk pk-cap" data-pid="'+esc(r.pieceId)+'">Copy caption</button>'
+    : '<span class="pk pk-off" aria-disabled="true">Copy caption<small>not added yet</small></span>';
+  return '<div class="pkit">'+lnk(r.copyLink,'Open Copy')+lnk(r.workLink,'Final work')+cap+'</div>';
+}
+function copyCell(r, empty){
+  if(hasKit(r)) return pubKit(r);
+  return r.copyLink ? '<a href="'+esc(r.copyLink)+'" class="pieceopen" data-pid="'+esc(r.pieceId)+'" target="_blank" rel="noopener">Open Copy</a>' : empty;
+}
+/* Copy that holds up on phones. 1) Clipboard API. 2) execCommand on a hidden textarea
+   (works in LINE's and other in-app browsers where the API is blocked). 3) If both fail,
+   open the caption in a sheet, pre-selected, so a long-press > Copy still works. */
+function flashCopied_(btn){ if(!btn) return; var o=btn.getAttribute('data-label')||btn.textContent;
+  btn.setAttribute('data-label',o); btn.textContent='Copied \u2713'; btn.classList.add('pk-done');
+  setTimeout(function(){ btn.textContent=o; btn.classList.remove('pk-done'); },1500); }
+function legacyCopy_(t){
+  var ta=document.createElement('textarea'); ta.value=t; ta.setAttribute('readonly','');
+  ta.style.cssText='position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;font-size:16px';
+  document.body.appendChild(ta); ta.focus(); ta.select();
+  try{ ta.setSelectionRange(0, t.length); }catch(e){}
+  var ok=false; try{ ok=document.execCommand('copy'); }catch(e){ ok=false; }
+  document.body.removeChild(ta); return ok;
+}
+function copyCaption_(t, btn){
+  function fallback(){ if(legacyCopy_(t)) flashCopied_(btn); else showCaptionSheet_(t); }
+  if(navigator.clipboard && navigator.clipboard.writeText && window.isSecureContext){
+    navigator.clipboard.writeText(t).then(function(){ flashCopied_(btn); }, fallback);
+  } else fallback();
+}
+function showCaptionSheet_(t){
+  var ov=document.getElementById('captionSheet');
+  if(!ov){
+    ov=document.createElement('div'); ov.id='captionSheet'; ov.className='chooser-overlay';
+    ov.innerHTML='<div class="chooser-card capsheet"><div class="chooser-title">Caption</div>'
+      +'<div class="rs-sub">Press and hold the text, then tap Copy.</div>'
+      +'<textarea readonly></textarea>'
+      +'<button type="button" class="chooser-cancel cs-close">Close</button></div>';
+    document.body.appendChild(ov);
+    var close=function(){ ov.classList.remove('show'); };
+    ov.addEventListener('click', function(e){ if(e.target===ov) close(); });
+    ov.querySelector('.cs-close').onclick=close;
+  }
+  var ta=ov.querySelector('textarea'); ta.value=t;
+  ov.classList.add('show');
+  setTimeout(function(){ try{ ta.focus(); ta.select(); ta.setSelectionRange(0, t.length); }catch(e){} }, 50);
+}
 function ensureChooser_(){
   var ov=document.getElementById('pieceChooser'); if(ov) return ov;
   ov=document.createElement('div'); ov.id='pieceChooser'; ov.className='chooser-overlay';
   ov.innerHTML='<div class="chooser-card"><div class="chooser-title ch-title"></div>'
     +'<a class="chooser-btn ch-copy" target="_blank" rel="noopener">Open Copy</a>'
-    +'<a class="chooser-btn ch-work" target="_blank" rel="noopener">Open final work</a>'
+    +'<a class="chooser-btn ch-work" target="_blank" rel="noopener">Final work</a>'
     +'<button type="button" class="chooser-btn ch-caption">Copy caption</button>'
     +'<button type="button" class="chooser-cancel ch-cancel">Cancel</button></div>';
   document.body.appendChild(ov);
   var close=function(){ ov.classList.remove('show'); };
   ov.addEventListener('click', function(e){ if(e.target===ov) close(); });
   ov.querySelector('.ch-cancel').onclick=close;
-  ov.querySelector('.ch-copy').addEventListener('click', close);
-  ov.querySelector('.ch-work').addEventListener('click', close);
+  ov.querySelector('.ch-copy').addEventListener('click', function(e){ if(this.classList.contains('pk-off')){ e.preventDefault(); return; } close(); });
+  ov.querySelector('.ch-work').addEventListener('click', function(e){ if(this.classList.contains('pk-off')){ e.preventDefault(); return; } close(); });
   return ov;
+}
+function setChooserLink_(a, url, label){
+  url=(url||'').trim();
+  if(url){ a.href=url; a.classList.remove('pk-off'); a.textContent=label; a.removeAttribute('aria-disabled'); }
+  else { a.removeAttribute('href'); a.classList.add('pk-off'); a.textContent=label+' \u00b7 not added yet'; a.setAttribute('aria-disabled','true'); }
 }
 function openChooser(r){
   var ov=ensureChooser_();
   ov.querySelector('.ch-title').textContent=(r.pieceId||'')+(r.title?' \u00b7 '+r.title:'');
-  var copy=ov.querySelector('.ch-copy'), work=ov.querySelector('.ch-work'), cap=ov.querySelector('.ch-caption');
-  if((r.copyLink||'').trim()){ copy.href=r.copyLink; copy.style.display=''; } else copy.style.display='none';
-  if((r.workLink||'').trim()){ work.href=r.workLink; work.style.display=''; } else work.style.display='none';
-  if((r.caption||'').trim()){ cap.style.display=''; cap.onclick=function(){ var t=r.caption||'';
-    if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(t); }
-    var o=cap.textContent; cap.textContent='Copied'; setTimeout(function(){ cap.textContent=o; },1200); }; } else cap.style.display='none';
+  setChooserLink_(ov.querySelector('.ch-copy'), r.copyLink, 'Open Copy');
+  setChooserLink_(ov.querySelector('.ch-work'), r.workLink, 'Final work');
+  var cap=ov.querySelector('.ch-caption'), t=(r.caption||'');
+  cap.removeAttribute('data-label');
+  if(t.trim()){ cap.classList.remove('pk-off'); cap.textContent='Copy caption'; cap.onclick=function(){ copyCaption_(t, cap); }; }
+  else { cap.classList.add('pk-off'); cap.textContent='Copy caption \u00b7 not added yet'; cap.onclick=null; }
   ov.classList.add('show');
 }
-document.addEventListener('click', function(e){ var a=e.target.closest?e.target.closest('.pieceopen'):null; if(!a) return;
-  var pid=a.getAttribute('data-pid'); var r=(STATE&&STATE.rows||[]).filter(function(x){return x.pieceId===pid;})[0]; if(!r) return;
-  if(isReadyToPub(r) && ((r.workLink||'').trim() || (r.caption||'').trim())){ e.preventDefault(); e.stopPropagation(); openChooser(r); }
-}, true);
+document.addEventListener('click', function(e){
+  if(!e.target.closest) return;
+  var cb=e.target.closest('.pk-cap');
+  if(cb){ var r=rowById_(cb.getAttribute('data-pid')); if(r) copyCaption_(r.caption||'', cb); return; }
+  var off=e.target.closest('.pkit .pk-off'); if(off){ e.preventDefault(); return; }
+  var kc=e.target.closest('.kitchip');
+  if(kc){ var r2=rowById_(kc.getAttribute('data-pid')); if(r2) openChooser(r2); }
+});
+document.addEventListener('keydown', function(e){
+  if((e.key==='Enter'||e.key===' ') && e.target.classList && e.target.classList.contains('kitchip')){
+    e.preventDefault(); var r=rowById_(e.target.getAttribute('data-pid')); if(r) openChooser(r); }
+});
 if(document.readyState==="loading") document.addEventListener("DOMContentLoaded", orbitStart);
 else orbitStart();
 
@@ -1178,7 +1261,7 @@ function startDemo(){
     { pieceId:"VO12.4", title:"\u0e04\u0e27\u0e32\u0e21\u0e1c\u0e34\u0e14\u0e1e\u0e25\u0e32\u0e14\u0e40\u0e23\u0e37\u0e48\u0e2d\u0e07\u0e40\u0e01\u0e29\u0e35\u0e22\u0e13\u0e17\u0e35\u0e48\u0e04\u0e19\u0e44\u0e17\u0e22\u0e2a\u0e48\u0e27\u0e19\u0e43\u0e2b\u0e0d\u0e48\u0e17\u0e33 / The retirement mistake most Thais make", format:"VO Reels", platform:"TikTok", publishDate:wk(3), stage:"5 Voiceover / Video Received", copyLink:"https://notion.so/demo4" },
     { pieceId:"C12.5",  title:"\u0e2d\u0e48\u0e32\u0e19\u0e04\u0e48\u0e32 expense ratio \u0e43\u0e2b\u0e49\u0e40\u0e1b\u0e47\u0e19\u0e43\u0e19 60 \u0e27\u0e34\u0e19\u0e32\u0e17\u0e35 / Reading an expense ratio in 60 seconds", format:"Carousel", platform:"IG", publishDate:wk(4), stage:"6 In Production",                copyLink:"https://notion.so/demo5" },
     { pieceId:"C12.6",  title:"\u0e1b\u0e23\u0e30\u0e01\u0e31\u0e19\u0e0a\u0e35\u0e27\u0e34\u0e15\u0e41\u0e1a\u0e1a\u0e44\u0e2b\u0e19\u0e40\u0e2b\u0e21\u0e32\u0e30\u0e01\u0e31\u0e1a\u0e04\u0e38\u0e13 / Which life policy actually fits you", format:"Carousel", platform:"IG", publishDate:wk(5), stage:"4 Waiting for Voiceover / Video",             copyLink:"https://notion.so/demo6" },
-    { pieceId:"VO12.7", title:"\u0e40\u0e23\u0e34\u0e48\u0e21\u0e25\u0e07\u0e17\u0e38\u0e19\u0e14\u0e49\u0e27\u0e22\u0e40\u0e07\u0e34\u0e19 1,000 \u0e1a\u0e32\u0e17 / Starting to invest with 1,000 baht", format:"VO Reels", platform:"IG Reels", publishDate:off(6), stage:"9 Ready to Publish",                     copyLink:"https://notion.so/demo7" },
+    { pieceId:"VO12.7", title:"\u0e40\u0e23\u0e34\u0e48\u0e21\u0e25\u0e07\u0e17\u0e38\u0e19\u0e14\u0e49\u0e27\u0e22\u0e40\u0e07\u0e34\u0e19 1,000 \u0e1a\u0e32\u0e17 / Starting to invest with 1,000 baht", format:"VO Reels", platform:"IG Reels", publishDate:off(6), stage:"9 Ready to Publish",                     copyLink:"https://notion.so/demo7", workLink:"https://drive.google.com/demo7", caption:"\u0e40\u0e23\u0e34\u0e48\u0e21\u0e25\u0e07\u0e17\u0e38\u0e19\u0e44\u0e14\u0e49\u0e14\u0e49\u0e27\u0e22 1,000 \u0e1a\u0e32\u0e17\n\n#WWA #investing" },
     { pieceId:"C12.8",  title:"\u0e20\u0e32\u0e29\u0e35\u0e01\u0e31\u0e1a\u0e01\u0e2d\u0e07\u0e17\u0e38\u0e19 SSF/RMF \u0e2a\u0e23\u0e38\u0e1b\u0e2a\u0e31\u0e49\u0e19 \u0e46 / SSF vs RMF tax, in brief", format:"Carousel", platform:"IG", publishDate:off(8), stage:"1 Copywriting",                                     copyLink:"" },
     { pieceId:"C12.9",  title:"\u0e2a\u0e34\u0e07\u0e04\u0e42\u0e1b\u0e23\u0e4c\u0e43\u0e2b\u0e49\u0e25\u0e32\u0e04\u0e25\u0e2d\u0e14 30 \u0e2a\u0e31\u0e1b\u0e14\u0e32\u0e2b\u0e4c / Singapore's 30-week parental leave", format:"Carousel", platform:"IG", publishDate:off(-3), stage:"\u25fc\ufe0f Unselected",                             copyLink:"https://notion.so/demo9" },
     { pieceId:"VO12.10",title:"\u0e1a\u0e17\u0e40\u0e23\u0e35\u0e22\u0e19\u0e08\u0e32\u0e01\u0e15\u0e25\u0e32\u0e14\u0e2b\u0e21\u0e35 / What a bear market teaches you", format:"VO Reels", platform:"IG Reels", publishDate:off(11), stage:"\ud83d\udd01 Rolled Over",                                        copyLink:"https://notion.so/demo10" },
