@@ -264,7 +264,7 @@
     tbody tr:last-child td { border-bottom:none; }
     .empty { padding:44px; text-align:center; color:var(--ink-soft); }
     /* Activity Log — plain-sentence events, one per person + piece + moment; search on top. */
-    .logwrap{ max-width:880px; }
+    .logwrap{ max-width:none; }   /* full width, like the other tabs */
     .logsearch{ position:sticky; top:8px; z-index:5; display:flex; align-items:center; gap:8px; height:46px; padding:0 8px 0 14px; margin:14px 0 6px;
       border-radius:14px; background:rgba(255,255,255,.82); -webkit-backdrop-filter:saturate(180%) blur(18px); backdrop-filter:saturate(180%) blur(18px);
       box-shadow:0 0 0 1px rgba(0,0,0,.08), 0 6px 20px rgba(0,0,0,.05); transition:box-shadow .18s cubic-bezier(.22,1,.36,1); }
@@ -335,6 +335,70 @@
     @media (prefers-reduced-motion: reduce){ .lpeople{ animation:none; } .logsearch, .logclear, .lpiece{ transition:none; } .logclear:active, .lpiece:active{ transform:none; } }
     @media (prefers-reduced-transparency: reduce){ .logsearch{ background:#fff; -webkit-backdrop-filter:none; backdrop-filter:none; } }
     @media (prefers-contrast: more){ .logday, .logsearch, .lpeople{ box-shadow:0 0 0 1px rgba(0,0,0,.5); } .lsoft, .ltitle, .ltime{ color:#3a3a3c; } }
+
+    /* Next Batch (decision #29) — one card per client: status, stock, a 5-step timeline, status control. */
+    .navbadge.amber{ background:#d98a00; }
+    .nbsummary{ display:flex; gap:8px; flex-wrap:wrap; }
+    .nbsum-n{ font-size:12.5px; padding:4px 10px; border-radius:999px; font-variant-numeric:tabular-nums; }
+    .nbsum-n b{ font-weight:700; } .nbsum-n.red{ background:rgba(215,38,61,.1); color:#b0182e; }
+    .nbsum-n.amber{ background:rgba(217,138,0,.12); color:#8a5300; } .nbsum-n.ok{ background:rgba(30,142,78,.1); color:#1e6e3e; }
+    .nbgrid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(min(100%,420px),1fr)); gap:16px; margin-top:6px; }
+    .nbcard{ position:relative; background:var(--panel,#fff); border-radius:18px; padding:18px 18px 16px; box-shadow:0 0 0 1px rgba(0,0,0,.06), 0 4px 18px rgba(0,0,0,.04);
+      animation:nbIn .28s cubic-bezier(.22,1,.36,1) both; }
+    .nbcard.lv-red{ box-shadow:0 0 0 1.5px rgba(215,38,61,.45), 0 8px 26px rgba(215,38,61,.08); }
+    .nbcard.lv-amber{ box-shadow:0 0 0 1.5px rgba(217,138,0,.45), 0 8px 26px rgba(217,138,0,.08); }
+    .nbcard.skelcard{ min-height:220px; display:flex; flex-direction:column; }
+    @keyframes nbIn{ from{ opacity:0; transform:translateY(6px); } to{ opacity:1; transform:none; } }
+    .nbhead{ display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
+    .nbtitle{ display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 10px; min-width:0; }
+    .nbtitle h3{ margin:0; font-size:19px; font-weight:700; letter-spacing:-.015em; line-height:1.2; }
+    .nbfirst{ font-size:13px; color:var(--ink-soft); }
+    .nbpill{ flex:none; display:inline-flex; align-items:center; gap:5px; font-size:12px; font-weight:600; padding:4px 10px; border-radius:999px; background:rgba(0,0,0,.05); color:var(--ink-soft); white-space:nowrap; }
+    .nbpill svg{ width:14px; height:14px; }
+    .nbpill.lv-red{ background:rgba(215,38,61,.1); color:#b0182e; } .nbpill.lv-amber{ background:rgba(217,138,0,.12); color:#8a5300; }
+    .nbpill.lv-done{ background:rgba(30,142,78,.1); color:#1e6e3e; }
+    .nbpill.lv-red svg, .nbpill.lv-amber svg{ animation:nbRing 2.4s ease-in-out 1; transform-origin:50% 15%; }
+    @keyframes nbRing{ 0%,60%,100%{ transform:rotate(0); } 10%{ transform:rotate(14deg); } 20%{ transform:rotate(-12deg); } 30%{ transform:rotate(8deg); } 40%{ transform:rotate(-5deg); } }
+    .nbmsg{ margin:10px 0 0; font-size:14.5px; font-weight:500; line-height:1.45; color:var(--ink); }
+    .lv-red .nbmsg{ color:#9b1c2c; }
+    .nbstock{ display:flex; flex-wrap:wrap; gap:4px 16px; margin-top:8px; font-size:12.5px; color:var(--ink-soft); font-variant-numeric:tabular-nums; }
+    .nbstock b{ color:var(--ink); font-weight:600; }
+    .nbgap{ margin:8px 0 0; font-size:12.5px; padding:6px 10px; border-radius:10px; background:rgba(217,138,0,.1); color:#7a4a00; }
+    .nbtrack{ list-style:none; margin:16px 0 0; padding:0; display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); position:relative; }
+    .nbtrack::before{ content:''; position:absolute; left:10%; right:10%; top:6px; height:2px; background:rgba(0,0,0,.08); border-radius:2px; }
+    .nbstep{ position:relative; display:flex; flex-direction:column; align-items:center; text-align:center; gap:2px; padding:0 2px; min-width:0; }
+    .nbdot{ position:relative; z-index:1; width:14px; height:14px; border-radius:50%; background:var(--panel,#fff); box-shadow:inset 0 0 0 2px rgba(0,0,0,.18); margin-bottom:6px;
+      transition:background-color .2s cubic-bezier(.22,1,.36,1), box-shadow .2s cubic-bezier(.22,1,.36,1); }
+    .nbstep.past .nbdot{ box-shadow:inset 0 0 0 2px rgba(0,0,0,.3); background:rgba(0,0,0,.06); }
+    .nbstep.done .nbdot{ background:#1e8e4e; box-shadow:none; }
+    .nbstep.done .nbdot::after{ content:''; position:absolute; left:4px; top:3px; width:5px; height:3px; border:2px solid #fff; border-top:0; border-right:0; transform:rotate(-45deg); }
+    .nbstep.late .nbdot{ background:#d7263d; box-shadow:0 0 0 4px rgba(215,38,61,.15); }
+    .nbstep.today .nbdot{ box-shadow:inset 0 0 0 2px var(--brand,#1f4fa0), 0 0 0 4px rgba(31,79,160,.15); }
+    .nblab{ font-size:11.5px; font-weight:600; color:var(--ink); line-height:1.25; }
+    .nbwhen{ font-size:12px; color:var(--ink); font-variant-numeric:tabular-nums; }
+    .nbrel{ font-size:11px; color:var(--ink-soft); }
+    .nbstep.late .nbrel, .nbstep.late .nblab{ color:#b0182e; }
+    .nbbasis{ margin:12px 0 0; font-size:12px; color:var(--ink-soft); }
+    .nbsegwrap{ display:flex; flex-wrap:wrap; gap:4px; margin-top:14px; padding:4px; border-radius:12px; background:rgba(0,0,0,.045); }
+    #nbBody .nbseg{ flex:1 1 auto; min-height:32px; padding:5px 10px; border:0; border-radius:9px; background:transparent; color:var(--ink-soft); font-size:12.5px; font-weight:500; box-shadow:none;
+      transition:background-color .18s cubic-bezier(.22,1,.36,1), color .18s ease, box-shadow .18s ease, transform .1s ease-out; }
+    #nbBody .nbseg:hover{ background:rgba(255,255,255,.6); color:var(--ink); }
+    #nbBody .nbseg.on{ background:var(--panel,#fff); color:var(--ink); font-weight:600; box-shadow:0 1px 3px rgba(0,0,0,.1), 0 0 0 .5px rgba(0,0,0,.05); }
+    #nbBody .nbseg:active{ transform:scale(.96); }
+    .nbnote{ display:block; margin-top:12px; }
+    .nbnote span{ display:block; font-size:12px; font-weight:600; color:var(--ink-soft); margin-bottom:4px; }
+    .nbnote textarea{ width:100%; box-sizing:border-box; resize:vertical; min-height:42px; padding:8px 11px; font:inherit; font-size:13.5px; }
+    .nbstamps{ margin:8px 0 0; font-size:11.5px; color:var(--ink-soft); }
+    @media (max-width:820px){
+      .nbcard{ padding:16px 14px 14px; border-radius:16px; }
+      .nbtrack{ grid-template-columns:1fr; gap:0; }
+      .nbtrack::before{ left:6px; right:auto; top:8px; bottom:8px; width:2px; height:auto; }
+      .nbstep{ flex-direction:row; align-items:center; text-align:left; gap:10px; padding:5px 0; }
+      .nbdot{ margin:0; flex:none; } .nblab{ flex:1; font-size:13px; } .nbwhen{ font-size:13px; } .nbrel{ min-width:74px; text-align:right; }
+      #nbBody .nbseg{ min-height:40px; font-size:13px !important; }
+    }
+    @media (prefers-reduced-motion: reduce){ .nbcard, .nbpill svg{ animation:none; } .nbdot, #nbBody .nbseg{ transition:none; } #nbBody .nbseg:active{ transform:none; } }
+    @media (prefers-contrast: more){ .nbcard{ box-shadow:0 0 0 1px rgba(0,0,0,.5); } .nbrel, .nbbasis, .nbstamps, .nbfirst{ color:#3a3a3c; } }
 
     .pill { display:inline-block; padding:3px 11px; border-radius:999px; font-size:12px; font-weight:600; line-height:1.4; white-space:nowrap; }
     .chip { display:inline-block; padding:2px 8px; margin:1px 3px 1px 0; border-radius:7px; font-size:11px; background:#eef1ec; color:#5b625b; font-weight:500; white-space:nowrap; }
@@ -1029,6 +1093,7 @@
       <button class="navbtn" data-tab="today"><span class="ic"><svg viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="3.2"/><path d="M10 2.5v1.6M10 15.9v1.6M2.5 10h1.6M15.9 10h1.6M4.7 4.7l1.1 1.1M14.2 14.2l1.1 1.1M4.7 15.3l1.1-1.1M14.2 5.8l1.1-1.1"/></svg></span> Today</button>
       <button class="navbtn" data-tab="pipeline"><span class="ic"><svg viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3.5" width="14" height="13" rx="2.5"/><path d="M3 8h14M3 12.3h14M7.5 8v8.5"/></svg></span> Pipeline</button>
       <button class="navbtn" data-tab="assign"><span class="ic"><svg viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="14" height="13" rx="2.5"/><path d="M3 8h14M7 2.5v3M13 2.5v3M7.3 12.4l1.9 1.9 3.6-3.8"/></svg></span> Publish Dates</button>
+      <button class="navbtn" data-tab="nextbatch"><span class="ic"><svg viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3.2a4.4 4.4 0 0 0-4.4 4.4v2.6L4.3 13h11.4l-1.3-2.8V7.6A4.4 4.4 0 0 0 10 3.2z"/><path d="M8.3 15.4a1.8 1.8 0 0 0 3.4 0"/></svg></span> Next Batch</button>
       <button class="navbtn" data-tab="import"><span class="ic"><svg viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3v9M6.3 8.6 10 12.3l3.7-3.7"/><path d="M3.5 12.5v2.3a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2v-2.3"/></svg></span> Import</button>
       <button class="navbtn" data-tab="handoff"><span class="ic"><svg viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4.5h12a1.5 1.5 0 0 1 1.5 1.5v7a1.5 1.5 0 0 1-1.5 1.5H9l-3.5 2.7V14.5H4A1.5 1.5 0 0 1 2.5 13V6A1.5 1.5 0 0 1 4 4.5Z"/><path d="M6 8.3h8M6 11h5"/></svg></span> Prompts &amp; Handoffs</button>
       <button class="navbtn" data-tab="invoices"><span class="ic"><svg viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 2.8h10v14.4l-2-1.3-1.9 1.3-2.2-1.3-1.9 1.3L5 15.9Z"/><path d="M7.6 6.6h4.8M7.6 9.4h4.8M7.6 12.2h2.6"/></svg></span> Invoices</button>
@@ -1133,6 +1198,20 @@
         <div id="parkedArea" class="parked"></div>
       </section>
 
+      <section class="hidden" id="tab-nextbatch">
+        <div class="head"><div><h2>Next Batch</h2><p class="sub">When each client's next batch proposal should start, go to the client, and be approved, so new content is ready before the current stock runs out.</p></div></div>
+        <details class="expl"><summary>How Next Batch is worked out</summary>
+          <ul>
+            <li><b>First post of the next batch.</b> The earlier of two dates: four weeks after the current batch's first post, or the next posting day after the client's last scheduled post (when the stock runs out).</li>
+            <li><b>What counts as stock.</b> Every post on the client's own feed that has a date and isn't On Hold or Unselected, including spin-offs and extra pieces the client asked for. Each row is one piece.</li>
+            <li><b>The steps.</b> Start drafting 5 weeks before the first post, send it to the client 4 weeks before, client approval 3 weeks before, first piece ready 2 weeks before. The three proposal timings can be changed in the Settings tab.</li>
+            <li><b>The bell.</b> Amber from the start date until the proposal is approved. Red when it should already be with the client, or approval is overdue. It clears once the status is Approved.</li>
+            <li><b>Status.</b> Tap a status to save it for everyone. Sent and Approved record the date automatically. Every change shows in the Activity Log.</li>
+          </ul>
+        </details>
+        <div class="controls"><label class="inline">Client <select id="nbClient"></select></label><span class="nbsummary" id="nbSummary" aria-live="polite"></span></div>
+        <div id="nbBody"></div>
+      </section>
       <section class="hidden" id="tab-assign">
         <div class="head"><div><h2>Publish Dates</h2><p class="sub">Assign, oversee, and rearrange every client's publish schedule in one place.</p></div><span class="count" id="assignCount"></span></div>
         <details class="expl"><summary>How Publish Dates is worked out</summary>
@@ -1154,7 +1233,7 @@
           <label class="inline">Client
             <select id="assignClient"><option value="">All</option><option>Ice</option><option>Lynn</option><option>Melissa</option><option>SRU</option><option>Dianna</option></select>
           </label>
-          <label class="origtog" id="pdOrigWrap" hidden><input type="checkbox" id="pdOriginals"><span class="origtog-box" aria-hidden="true"></span><span>Originals only</span></label>
+          <label class="origtog" id="pdOrigWrap" hidden><input type="checkbox" id="pdOriginals"><span class="origtog-box" aria-hidden="true"></span><span>Own quota only</span></label>
           <label class="inline">View <span class="seg"><button id="pdViewTable" class="on">Table</button><button id="pdViewCalendar">Calendar</button></span></label>
           <label class="inline">Posting style
             <select id="assignStyle"><option value="alternate">Alternate formats (reel → carousel → reel)</option><option value="any">Any format (same allowed)</option></select>
@@ -1561,7 +1640,7 @@
     //   page (the old full-screen modal did), so the team keeps working while the Sheet catches up.
     // Busy — the button that started a call swaps its label for a spinner until the work it caused ends,
     //   including chained follow-ups (Validate → Import, Generate → refresh list).
-    const WRITE_ACT = { updatePiece:1, updatePieces:1, importBatch:1, generateInvoice:1, markPaid:1, onboardClient:1, addRequest:1, markReceived:1, setTeamKey:1, deletePiece:1, setDaysOff:1 };
+    const WRITE_ACT = { updatePiece:1, updatePieces:1, importBatch:1, generateInvoice:1, markPaid:1, onboardClient:1, addRequest:1, markReceived:1, setTeamKey:1, deletePiece:1, setDaysOff:1, setProposal:1 };
     let PROG_SUPPRESS = false;
     const Activity = (function(){
       let el=null, bar=null, n=0, val=0, tick=null, hide=null;
@@ -1917,6 +1996,7 @@
       const metaReady = !!(META && META.clients);
       const refreshMeta = function(after){ loadMeta().then(function(){ if(after) after(); }); };
       if(name==='log') loadLog();
+      if(name==='nextbatch') renderNextBatch();
       if(name==='help') renderHelp();
       if(name==='today'){ var _t=function(){ renderTodayPosts(); renderShareLink(); };
         if(metaReady){ _t(); refreshMeta(_t); } else loadMeta().then(_t); }
@@ -2058,10 +2138,10 @@
     function pdRerender(){ PD_PAGE=0; syncOrigToggle(); renderAssign(); renderPdDated(); if(!$('pdCalendarView').classList.contains('hidden')) renderPdCalendar(); }
     $('assignClient').onchange=function(){ PREFS.assignClient=$('assignClient').value; savePrefs(); pdRerender(); };
     $('pdOriginals').onchange=function(){ PREFS.pdOriginals=$('pdOriginals').checked; savePrefs(); pdRerender(); };
-    // "Originals only" appears only for a client that has an Original quota per batch (today: SRU).
+    // "Own quota only" appears for a client that hosts collabs under its own Client column (today: SRU).
     function syncOrigToggle(){
       var wrap=$('pdOrigWrap'), cb=$('pdOriginals'); if(!wrap||!cb) return;
-      var client=$('assignClient')?$('assignClient').value:'', show=!!originalQuota(client);
+      var client=$('assignClient')?$('assignClient').value:'', show=!!(originalQuota(client) || hasCollabFeed(client));
       wrap.hidden=!show; cb.checked=!!PREFS.pdOriginals;
       if(show && !wrap.dataset.shown){ wrap.dataset.shown='1'; wrap.classList.remove('origtog-in'); void wrap.offsetWidth; wrap.classList.add('origtog-in'); }
       if(!show) delete wrap.dataset.shown;
@@ -2072,13 +2152,15 @@
       var client=$('assignClient')?$('assignClient').value:'';
       if(!pdOriginalsOn(client)){ el.hidden=true; el.innerHTML=''; return; }
       var q=originalQuota(client), b=originalsBatch(client, null);
-      if(b.cur==null){ el.innerHTML='<span>'+esc(client)+'</span> <span>originals</span> · <span>No batch numbers found in the Piece IDs yet.</span>'; el.hidden=false; return; }
-      var over=b.planned-q;
-      el.innerHTML='<span class="origsum-k"><span>'+esc(client)+'</span> <span>originals</span> · <span>Batch</span> '+b.cur+'</span>'+
-        '<span class="origsum-n'+(over>0?' over':'')+'"><b>'+b.planned+'</b> / '+q+' <span>planned</span></span>'+
+      if(b.cur==null){ el.innerHTML='<span>'+esc(client)+'</span> <span>own quota</span> · <span>No batch numbers found in the Piece IDs yet.</span>'; el.hidden=false; return; }
+      var over=q?b.planned-q:0;
+      el.innerHTML='<span class="origsum-k"><span>'+esc(client)+'</span> <span>own quota</span> · <span>Batch</span> '+b.cur+'</span>'+
+        '<span class="origsum-n'+(over>0?' over':'')+'"><b>'+b.planned+'</b>'+(q?' / '+q:'')+' <span>planned</span></span>'+
+        (b.withPartner?'<span class="origsum-n"><b>'+b.solo+'</b> <span>solo</span> · <b>'+b.withPartner+'</b> <span>with a collab partner</span></span>':'')+
         '<span class="origsum-n"><b>'+b.done+'</b> <span>ready or published</span></span>'+
         (over>0?'<span class="origsum-flag">+'+over+' <span>over quota</span></span>':'')+
-        (b.noBatch?'<span class="origsum-flag">'+b.noBatch+' <span>without a batch number in the ID</span></span>':'');
+        (b.noBatch?'<span class="origsum-flag">'+b.noBatch+' <span>without a batch number in the ID</span></span>':'')+
+        (b.undated?'<span class="origsum-flag">'+b.undated+' <span>without a publish date, not counted</span></span>':'');
       el.hidden=false;
     }
     $('assignStyle').onchange=function(){ PREFS.assignStyle=$('assignStyle').value; savePrefs(); renderAssign(); };
@@ -2736,6 +2818,7 @@
       if(v.indexOf('🟠')===0) return 2; return 3; }
     function renderToday(){
       try{ renderCaptionAlerts(); }catch(e){}
+      try{ renderNbBadge(); }catch(e){}
       const pool=filtered().filter(function(r){
         const st=r['Stage']||'';
         // Parked work (On Hold, Unselected, Rolled Over) already has its own section elsewhere —
@@ -2864,6 +2947,9 @@
         case 'days off':
           var ad=parseInt(b,10)||0, rm=parseInt(a,10)||0;
           return _L('updated the team’s days off','แก้วันหยุดของทีม')+_logSoft(_L(ad+' added · '+rm+' removed','เพิ่ม '+ad+' · ลบ '+rm));
+        case 'proposal:status':
+          var pp=b.split(' · '); return _L('set the ','ตั้งสถานะข้อเสนอ ')+_logB((pp[0]||'')+' · '+(pp[1]||''))+_L(' proposal to ',' เป็น ')+_logB(nbStatusLabel(pp[2]||''))+(a?_logSoft(_L('was ','เดิม ')+esc(nbStatusLabel(a.split(' · ')[2]||''))):'');
+        case 'proposal:note': return _L('updated the note on the ','แก้โน้ตของข้อเสนอ ')+_logB(a)+_L(' proposal','')+(b?'<div class="lquote">'+_logVal(b)+'</div>':'');
         case 'team link key': return a==='rotated' ? _L('replaced the team share link — old links stop working','เปลี่ยนลิงก์แชร์ของทีม ลิงก์เดิมใช้ไม่ได้แล้ว') : _L('created the team share link','สร้างลิงก์แชร์ของทีม');
       }
       if(_LOG_GATES.indexOf(f)>=0) return (_logIsOn(b)?_L('ticked ','ติ๊ก '):_L('unticked ','เอาติ๊กออก '))+'“'+esc(f)+'”'+_L(' on the checklist',' ในเช็กลิสต์');
@@ -2992,6 +3078,142 @@
         var sec=$('tab-log'); if(!sec || sec.classList.contains('hidden')) return; e.preventDefault(); inp.focus(); inp.select(); });
     })();
 
+    /* ── Next Batch (decision #29) ──────────────────────────────────────────────
+       When each client's next batch proposal has to start, go to the client, and be approved.
+       Worked out from the Sheet, never stored: the next batch's first post is the EARLIER of
+       (a) the batch cadence — the current batch's first post + 28 days, and
+       (b) the stock running out — the next posting day after the client's last scheduled post.
+       Counted on the client's own feed (Client = that client AND it posts from that account), every
+       dated, non-parked row = one piece (spin-offs and client-requested extras included).
+       Steps count back from that first post; the offsets live in Settings. Only the team's status,
+       the Sent/Approved stamps and a note are stored (Proposals tab). */
+    var NB_STATUSES=['Not started','Drafting','Sent','Changes requested','Approved'];
+    var NB_STATUS_TH={'Not started':'ยังไม่เริ่ม','Drafting':'กำลังร่าง','Sent':'ส่งให้ลูกค้าแล้ว','Changes requested':'ลูกค้าขอแก้','Approved':'อนุมัติแล้ว'};
+    function nbStatusLabel(s){ return _logTH() ? (NB_STATUS_TH[s]||s) : s; }
+    function nbSetting(k,d){ var v=Number(((META&&META.settings)||{})[k]); return v>0?v:d; }
+    function nbOffsets(){ return { start:nbSetting('Proposal start days',35), send:nbSetting('Proposal send days',28), approve:nbSetting('Proposal approve days',21), ready:14 }; }
+    function nbAddDays(iso,n){ var d=new Date(iso+'T00:00:00'); d.setDate(d.getDate()+n); return isoOf(d); }
+    function nbDiff(a,b){ return Math.round((new Date(a+'T00:00:00')-new Date(b+'T00:00:00'))/86400000); }   // a − b in days
+    function nbNextPostingDay(client, afterIso){ var ok=clientAllowedDays(client), d=new Date(afterIso+'T00:00:00');
+      for(var i=0;i<21;i++){ d.setDate(d.getDate()+1); if(d.getDay()!==0 && ok.has(d.getDay())) return isoOf(d); } return isoOf(d); }
+    function nbOnOrAfter(client, iso){ return nbNextPostingDay(client, nbAddDays(iso,-1)); }
+    function nbLastDate(r){ return [r['Publish Date'],r['IG Date'],r['TikTok Date']].filter(Boolean).sort().pop()||''; }
+    function nbParked(r){ return /Unselected|On Hold/.test(r['Stage']||''); }
+    function nbProposal(client, batch){ var p=((META&&META.proposals)||[]).filter(function(x){ return x.client===client && Number(x.batch)===batch; })[0];
+      return p || { client:client, batch:batch, status:'Not started', sentOn:'', approvedOn:'', note:'', by:'', at:'' }; }
+    function nbCompute(client){
+      var t=todayISO(), off=nbOffsets();
+      var own=(allRows||[]).filter(function(r){ return String(r['Client']||'').trim()===client && accountsFor(r).poster===client && !nbParked(r); });
+      var cur=null; own.forEach(function(r){ var b=getBatch(r); if(b!==null && (cur===null || b>cur)) cur=b; });
+      var dates=own.map(nbLastDate).filter(Boolean).sort(), last=dates.length?dates[dates.length-1]:'';
+      var ahead=own.filter(function(r){ var d=nbLastDate(r); return d && d>=t; }).length;
+      var ready=own.filter(function(r){ var d=nbLastDate(r); return d && d>=t && /^9 /.test(r['Stage']||''); }).length;
+      var firstOfCur=cur===null?'':own.filter(function(r){ return getBatch(r)===cur; }).map(function(r){ return r['Publish Date']||nbLastDate(r); }).filter(Boolean).sort()[0]||'';
+      var byCadence=firstOfCur?nbOnOrAfter(client, nbAddDays(firstOfCur,28)):'';
+      var byStock=last ? nbNextPostingDay(client, last<t ? nbAddDays(t,-1) : last) : nbOnOrAfter(client, t);
+      // A cadence date already in the past can't be the next first post: fall back to the stock date (never before today).
+      var useCad=byCadence && byCadence>=t && byCadence<byStock, late=!!(byCadence && byCadence<t);
+      var first=useCad ? byCadence : byStock, reason=useCad?'cadence':'stock';
+      var next=(cur===null?0:cur)+1, p=nbProposal(client, next);
+      var steps=[ {k:'start',   d:nbAddDays(first,-off.start)}, {k:'send', d:nbAddDays(first,-off.send)},
+                  {k:'approve', d:nbAddDays(first,-off.approve)}, {k:'ready', d:nbAddDays(first,-off.ready)}, {k:'post', d:first} ];
+      var st=p.status, level='none', why='';
+      if(st==='Approved'){ level='done'; }
+      else if(late && t>=steps[2].d){ level='red'; why='late'; }                                       // the batch should already have started
+      else if(t>=steps[2].d){ level='red'; why='approve'; }                                            // approval due date has passed
+      else if(t>steps[1].d && ['Sent','Changes requested'].indexOf(st)===-1){ level='red'; why='send'; } // should already be with the client
+      else if(t>=steps[0].d){ level='amber'; why=(st==='Not started')?'start':'progress'; }
+      return { client:client, cur:cur, next:next, first:first, reason:reason, late:late, byCadence:byCadence, byStock:byStock, last:last, ahead:ahead, ready:ready,
+               gap: (last && !late && nbNextPostingDay(client,last)<first) ? nbNextPostingDay(client,last) : '', steps:steps, p:p, level:level, why:why, today:t };
+    }
+    function nbAll(){ return ((META&&META.clients)||[]).map(nbCompute); }
+    function nbRank(c){ return {red:0, amber:1, none:2, done:3}[c.level]; }
+    function renderNbBadge(){
+      var n=0; try{ n=nbAll().filter(function(c){ return c.level==='red'||c.level==='amber'; }).length; }catch(e){ return; }
+      var red=0; try{ red=nbAll().filter(function(c){ return c.level==='red'; }).length; }catch(e){}
+      Array.prototype.forEach.call(document.querySelectorAll('[data-tab="nextbatch"]'), function(b){
+        var bd=b.querySelector('.navbadge');
+        if(!n){ if(bd) bd.remove(); return; }
+        if(!bd){ bd=document.createElement('span'); bd.className='navbadge'; b.appendChild(bd); }
+        bd.classList.toggle('amber', !red); bd.textContent=n;
+        bd.setAttribute('aria-label', n+' '+_L('proposals need attention','ข้อเสนอที่ต้องดำเนินการ'));
+      });
+    }
+    function nbDate(iso){ return iso ? _logDate(iso) : '—'; }
+    function nbRel(iso, t){ var n=nbDiff(iso,t); if(n===0) return _L('today','วันนี้'); if(n===1) return _L('tomorrow','พรุ่งนี้'); if(n===-1) return _L('yesterday','เมื่อวาน');
+      return n>0 ? _L('in '+n+' days','อีก '+n+' วัน') : _L(-n+' days ago','ผ่านมา '+(-n)+' วัน'); }
+    var NB_STEP_LABEL={ start:['Start drafting','เริ่มร่างข้อเสนอ'], send:['Send to client','ส่งให้ลูกค้า'], approve:['Client approval','ลูกค้าอนุมัติ'],
+      ready:['First piece ready','ชิ้นแรกพร้อม'], post:['First post','โพสต์แรก'] };
+    function nbHeadline(c){
+      if(c.level==='done') return _L('Approved — ready for batch '+c.next,'อนุมัติแล้ว พร้อมสำหรับ Batch '+c.next);
+      if(c.why==='late') return c.ahead
+        ? _L('Batch '+c.next+' is late — stock runs out after '+nbDate(c.last)+'. Get the proposal approved as soon as possible.','Batch '+c.next+' ล่าช้าแล้ว สต็อกหมดหลัง '+nbDate(c.last)+' เร่งให้ลูกค้าอนุมัติข้อเสนอโดยเร็ว')
+        : _L('Batch '+c.next+' is late — nothing is scheduled'+(c.last?' after '+nbDate(c.last):'')+'. Get the proposal approved as soon as possible.','Batch '+c.next+' ล่าช้าแล้ว ไม่มีโพสต์ที่ตั้งไว้'+(c.last?'หลัง '+nbDate(c.last):'')+' เร่งให้ลูกค้าอนุมัติข้อเสนอโดยเร็ว');
+      if(c.why==='approve') return _L('Client approval was due '+nbRel(c.steps[2].d,c.today)+'. Chase it today.','เลยกำหนดอนุมัติจากลูกค้ามา '+nbRel(c.steps[2].d,c.today).replace('ผ่านมา ','')+' ตามลูกค้าวันนี้');
+      if(c.why==='send') return _L('The proposal should be with the client by now.','ข้อเสนอควรถึงมือลูกค้าแล้ว');
+      if(c.why==='start') return _L('Time to start the batch '+c.next+' proposal.','ถึงเวลาเริ่มร่างข้อเสนอ Batch '+c.next+' แล้ว');
+      if(c.why==='progress') return _L('In progress — send it by '+nbDate(c.steps[1].d)+'.','กำลังดำเนินการ ส่งให้ลูกค้าภายใน '+nbDate(c.steps[1].d));
+      return _L('Starts '+nbRel(c.steps[0].d,c.today)+' — nothing to do yet.','เริ่ม'+nbRel(c.steps[0].d,c.today)+' ยังไม่ต้องทำอะไร');
+    }
+    function nbCard(c){
+      var t=c.today, p=c.p;
+      var steps=c.steps.map(function(s,i){
+        var past=s.d<t, isToday=s.d===t, lab=NB_STEP_LABEL[s.k];
+        var done = (s.k==='start' && p.status!=='Not started') || (s.k==='send' && ['Sent','Changes requested','Approved'].indexOf(p.status)>=0) || (s.k==='approve' && p.status==='Approved');
+        var late = !done && past && (s.k==='send'||s.k==='approve') && p.status!=='Approved';
+        return '<li class="nbstep'+(done?' done':'')+(late?' late':'')+(isToday?' today':'')+(past&&!done&&!late?' past':'')+'">'+
+          '<span class="nbdot" aria-hidden="true"></span><span class="nblab">'+esc(_L(lab[0],lab[1]))+'</span>'+
+          '<span class="nbwhen">'+esc(nbDate(s.d))+'</span><span class="nbrel">'+esc(nbRel(s.d,t))+'</span></li>';
+      }).join('');
+      var seg=NB_STATUSES.map(function(s){ return '<button type="button" class="nbseg'+(p.status===s?' on':'')+'" data-client="'+esc(c.client)+'" data-batch="'+c.next+'" data-status="'+esc(s)+'" aria-pressed="'+(p.status===s)+'">'+esc(nbStatusLabel(s))+'</button>'; }).join('');
+      var stamps=[]; if(p.sentOn) stamps.push(_L('Sent ','ส่งเมื่อ ')+nbDate(p.sentOn)); if(p.approvedOn) stamps.push(_L('Approved ','อนุมัติเมื่อ ')+nbDate(p.approvedOn));
+      if(p.by) stamps.push(_L('updated by ','อัปเดตโดย ')+_logName(p.by));
+      var basis = c.reason==='cadence'
+        ? _L('Based on the 4-week cadence from batch '+(c.cur||'—')+'’s first post.','คำนวณจากรอบ 4 สัปดาห์นับจากโพสต์แรกของ Batch '+(c.cur||'—'))
+        : (c.last ? _L('Based on stock: the last scheduled post is '+nbDate(c.last)+'.','คำนวณจากสต็อก: โพสต์สุดท้ายที่ตั้งไว้คือ '+nbDate(c.last))
+                  : _L('No posts scheduled — the next batch is needed now.','ยังไม่มีโพสต์ที่ตั้งไว้ ต้องเริ่ม Batch ถัดไปทันที'));
+      return '<article class="nbcard lv-'+c.level+'">'+
+        '<header class="nbhead"><div class="nbtitle">'+clientChip(c.client)+'<h3>'+esc(_L('Batch '+c.next,'Batch '+c.next))+'</h3>'+
+          '<span class="nbfirst">'+esc(_L('first post ','โพสต์แรก ')+nbDate(c.first))+'</span></div>'+
+          '<span class="nbpill lv-'+c.level+'">'+(c.level==='red'||c.level==='amber'?'<svg viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3.2a4.4 4.4 0 0 0-4.4 4.4v2.6L4.3 13h11.4l-1.3-2.8V7.6A4.4 4.4 0 0 0 10 3.2z"/><path d="M8.3 15.4a1.8 1.8 0 0 0 3.4 0"/></svg>':'')+esc(nbStatusLabel(p.status))+'</span></header>'+
+        '<p class="nbmsg">'+esc(nbHeadline(c))+'</p>'+
+        '<div class="nbstock"><span><b>'+c.ahead+'</b> '+esc(_L(c.ahead===1?'post scheduled ahead':'posts scheduled ahead','โพสต์ที่ตั้งไว้ล่วงหน้า'))+'</span><span><b>'+c.ready+'</b> '+esc(_L('ready to publish','พร้อมโพสต์'))+'</span>'+
+          (c.last?'<span>'+esc(_L('last post ','โพสต์สุดท้าย '))+'<b>'+esc(nbDate(c.last))+'</b></span>':'')+'</div>'+
+        (c.gap?'<p class="nbgap">'+esc(_L('Gap: nothing scheduled from '+nbDate(c.gap)+' until batch '+c.next+' starts.','ช่องว่าง: ไม่มีโพสต์ตั้งแต่ '+nbDate(c.gap)+' จนกว่า Batch '+c.next+' จะเริ่ม'))+'</p>':'')+
+        '<ol class="nbtrack">'+steps+'</ol>'+
+        '<p class="nbbasis">'+esc(basis)+'</p>'+
+        '<div class="nbsegwrap" role="group" aria-label="'+esc(_L('Proposal status','สถานะข้อเสนอ'))+'">'+seg+'</div>'+
+        '<label class="nbnote"><span>'+esc(_L('Note','โน้ต'))+'</span><textarea rows="2" data-client="'+esc(c.client)+'" data-batch="'+c.next+'" placeholder="'+esc(_L('e.g. waiting on Ice for topics','เช่น รอหัวข้อจากคุณไอซ์'))+'">'+esc(p.note||'')+'</textarea></label>'+
+        (stamps.length?'<p class="nbstamps">'+esc(stamps.join(' · '))+'</p>':'')+
+      '</article>';
+    }
+    function renderNextBatch(){
+      var host=$('nbBody'); if(!host) return;
+      var sel=$('nbClient'); if(sel && !sel.dataset.filled && META && META.clients){
+        sel.innerHTML='<option value="">'+esc(_L('All clients','ลูกค้าทั้งหมด'))+'</option>'+META.clients.map(function(c){ return '<option>'+esc(c)+'</option>'; }).join('');
+        sel.dataset.filled='1'; sel.value=PREFS.nbClient||''; }
+      if(!allRows.length && ROWS_STATE!=='ready'){ host.innerHTML='<div class="nbgrid">'+[0,1,2].map(function(){ return '<div class="nbcard skelcard"><span class="skel" style="width:40%"></span><span class="skel" style="width:80%;margin-top:14px"></span><span class="skel" style="width:100%;height:44px;margin-top:14px"></span></div>'; }).join('')+'</div>'; return; }
+      var want=sel?sel.value:'', list=nbAll().filter(function(c){ return !want || c.client===want; })
+        .sort(function(a,b){ return nbRank(a)-nbRank(b) || a.first.localeCompare(b.first); });
+      var red=list.filter(function(c){ return c.level==='red'; }).length, amber=list.filter(function(c){ return c.level==='amber'; }).length;
+      var sum=$('nbSummary'); if(sum) sum.innerHTML = (red||amber)
+        ? '<span class="nbsum-n red"><b>'+red+'</b> '+esc(_L('overdue','เลยกำหนด'))+'</span><span class="nbsum-n amber"><b>'+amber+'</b> '+esc(_L('to work on now','ต้องทำตอนนี้'))+'</span>'
+        : '<span class="nbsum-n ok">'+esc(_L('Nothing due right now.','ตอนนี้ยังไม่มีอะไรถึงกำหนด'))+'</span>';
+      host.innerHTML = list.length ? '<div class="nbgrid">'+list.map(nbCard).join('')+'</div>' : '<div class="empty">'+esc(_L('No clients yet.','ยังไม่มีลูกค้า'))+'</div>';
+      renderNbBadge();
+    }
+    async function nbSave(client, batch, patch, btn){
+      var payload=Object.assign({client:client, batch:batch}, patch);
+      var data=await call('setProposal', payload);
+      if(!data.ok){ if(typeof toastErr==='function') toastErr(data.error); else alert(data.error); renderNextBatch(); return; }
+      META.proposals=data.result.proposals||[]; renderNextBatch();
+    }
+    document.addEventListener('click', function(e){ var b=e.target && e.target.closest ? e.target.closest('#nbBody .nbseg') : null; if(!b || b.classList.contains('on')) return;
+      var wrap=b.parentNode; Array.prototype.forEach.call(wrap.querySelectorAll('.nbseg'), function(x){ x.classList.toggle('on', x===b); x.setAttribute('aria-pressed', x===b); });   // instant feedback
+      nbSave(b.dataset.client, Number(b.dataset.batch), { status:b.dataset.status }, b); });
+    document.addEventListener('change', function(e){ var ta=e.target; if(!ta || !ta.matches || !ta.matches('#nbBody .nbnote textarea')) return;
+      nbSave(ta.dataset.client, Number(ta.dataset.batch), { note:ta.value }); });
+    (function(){ var sel=$('nbClient'); if(sel) sel.onchange=function(){ PREFS.nbClient=sel.value; savePrefs(); renderNextBatch(); }; })();
     function toggleViralLinks(){ $('pViralLinks').classList.toggle('hidden', !$('pViral').checked); }
     document.addEventListener('DOMContentLoaded',function(){ var v=$('pViral'); if(v) v.addEventListener('change',toggleViralLinks); });
     function buildStageSelect(){ $('pStage').innerHTML=STAGES.map(function(s){ return '<option>'+esc(s)+'</option>'; }).join(''); }
@@ -3410,8 +3632,14 @@
       el.innerHTML='<b class="pfwarn-t"><span>Check poster</span></b><div>'+posterMsgHtml(m)+'</div>'; el.hidden=false; }
     // ── Originals (decision #24): the client's own solo posts, counted against Original quota per batch ──
     function originalQuota(cl){ var q=(META&&META.originalQuota)||{}; var n=Number(q[cl]); return n>0?n:0; }
-    function isOriginal(r, cl){ if(String(r['Client']||'').trim()!==cl) return false; var a=accountsFor(r).accounts; return a.length===1 && a[0]===cl; }
-    function pdOriginalsOn(client){ return !!(client && PREFS.pdOriginals && originalQuota(client)); }
+    // Own quota (decision #24, confirmed by the SRU project 23 Oct): the client posts it and owns its quota —
+    // the quota owner reads first in the person code. SRU solo and SRU+DIA count for SRU; ICE and DIA pieces don't.
+    function isOriginal(r, cl){ if(String(r['Client']||'').trim()!==cl) return false; return accountsFor(r).poster===cl; }
+    function hasPartner(r){ return accountsFor(r).accounts.length>1; }
+    // The tick appears for any client that hosts collabs under its own Client column (SRU hosts the Ice and Dianna ones).
+    // The Original quota per batch number is optional: it only adds the "/ 10" to the summary.
+    function hasCollabFeed(client){ return !!client && (allRows||[]).some(function(r){ return String(r['Client']||'').trim()===client && accountsFor(r).accounts.length>1; }); }
+    function pdOriginalsOn(client){ return !!(client && PREFS.pdOriginals && (originalQuota(client) || hasCollabFeed(client))); }
     // One scope rule for every Publish Dates list: shows on that account's feed, and (if ticked) originals only.
     function pdInScope(r, client){ if(!client) return true; if(accountsFor(r).accounts.indexOf(client)===-1) return false;
       return pdOriginalsOn(client) ? isOriginal(r, client) : true; }
@@ -3421,7 +3649,10 @@
       var rows=allRows.filter(function(r){ return isOriginal(r, cl) && !isOnHold(r); });
       var cur=ov; if(cur==null){ rows.forEach(function(r){ var b=getBatch(r); if(b!==null && (cur==null || b>cur)) cur=b; }); }
       var inB=rows.filter(function(r){ return cur!=null && getBatch(r)===cur; });
-      return { cur:cur, planned:inB.length, done:inB.filter(function(r){ return /^(9 |10 )/.test(r['Stage']||''); }).length,
+      var dated=inB.filter(function(r){ return !!r['Publish Date']; });     // one piece per dated row (sub-cuts without a date don't count)
+      return { cur:cur, planned:dated.length, solo:dated.filter(function(r){ return !hasPartner(r); }).length,
+        withPartner:dated.filter(hasPartner).length, undated:inB.length-dated.length,
+        done:dated.filter(function(r){ return /^(9 |10 )/.test(r['Stage']||''); }).length,
         noBatch:rows.filter(function(r){ return getBatch(r)===null; }).length };
     }
     function collabTag(r){ var c=collabInfo(r); if(!c) return '';
@@ -3804,7 +4035,7 @@ sched,
     let metaLoaded=false;
     async function loadMeta(){
       const data = await callBooted('getMeta');
-      if (data && data.ok) { META = data.result; metaLoaded = true; }
+      if (data && data.ok) { META = data.result; metaLoaded = true; try{ renderNbBadge(); }catch(e){} }
       return META;
     }
     function money(cur, n){
@@ -4890,12 +5121,15 @@ sched,
       "Missed a post? Push by one moves this piece and the later ones in the same lane one posting day later. Collabs and other lanes don't move. You see every change before anything saves.": "โพสต์ไม่ได้ลง? กด เลื่อน 1 ช่อง ระบบจะเลื่อนชิ้นนี้และชิ้นถัดไปในช่องโพสต์เดียวกันไปวันโพสต์ถัดไป โพสต์ collab และช่องอื่นไม่ขยับ และจะเห็นทุกการเปลี่ยนแปลงก่อนบันทึก"
     });
     Object.assign(TH, {
-      "Originals only": "เฉพาะโพสต์ต้นฉบับ",
-      "originals": "ต้นฉบับ",
+      "Own quota only": "เฉพาะโควตาของตัวเอง",
+      "own quota": "โควตาของตัวเอง",
       "Batch": "Batch",
       "planned": "ชิ้นที่วางแผนไว้",
       "ready or published": "พร้อมโพสต์หรือโพสต์แล้ว",
       "over quota": "เกินโควตา",
+      "solo": "โพสต์เดี่ยว",
+      "with a collab partner": "มีพาร์ทเนอร์ collab",
+      "without a publish date, not counted": "ชิ้นที่ยังไม่มีวันโพสต์ ไม่นับ",
       "without a batch number in the ID": "ชิ้นที่ไม่มีเลข Batch ใน Piece ID",
       "No batch numbers found in the Piece IDs yet.": "ยังไม่พบเลข Batch ใน Piece ID",
       "Check poster": "ตรวจบัญชีที่โพสต์",
@@ -4907,6 +5141,24 @@ sched,
       "Advanced": "ตั้งค่าเพิ่มเติม",
       "Who changed what, newest first. Search to see who worked on a piece.": "ใครแก้อะไรบ้าง เรียงจากล่าสุด ค้นหาเพื่อดูว่าใครทำงานชิ้นไหน",
       "Search a Piece ID, title or name": "ค้นหา Piece ID ชื่อเรื่อง หรือชื่อคน",
+      "Next Batch": "Batch ถัดไป",
+      "When each client's next batch proposal should start, go to the client, and be approved, so new content is ready before the current stock runs out.": "กำหนดว่าข้อเสนอ Batch ถัดไปของลูกค้าแต่ละรายควรเริ่มร่าง ส่งให้ลูกค้า และได้รับอนุมัติเมื่อไร เพื่อให้คอนเทนต์ใหม่พร้อมก่อนสต็อกปัจจุบันหมด",
+      "How Next Batch is worked out": "หลักการคำนวณ Batch ถัดไป",
+      "First post of the next batch.": "โพสต์แรกของ Batch ถัดไป",
+      " The earlier of two dates: four weeks after the current batch's first post, or the next posting day after the client's last scheduled post (when the stock runs out).": " เลือกวันที่มาก่อนระหว่าง 4 สัปดาห์หลังโพสต์แรกของ Batch ปัจจุบัน กับวันโพสต์ถัดไปหลังโพสต์สุดท้ายที่ตั้งไว้ (วันที่สต็อกหมด)",
+      "What counts as stock.": "อะไรนับเป็นสต็อก",
+      " Every post on the client's own feed that has a date and isn't On Hold or Unselected, including spin-offs and extra pieces the client asked for. Each row is one piece.": " ทุกโพสต์บนฟีดของลูกค้าเองที่มีวันที่ และไม่ได้อยู่ในสถานะ On Hold หรือ Unselected รวมถึงชิ้นที่แตกออกมาและชิ้นพิเศษที่ลูกค้าขอ นับ 1 แถวเป็น 1 ชิ้น",
+      "The steps.": "ขั้นตอน",
+      " Start drafting 5 weeks before the first post, send it to the client 4 weeks before, client approval 3 weeks before, first piece ready 2 weeks before. The three proposal timings can be changed in the Settings tab.": " เริ่มร่าง 5 สัปดาห์ก่อนโพสต์แรก ส่งให้ลูกค้า 4 สัปดาห์ก่อน ลูกค้าอนุมัติ 3 สัปดาห์ก่อน ชิ้นแรกพร้อม 2 สัปดาห์ก่อน ปรับระยะเวลาสามขั้นแรกได้ในแท็บ Settings",
+      "The bell.": "กระดิ่งแจ้งเตือน",
+      " Amber from the start date until the proposal is approved. Red when it should already be with the client, or approval is overdue. It clears once the status is Approved.": " สีส้มตั้งแต่วันเริ่มจนกว่าข้อเสนอจะได้รับอนุมัติ สีแดงเมื่อควรส่งถึงลูกค้าแล้วหรือเลยกำหนดอนุมัติ จะหายไปเมื่อสถานะเป็นอนุมัติแล้ว",
+      "Status.": "สถานะ",
+      " Tap a status to save it for everyone. Sent and Approved record the date automatically. Every change shows in the Activity Log.": " แตะสถานะเพื่อบันทึกให้ทุกคนเห็น สถานะส่งแล้วและอนุมัติแล้วจะบันทึกวันที่ให้อัตโนมัติ ทุกการเปลี่ยนแปลงแสดงในบันทึกกิจกรรม",
+      "The earlier of two dates: four weeks after the current batch's first post, or the next posting day after the client's last scheduled post (when the stock runs out).": "เลือกวันที่มาก่อนระหว่าง 4 สัปดาห์หลังโพสต์แรกของ Batch ปัจจุบัน กับวันโพสต์ถัดไปหลังโพสต์สุดท้ายที่ตั้งไว้ (วันที่สต็อกหมด)",
+      "Every post on the client's own feed that has a date and isn't On Hold or Unselected, including spin-offs and extra pieces the client asked for. Each row is one piece.": "ทุกโพสต์บนฟีดของลูกค้าเองที่มีวันที่ และไม่ได้อยู่ในสถานะ On Hold หรือ Unselected รวมถึงชิ้นที่แตกออกมาและชิ้นพิเศษที่ลูกค้าขอ นับ 1 แถวเป็น 1 ชิ้น",
+      "Start drafting 5 weeks before the first post, send it to the client 4 weeks before, client approval 3 weeks before, first piece ready 2 weeks before. The three proposal timings can be changed in the Settings tab.": "เริ่มร่าง 5 สัปดาห์ก่อนโพสต์แรก ส่งให้ลูกค้า 4 สัปดาห์ก่อน ลูกค้าอนุมัติ 3 สัปดาห์ก่อน ชิ้นแรกพร้อม 2 สัปดาห์ก่อน ปรับระยะเวลาสามขั้นแรกได้ในแท็บ Settings",
+      "Amber from the start date until the proposal is approved. Red when it should already be with the client, or approval is overdue. It clears once the status is Approved.": "สีส้มตั้งแต่วันเริ่มจนกว่าข้อเสนอจะได้รับอนุมัติ สีแดงเมื่อควรส่งถึงลูกค้าแล้วหรือเลยกำหนดอนุมัติ จะหายไปเมื่อสถานะเป็นอนุมัติแล้ว",
+      "Tap a status to save it for everyone. Sent and Approved record the date automatically. Every change shows in the Activity Log.": "แตะสถานะเพื่อบันทึกให้ทุกคนเห็น สถานะส่งแล้วและอนุมัติแล้วจะบันทึกวันที่ให้อัตโนมัติ ทุกการเปลี่ยนแปลงแสดงในบันทึกกิจกรรม",
       "Current batch": "Batch ปัจจุบัน",
       "Done so far": "เสร็จแล้ว",
       "Contents this batch": "จำนวนชิ้นใน Batch นี้",
@@ -5007,6 +5259,7 @@ sched,
         else { stopObs(); revertEN(); }
         try{ if(typeof renderImportGrid==='function' && typeof IMP_ROWS!=='undefined' && IMP_ROWS.length) renderImportGrid(); }catch(e){}
         try{ if(typeof renderLogRows==='function' && typeof LOG!=='undefined' && LOG.rows) renderLogRows(); }catch(e){}
+        try{ var _nb=document.getElementById('tab-nextbatch'); if(_nb && !_nb.classList.contains('hidden')) renderNextBatch(); var _ns=document.getElementById('nbClient'); if(_ns) delete _ns.dataset.filled; renderNbBadge(); }catch(e){}
         try{ var _ht=document.getElementById('tab-help'); if(_ht && !_ht.classList.contains('hidden') && typeof renderHelp==='function') renderHelp(); }catch(e){}
       }
       window.orbitSetLang = setLang;
