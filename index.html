@@ -385,6 +385,15 @@
     #nbBody .nbseg:hover{ background:rgba(255,255,255,.6); color:var(--ink); }
     #nbBody .nbseg.on{ background:var(--panel,#fff); color:var(--ink); font-weight:600; box-shadow:0 1px 3px rgba(0,0,0,.1), 0 0 0 .5px rgba(0,0,0,.05); }
     #nbBody .nbseg:active{ transform:scale(.96); }
+    .nblink{ margin-top:14px; }
+    .nblink label{ display:block; font-size:12px; font-weight:600; color:var(--ink-soft); margin-bottom:4px; }
+    .nblink-row{ display:flex; gap:8px; align-items:stretch; }
+    .nblink-row input{ flex:1; min-width:0; }
+    .nblink-row input.bad{ border-color:#d7263d; box-shadow:0 0 0 3px rgba(215,38,61,.12); }
+    .nbopen{ flex:none; display:inline-flex; align-items:center; gap:4px; padding:0 14px; min-height:38px; border-radius:10px; background:var(--brand-soft,#eaf0fb);
+      color:var(--brand,#1f4fa0); font-size:13px; font-weight:600; text-decoration:none; transition:transform .1s ease-out, background-color .15s ease; }
+    .nbopen[hidden]{ display:none; } .nbopen:active{ transform:scale(.96); } .nbopen:hover{ background:#dfe8f8; }
+    @media (prefers-reduced-motion: reduce){ .nbopen{ transition:none; } .nbopen:active{ transform:none; } }
     .nbnote{ display:block; margin-top:12px; }
     .nbnote span{ display:block; font-size:12px; font-weight:600; color:var(--ink-soft); margin-bottom:4px; }
     .nbnote textarea{ width:100%; box-sizing:border-box; resize:vertical; min-height:42px; padding:8px 11px; font:inherit; font-size:13.5px; }
@@ -2949,6 +2958,7 @@
           return _L('updated the team’s days off','แก้วันหยุดของทีม')+_logSoft(_L(ad+' added · '+rm+' removed','เพิ่ม '+ad+' · ลบ '+rm));
         case 'proposal:status':
           var pp=b.split(' · '); return _L('set the ','ตั้งสถานะข้อเสนอ ')+_logB((pp[0]||'')+' · '+(pp[1]||''))+_L(' proposal to ',' เป็น ')+_logB(nbStatusLabel(pp[2]||''))+(a?_logSoft(_L('was ','เดิม ')+esc(nbStatusLabel(a.split(' · ')[2]||''))):'');
+        case 'proposal:link': return b ? _L('added the link to the ','ใส่ลิงก์ข้อเสนอ ')+_logB(a)+_L(' proposal ',' ')+_logVal(b) : _L('removed the link from the ','ลบลิงก์ข้อเสนอ ')+_logB(a)+_L(' proposal','');
         case 'proposal:note': return _L('updated the note on the ','แก้โน้ตของข้อเสนอ ')+_logB(a)+_L(' proposal','')+(b?'<div class="lquote">'+_logVal(b)+'</div>':'');
         case 'team link key': return a==='rotated' ? _L('replaced the team share link — old links stop working','เปลี่ยนลิงก์แชร์ของทีม ลิงก์เดิมใช้ไม่ได้แล้ว') : _L('created the team share link','สร้างลิงก์แชร์ของทีม');
       }
@@ -3104,7 +3114,11 @@
     function nbCompute(client){
       var t=todayISO(), off=nbOffsets();
       var own=(allRows||[]).filter(function(r){ return String(r['Client']||'').trim()===client && accountsFor(r).poster===client && !nbParked(r); });
-      var cur=null; own.forEach(function(r){ var b=getBatch(r); if(b!==null && (cur===null || b>cur)) cur=b; });
+      // Current batch = the highest batch number with at least 3 pieces planned. One early piece of the next batch
+      // (e.g. VO14.1) doesn't make it current; falls back to the highest batch number when no batch has 3 yet.
+      var perB={}, curAny=null; own.forEach(function(r){ var b=getBatch(r); if(b===null) return; perB[b]=(perB[b]||0)+1; if(curAny===null || b>curAny) curAny=b; });
+      var cur=null; Object.keys(perB).forEach(function(k){ var b=Number(k); if(perB[k]>=3 && (cur===null || b>cur)) cur=b; });
+      if(cur===null) cur=curAny;
       var dates=own.map(nbLastDate).filter(Boolean).sort(), last=dates.length?dates[dates.length-1]:'';
       var ahead=own.filter(function(r){ var d=nbLastDate(r); return d && d>=t; }).length;
       var ready=own.filter(function(r){ var d=nbLastDate(r); return d && d>=t && /^9 /.test(r['Stage']||''); }).length;
@@ -3155,6 +3169,7 @@
       if(c.why==='progress') return _L('In progress — send it by '+nbDate(c.steps[1].d)+'.','กำลังดำเนินการ ส่งให้ลูกค้าภายใน '+nbDate(c.steps[1].d));
       return _L('Starts '+nbRel(c.steps[0].d,c.today)+' — nothing to do yet.','เริ่ม'+nbRel(c.steps[0].d,c.today)+' ยังไม่ต้องทำอะไร');
     }
+    function nbIsUrl(u){ return /^https?:\/\/\S+$/i.test(String(u||'').trim()); }
     function nbCard(c){
       var t=c.today, p=c.p;
       var steps=c.steps.map(function(s,i){
@@ -3183,6 +3198,9 @@
         '<ol class="nbtrack">'+steps+'</ol>'+
         '<p class="nbbasis">'+esc(basis)+'</p>'+
         '<div class="nbsegwrap" role="group" aria-label="'+esc(_L('Proposal status','สถานะข้อเสนอ'))+'">'+seg+'</div>'+
+        '<div class="nblink"><label for="nbl-'+esc(c.client)+'">'+esc(_L('Proposal link','ลิงก์ข้อเสนอ'))+'</label><div class="nblink-row">'+
+          '<input type="url" id="nbl-'+esc(c.client)+'" inputmode="url" autocomplete="off" spellcheck="false" data-client="'+esc(c.client)+'" data-batch="'+c.next+'" value="'+esc(p.link||'')+'" placeholder="'+esc(_L('Paste the Notion page or doc link','วางลิงก์หน้า Notion หรือเอกสาร'))+'">'+
+          '<a class="nbopen" href="'+esc(nbIsUrl(p.link)?p.link:'#')+'" target="_blank" rel="noopener"'+(nbIsUrl(p.link)?'':' hidden')+'>'+esc(_L('Open','เปิด'))+'<span aria-hidden="true">\u2197</span></a></div></div>'+
         '<label class="nbnote"><span>'+esc(_L('Note','โน้ต'))+'</span><textarea rows="2" data-client="'+esc(c.client)+'" data-batch="'+c.next+'" placeholder="'+esc(_L('e.g. waiting on Ice for topics','เช่น รอหัวข้อจากคุณไอซ์'))+'">'+esc(p.note||'')+'</textarea></label>'+
         (stamps.length?'<p class="nbstamps">'+esc(stamps.join(' · '))+'</p>':'')+
       '</article>';
@@ -3213,6 +3231,12 @@
       nbSave(b.dataset.client, Number(b.dataset.batch), { status:b.dataset.status }, b); });
     document.addEventListener('change', function(e){ var ta=e.target; if(!ta || !ta.matches || !ta.matches('#nbBody .nbnote textarea')) return;
       nbSave(ta.dataset.client, Number(ta.dataset.batch), { note:ta.value }); });
+    document.addEventListener('input', function(e){ var inp=e.target; if(!inp || !inp.matches || !inp.matches('#nbBody .nblink input')) return;
+      var a=inp.parentNode.querySelector('.nbopen'), ok=nbIsUrl(inp.value); if(a){ a.hidden=!ok; a.href=ok?inp.value.trim():'#'; }
+      inp.classList.toggle('bad', !!inp.value.trim() && !ok); });
+    document.addEventListener('change', function(e){ var inp=e.target; if(!inp || !inp.matches || !inp.matches('#nbBody .nblink input')) return;
+      var v=inp.value.trim(); if(v && !nbIsUrl(v)){ inp.classList.add('bad'); return; }      // only a real web address is saved
+      nbSave(inp.dataset.client, Number(inp.dataset.batch), { link:v }); });
     (function(){ var sel=$('nbClient'); if(sel) sel.onchange=function(){ PREFS.nbClient=sel.value; savePrefs(); renderNextBatch(); }; })();
     function toggleViralLinks(){ $('pViralLinks').classList.toggle('hidden', !$('pViral').checked); }
     document.addEventListener('DOMContentLoaded',function(){ var v=$('pViral'); if(v) v.addEventListener('change',toggleViralLinks); });
