@@ -263,43 +263,78 @@
     tr.clickable:active td { background:#eef1ec; }   /* §1 Response — feedback on press */
     tbody tr:last-child td { border-bottom:none; }
     .empty { padding:44px; text-align:center; color:var(--ink-soft); }
-    /* Activity Log — day-grouped. Mobile: stacked feed. Desktop: aligned columns (piece · field · change · time · who) that fill the width, no horizontal scroll. */
-    #tab-log .loglist{ max-width:760px; }
-    .logday-h{ font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-soft,#8a928c); margin:18px 2px 7px; }
-    .logday-h:first-child{ margin-top:2px; }
-    .logday{ background:var(--panel,#fff); border:1px solid var(--line); border-radius:14px; overflow:hidden; }
-    .logrow{ display:flex; align-items:flex-start; gap:11px; padding:10px 14px; border-top:1px solid var(--line-soft,#eef0ec); transition:background .15s ease; }
-    .logday .logrow:first-child{ border-top:none; }
-    .logrow:hover{ background:#faf9f6; }
-    .logdot{ width:8px; height:8px; border-radius:50%; margin-top:5px; flex:0 0 auto; background:#c4cbc4; }
-    .logdot.k-stage{ background:#3b6fb0; } .logdot.k-caption{ background:#7a5cc0; } .logdot.k-link{ background:#2f8f8f; } .logdot.k-date{ background:#c98a2b; } .logdot.k-block{ background:#c0392b; }
-    .logmain{ flex:1 1 auto; min-width:0; font-size:13px; }
-    .logpiece{ font-weight:600; color:var(--ink,#2a2f2c); margin-right:8px; }
-    .logfield{ color:var(--ink-soft,#6b7280); font-weight:500; }
-    .logchange{ font-size:12.5px; margin-top:2px; display:flex; flex-wrap:wrap; align-items:center; gap:6px; }
-    .logfrom{ color:var(--ink-soft,#8a928c); } .logarrow{ color:var(--ink-soft,#b4bbb4); } .logto{ color:var(--ink,#2a2f2c); font-weight:500; }
-    .logmeta{ flex:0 0 auto; text-align:right; display:flex; flex-direction:column; align-items:flex-end; gap:2px; }
-    .logtime{ font-size:12px; color:var(--ink-soft,#8a928c); font-variant-numeric:tabular-nums; }
-    .logwho{ font-size:11px; color:var(--ink-soft,#a2a8a2); max-width:140px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    #tab-log .empty{ padding:22px 28px; }
-    @media (prefers-reduced-motion: reduce){ .logrow{ transition:none; } }
-    /* Desktop: table-like aligned columns using the full width, nothing scrolls sideways. */
-    @media (min-width:821px){
-      #tab-log .loglist{ max-width:1180px; }
-      .logrow{ display:grid; grid-template-columns:14px minmax(0,1fr) 56px minmax(96px,168px); align-items:center; column-gap:18px; padding:10px 18px; }
-      .logmain{ display:grid; grid-template-columns:minmax(84px,116px) minmax(104px,168px) minmax(0,1fr); align-items:center; column-gap:18px; min-width:0; }
-      .logpiece{ margin-right:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-      .logfield{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-      .logchange{ margin-top:0; min-width:0; flex-wrap:nowrap; overflow:hidden; }
-      .logchange .logfrom, .logchange .logto{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-      .logmeta{ display:contents; }
-      .logtime{ text-align:left; }
-      .logwho{ text-align:right; max-width:none; justify-self:end; }
-    }
+    /* Activity Log — plain-sentence events, one per person + piece + moment; search on top. */
+    .logwrap{ max-width:880px; }
+    .logsearch{ position:sticky; top:8px; z-index:5; display:flex; align-items:center; gap:8px; height:46px; padding:0 8px 0 14px; margin:14px 0 6px;
+      border-radius:14px; background:rgba(255,255,255,.82); -webkit-backdrop-filter:saturate(180%) blur(18px); backdrop-filter:saturate(180%) blur(18px);
+      box-shadow:0 0 0 1px rgba(0,0,0,.08), 0 6px 20px rgba(0,0,0,.05); transition:box-shadow .18s cubic-bezier(.22,1,.36,1); }
+    .logsearch:focus-within{ box-shadow:0 0 0 2px rgba(31,79,160,.55), 0 8px 26px rgba(31,79,160,.10); }
+    .logsearch svg{ width:18px; height:18px; color:var(--ink-soft); flex:none; }
+    .logsearch input{ flex:1; min-width:0; height:100%; border:0; outline:0; background:transparent; font:inherit; font-size:16px; color:var(--ink); padding:0; }
+    .logsearch input::-webkit-search-cancel-button{ -webkit-appearance:none; display:none; }
+    .logsearch input::placeholder{ color:var(--ink-faint,#a1a1a6); }
+    .logclear{ width:32px; height:32px; border:0; border-radius:50%; background:rgba(0,0,0,.06); color:var(--ink-soft); display:grid; place-items:center; cursor:pointer; flex:none; padding:0;
+      transition:transform .1s ease-out, background-color .15s ease; }
+    .logclear[hidden]{ display:none; }
+    .logclear svg{ width:14px; height:14px; } .logclear:active{ transform:scale(.9); background:rgba(0,0,0,.1); }
+    .logcount{ margin:4px 4px 0; font-size:12.5px; color:var(--ink-soft); font-variant-numeric:tabular-nums; }
+    .logcount[hidden]{ display:none; }
+    .logday-h{ font-size:12px; font-weight:600; letter-spacing:.02em; color:var(--ink-soft); margin:22px 4px 8px; }
+    .logday{ background:var(--panel,#fff); border-radius:16px; box-shadow:0 0 0 1px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04); overflow:hidden; }
+    .lev{ display:grid; grid-template-columns:32px minmax(0,1fr) auto; gap:12px; align-items:start; padding:13px 16px; }
+    .lev + .lev{ box-shadow:inset 0 1px 0 rgba(0,0,0,.06); }
+    .lav{ width:32px; height:32px; border-radius:50%; display:grid; place-items:center; font-size:13px; font-weight:700; flex:none;
+      color:hsl(var(--h,210) 45% 32%); background:hsl(var(--h,210) 55% 92%); }
+    .lav.sm{ width:28px; height:28px; font-size:12px; }
+    .lav.skelav{ background:rgba(0,0,0,.06); }
+    .lbody{ min-width:0; }
+    .lhead{ display:flex; flex-wrap:wrap; align-items:baseline; gap:2px 8px; line-height:1.35; min-width:0; }
+    .lwho{ font-size:14px; font-weight:600; color:var(--ink); letter-spacing:-.005em; }
+    .lpiece{ font:inherit; font-size:12.5px; font-weight:600; color:var(--brand,#1f4fa0); background:var(--brand-soft,#eaf0fb); border:0; border-radius:6px; padding:1px 7px;
+      cursor:pointer; max-width:100%; overflow-wrap:anywhere; text-align:left; transition:transform .1s ease-out, background-color .15s ease; }
+    .lpiece:active{ transform:scale(.96); } .lpiece:disabled{ cursor:default; color:var(--ink-soft); background:rgba(0,0,0,.05); }
+    .ltitle{ flex:1 1 180px; min-width:0; font-size:12.5px; color:var(--ink-soft); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .lacts{ list-style:none; margin:4px 0 0; padding:0; font-size:13.5px; line-height:1.5; color:var(--ink); }
+    .lacts li{ overflow-wrap:anywhere; }
+    .lacts li + li{ margin-top:2px; }
+    .lv{ font-weight:600; }
+    .lv-long{ font-weight:400; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; color:var(--ink-soft); }
+    .lquote{ margin:4px 0 2px; padding:6px 10px; border-radius:10px; background:rgba(0,0,0,.035); font-size:12.5px; }
+    .lquote .lv-long{ color:var(--ink); }
+    .lsoft{ color:var(--ink-soft); font-size:12.5px; }
+    .llink{ display:inline-flex; align-items:center; gap:3px; max-width:100%; padding:1px 8px; border-radius:6px; background:rgba(0,0,0,.05);
+      color:var(--brand,#1f4fa0); font-size:12.5px; font-weight:500; text-decoration:none; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:baseline; }
+    .llink:active{ background:rgba(0,0,0,.1); }
+    .lids{ display:flex; flex-wrap:wrap; gap:4px; margin-top:4px; }
+    .lid{ font-size:11.5px; font-weight:600; padding:1px 7px; border-radius:6px; background:rgba(0,0,0,.05); color:var(--ink-soft); }
+    .ltime{ font-size:12px; color:var(--ink-soft); font-variant-numeric:tabular-nums; padding-top:2px; white-space:nowrap; }
+    .lpeople{ margin:14px 0 4px; padding:14px 16px; border-radius:16px; background:var(--panel,#fff); box-shadow:0 0 0 1px rgba(31,79,160,.18), 0 6px 20px rgba(31,79,160,.06);
+      animation:lpIn .24s cubic-bezier(.22,1,.36,1) both; }
+    .lpeople h3{ margin:0 0 10px; font-size:13px; font-weight:600; color:var(--ink-soft); letter-spacing:.01em; }
+    .lpeople-row{ display:flex; flex-wrap:wrap; gap:10px 18px; }
+    .lperson{ display:flex; align-items:center; gap:9px; min-width:0; }
+    .lperson b{ display:block; font-size:14px; color:var(--ink); }
+    .lperson span:not(.lav){ display:block; font-size:12px; color:var(--ink-soft); font-variant-numeric:tabular-nums; }
+    .lmade{ margin:12px 0 0; padding-top:10px; box-shadow:inset 0 1px 0 rgba(0,0,0,.06); font-size:12.5px; color:var(--ink-soft); line-height:1.6; }
+    .lmade b{ color:var(--ink); }
+    .lmore{ display:flex; justify-content:center; margin:16px 0 4px; }
+    @keyframes lpIn{ from{ opacity:0; transform:translateY(4px); } to{ opacity:1; transform:none; } }
+    /* Keep the global form rules (input:focus ring, button min-height/border) out of the log's own controls. */
+    .logsearch input, .logsearch input:focus, .logsearch input:focus-visible{ border:0; border-radius:0; box-shadow:none; outline:none; min-height:0; padding:0; background:transparent; }
+    #tab-log .logclear{ min-height:0; border:0; box-shadow:none; padding:0; }
+    #logBody .lpiece{ min-height:0; height:auto; border:0; box-shadow:none; font-size:12.5px !important; font-weight:600; line-height:1.45; padding:1px 7px; border-radius:6px; }
+    #logBody .lpiece:hover{ background:#dfe8f8; } #logBody .lpiece:disabled:hover{ background:rgba(0,0,0,.05); }
+    #tab-log .empty{ padding:28px; }
     @media (max-width:820px){
-      #tab-log .loglist{ max-width:100%; }
-      .logrow{ padding:9px 11px; gap:9px; } .logwho{ max-width:96px; }
+      .logwrap{ max-width:100%; }
+      .logsearch{ top:4px; }
+      .lev{ grid-template-columns:28px minmax(0,1fr) auto; gap:10px; padding:12px 13px; }
+      .lav{ width:28px; height:28px; font-size:12px; }
+      .ltitle{ flex-basis:100%; white-space:normal; display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical; }
     }
+    @media (prefers-reduced-motion: reduce){ .lpeople{ animation:none; } .logsearch, .logclear, .lpiece{ transition:none; } .logclear:active, .lpiece:active{ transform:none; } }
+    @media (prefers-reduced-transparency: reduce){ .logsearch{ background:#fff; -webkit-backdrop-filter:none; backdrop-filter:none; } }
+    @media (prefers-contrast: more){ .logday, .logsearch, .lpeople{ box-shadow:0 0 0 1px rgba(0,0,0,.5); } .lsoft, .ltitle, .ltime{ color:#3a3a3c; } }
 
     .pill { display:inline-block; padding:3px 11px; border-radius:999px; font-size:12px; font-weight:600; line-height:1.4; white-space:nowrap; }
     .chip { display:inline-block; padding:2px 8px; margin:1px 3px 1px 0; border-radius:7px; font-size:11px; background:#eef1ec; color:#5b625b; font-weight:500; white-space:nowrap; }
@@ -823,6 +858,49 @@
     .collabtag{ background:#eaf0fb; color:#244a8a; border-radius:7px; padding:2px 8px; font-size:10.5px; }
     .needsinfo{ background:#fff4e0; color:#8a5300; border-radius:7px; padding:2px 8px; font-size:10.5px; }
     .capmark{ border-radius:7px; padding:2px 8px; font-size:10.5px; }
+
+    /* ── Poster check + Originals only (decisions #24–#25) ── */
+    .postermark{ display:inline-flex; align-items:center; gap:5px; width:fit-content; margin-top:4px; white-space:nowrap;
+      font-size:10.5px; font-weight:600; padding:2px 8px; border-radius:7px; background:rgba(178,106,0,.1); color:var(--warn); }
+    .postermark::before{ content:''; width:6px; height:6px; border-radius:50%; background:currentColor; flex:none; }
+    .pfwarn{ margin-top:8px; padding:10px 12px; border-radius:var(--r-m); background:rgba(178,106,0,.08);
+      box-shadow:inset 0 0 0 1px rgba(178,106,0,.22); color:#6b4100; font-size:12.5px; line-height:1.5; }
+    .pfwarn[hidden]{ display:none; }
+    .pfwarn-t{ display:block; color:var(--warn); font-size:12px; letter-spacing:.01em; margin-bottom:2px; }
+    .origtog{ position:relative; display:inline-flex; align-items:center; gap:8px; min-height:36px; padding:0 13px 0 10px;
+      border-radius:999px; background:var(--panel); box-shadow:var(--sh-1); font-size:13px; font-weight:500; color:var(--ink);
+      cursor:pointer; user-select:none; -webkit-tap-highlight-color:transparent;
+      transition:transform .1s ease-out, background-color .18s var(--ease-out), box-shadow .18s var(--ease-out); }
+    .origtog[hidden]{ display:none; }
+    .origtog input{ position:absolute; opacity:0; width:1px; height:1px; margin:0; pointer-events:none; }
+    .origtog-box{ width:18px; height:18px; border-radius:6px; box-shadow:inset 0 0 0 1.5px rgba(0,0,0,.22); background:var(--panel);
+      display:grid; place-items:center; transition:background-color .18s var(--ease-out), box-shadow .18s var(--ease-out); }
+    .origtog-box::after{ content:''; width:9px; height:5px; border:2px solid #fff; border-top:0; border-right:0;
+      transform:translateY(-1px) rotate(-45deg) scale(.4); opacity:0; transition:transform .2s var(--ease-out), opacity .12s ease-out; }
+    .origtog:has(input:checked){ background:var(--brand-soft); box-shadow:inset 0 0 0 1px var(--brand-line); color:var(--brand-ink); }
+    .origtog input:checked + .origtog-box{ background:var(--brand); box-shadow:none; }
+    .origtog input:checked + .origtog-box::after{ opacity:1; transform:translateY(-1px) rotate(-45deg) scale(1); }
+    .origtog input:focus-visible + .origtog-box{ box-shadow:0 0 0 3px rgba(31,79,160,.35); }
+    .origtog:active{ transform:scale(.97); }
+    .origtog-in{ animation:origIn .26s var(--ease-out) both; transform-origin:left center; }
+    @keyframes origIn{ from{ opacity:0; transform:translateX(-6px) scale(.96); } to{ opacity:1; transform:none; } }
+    .origsum{ display:flex; flex-wrap:wrap; align-items:center; gap:8px 16px; margin:-4px 0 14px; padding:11px 14px;
+      border-radius:var(--r-m); background:var(--brand-soft); box-shadow:inset 0 0 0 1px var(--brand-line);
+      font-size:13px; color:var(--brand-ink); animation:origIn .26s var(--ease-out) both; }
+    .origsum[hidden]{ display:none; }
+    .origsum-k{ font-weight:600; letter-spacing:-.005em; }
+    .origsum-n{ font-variant-numeric:tabular-nums; color:var(--ink-soft); }
+    .origsum-n b{ color:var(--ink); font-size:15px; font-weight:700; letter-spacing:-.01em; }
+    .origsum-n.over b{ color:var(--warn); }
+    .origsum-flag{ padding:2px 9px; border-radius:7px; background:rgba(178,106,0,.1); color:var(--warn); font-weight:600; font-size:12px; }
+    @media (max-width:760px){ .origtog{ min-height:40px; } .origsum{ gap:6px 12px; } }
+    @media (prefers-reduced-motion: reduce){
+      .origtog-in, .origsum{ animation:none; } .origtog:active{ transform:none; }
+      .origtog, .origtog-box, .origtog-box::after{ transition:none; }
+    }
+    @media (prefers-contrast: more){
+      .origtog{ box-shadow:inset 0 0 0 1px rgba(0,0,0,.5); } .pfwarn, .origsum{ box-shadow:inset 0 0 0 1px currentColor; }
+    }
     .urg{ border-radius:6px; background:var(--bad); }
 
     /* Board */
@@ -949,7 +1027,6 @@
     <nav class="sidebar">
       <div class="brand">Orbit<img class="brandlogo" src="data:image/png;base64,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" alt="WealthWise Atelier"></div>
       <button class="navbtn" data-tab="today"><span class="ic"><svg viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="3.2"/><path d="M10 2.5v1.6M10 15.9v1.6M2.5 10h1.6M15.9 10h1.6M4.7 4.7l1.1 1.1M14.2 14.2l1.1 1.1M4.7 15.3l1.1-1.1M14.2 5.8l1.1-1.1"/></svg></span> Today</button>
-      <button class="navbtn" data-tab="batch"><span class="ic"><svg viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="3" height="6" rx="1"/><rect x="8.5" y="7" width="3" height="10" rx="1"/><rect x="14" y="3" width="3" height="14" rx="1"/></svg></span> Batch Progress</button>
       <button class="navbtn" data-tab="pipeline"><span class="ic"><svg viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3.5" width="14" height="13" rx="2.5"/><path d="M3 8h14M3 12.3h14M7.5 8v8.5"/></svg></span> Pipeline</button>
       <button class="navbtn" data-tab="assign"><span class="ic"><svg viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="14" height="13" rx="2.5"/><path d="M3 8h14M7 2.5v3M13 2.5v3M7.3 12.4l1.9 1.9 3.6-3.8"/></svg></span> Publish Dates</button>
       <button class="navbtn" data-tab="import"><span class="ic"><svg viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3v9M6.3 8.6 10 12.3l3.7-3.7"/><path d="M3.5 12.5v2.3a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2v-2.3"/></svg></span> Import</button>
@@ -999,10 +1076,6 @@
         </div></div>
       </section>
 
-      <section class="hidden" id="tab-batch">
-        <div class="head"><div><h2>Batch Progress</h2><p class="sub">Ready-to-post or published vs the agreed quota. Resets to a new batch each time a client reaches their number.</p></div></div>
-        <div class="surface bpcard"><div class="batchprog" id="batchProg"></div></div>
-      </section>
       <section class="hidden" id="tab-pipeline">
         <div class="head"><div><h2>Pipeline</h2><p class="sub">Every piece across the production ladder. Click any row to update it.</p></div></div>
         <div class="buf" id="bufBar"></div>
@@ -1081,6 +1154,7 @@
           <label class="inline">Client
             <select id="assignClient"><option value="">All</option><option>Ice</option><option>Lynn</option><option>Melissa</option><option>SRU</option><option>Dianna</option></select>
           </label>
+          <label class="origtog" id="pdOrigWrap" hidden><input type="checkbox" id="pdOriginals"><span class="origtog-box" aria-hidden="true"></span><span>Originals only</span></label>
           <label class="inline">View <span class="seg"><button id="pdViewTable" class="on">Table</button><button id="pdViewCalendar">Calendar</button></span></label>
           <label class="inline">Posting style
             <select id="assignStyle"><option value="alternate">Alternate formats (reel → carousel → reel)</option><option value="any">Any format (same allowed)</option></select>
@@ -1091,6 +1165,7 @@
           <button id="reflowFixed" class="small">Reflow to fixed pattern</button>
           <span class="pstatus muted" id="assignStatus"></span>
         </div>
+        <div class="origsum" id="pdOrigSum" role="status" aria-live="polite" hidden></div>
 
         <div id="pdTableView">
           <h3 style="margin:22px 0 4px">Needs a date <span class="muted" id="assignCount2"></span></h3>
@@ -1309,8 +1384,16 @@
         <div class="help-body" id="helpBody"></div>
       </section>
       <section class="hidden" id="tab-log">
-        <div class="head"><div><h2>Activity Log</h2><p class="sub">Every change made through the dashboard, newest first.</p></div><button class="small" id="logRefresh">Refresh</button></div>
-        <div class="loglist" id="logBody" style="margin-top:12px"></div>
+        <div class="head"><div><h2>Activity Log</h2><p class="sub">Who changed what, newest first. Search to see who worked on a piece.</p></div><button class="small" id="logRefresh">Refresh</button></div>
+        <div class="logwrap">
+          <div class="logsearch" role="search">
+            <svg viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="8.8" cy="8.8" r="5.6"/><path d="m13 13 4 4"/></svg>
+            <input type="search" id="logSearch" placeholder="Search a Piece ID, title or name" aria-label="Search the activity log" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search">
+            <button type="button" id="logClear" class="logclear" aria-label="Clear search" hidden><svg viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l8 8M14 6l-8 8"/></svg></button>
+          </div>
+          <p class="logcount" id="logCount" aria-live="polite" hidden></p>
+          <div class="loglist" id="logBody"></div>
+        </div>
       </section>
     </main>
   </div>
@@ -1320,7 +1403,7 @@
       <h3 id="pTitle"></h3>
       <div class="pid" id="pMeta"></div>
       <div class="field"><label>Title</label><input type="text" id="pTitleEdit" style="font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;width:100%"></div>
-      <div class="field"><label>Post from</label><select id="pPostFrom" style="font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;width:100%"></select><div class="muted" style="font-size:12px;margin-top:4px">The account that actually posts it (its quota). A different account than the client = collab: it also shows on that account's calendar.</div></div>
+      <div class="field"><label>Post from</label><select id="pPostFrom" style="font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;width:100%"></select><div class="muted" style="font-size:12px;margin-top:4px">The account that actually posts it (its quota). A different account than the client = collab: it also shows on that account's calendar.</div><div class="pfwarn" id="pPostWarn" role="alert" hidden></div></div>
       <div class="field"><label>Collab with (partner)</label><select id="pCollab" style="font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;width:100%"></select><div class="muted" style="font-size:12px;margin-top:4px">Another account this post is a collab with. It also shows on that account's calendar. Leave as “None” for a normal solo post.</div></div>
       <div class="field"><label>Stage</label><select id="pStage"></select></div>
       <div class="field"><label>Dates</label><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span id="pDateSummary" class="muted"></span><button type="button" class="small" id="pDateEdit">Edit dates</button></div><div class="muted" style="font-size:12px;margin-top:4px">Opens the same per-platform date editor used everywhere else.</div></div>
@@ -1792,7 +1875,7 @@
         $('signScreen').classList.add('hidden'); $('app').classList.remove('hidden');
         buildStageSelect(); buildReqTypes();
         showTab(PREFS.tab||'today'); applyPipePrefs();
-        renderPipe(); renderToday(); renderTodayPosts(); renderBatchProgress();
+        renderPipe(); renderToday(); renderTodayPosts();
         return true;
       } catch(e){ return false; }
     }
@@ -1822,6 +1905,7 @@
       });
     }
     function showTab(name){
+      if(!document.getElementById('tab-'+name)) name='today';   // a saved tab that no longer exists (e.g. Batch Progress)
       PREFS.tab=name; savePrefs();
       document.querySelectorAll('.navbtn[data-tab]').forEach(function(b){ b.classList.toggle('active', b.dataset.tab===name); });
       document.querySelectorAll('.mobtab[data-tab]').forEach(function(b){ b.classList.toggle('active', b.dataset.tab===name); });
@@ -1834,7 +1918,6 @@
       const refreshMeta = function(after){ loadMeta().then(function(){ if(after) after(); }); };
       if(name==='log') loadLog();
       if(name==='help') renderHelp();
-      if(name==='batch') renderBatchProgress();
       if(name==='today'){ var _t=function(){ renderTodayPosts(); renderShareLink(); };
         if(metaReady){ _t(); refreshMeta(_t); } else loadMeta().then(_t); }
       if(name==='assign'){ var _pd=function(){ applyPdPrefs(); renderAssign(); renderPdDated(); if(!$('pdCalendarView').classList.contains('hidden')) renderPdCalendar(); };
@@ -1960,6 +2043,7 @@
     // and month/week mode all survive a refresh, the same way the Pipeline tab remembers its view.
     function applyPdPrefs(){
       var sel=$('assignClient'); if(sel) sel.value=PREFS.assignClient||'';
+      if(typeof syncOrigToggle==='function') syncOrigToggle();
       PD_CAL_MODE=(PREFS.pdCalMode==='week')?'week':'month';
       var mb=$('pdCalMonth'), wb=$('pdCalWeek');
       if(mb) mb.classList.toggle('on', PD_CAL_MODE==='month');
@@ -1971,7 +2055,32 @@
     function setRole(v){ PREFS.role=normRole(v); savePrefs(); syncRoleSelects(); PIPE_PAGE=0; renderPipe(); renderToday(); }
     $('roleView').onchange=function(){ setRole($('roleView').value); };
     $('todayRole').onchange=function(){ setRole($('todayRole').value); };
-    $('assignClient').onchange=function(){ PREFS.assignClient=$('assignClient').value; savePrefs(); PD_PAGE=0; renderAssign(); renderPdDated(); if(!$('pdCalendarView').classList.contains('hidden')) renderPdCalendar(); };
+    function pdRerender(){ PD_PAGE=0; syncOrigToggle(); renderAssign(); renderPdDated(); if(!$('pdCalendarView').classList.contains('hidden')) renderPdCalendar(); }
+    $('assignClient').onchange=function(){ PREFS.assignClient=$('assignClient').value; savePrefs(); pdRerender(); };
+    $('pdOriginals').onchange=function(){ PREFS.pdOriginals=$('pdOriginals').checked; savePrefs(); pdRerender(); };
+    // "Originals only" appears only for a client that has an Original quota per batch (today: SRU).
+    function syncOrigToggle(){
+      var wrap=$('pdOrigWrap'), cb=$('pdOriginals'); if(!wrap||!cb) return;
+      var client=$('assignClient')?$('assignClient').value:'', show=!!originalQuota(client);
+      wrap.hidden=!show; cb.checked=!!PREFS.pdOriginals;
+      if(show && !wrap.dataset.shown){ wrap.dataset.shown='1'; wrap.classList.remove('origtog-in'); void wrap.offsetWidth; wrap.classList.add('origtog-in'); }
+      if(!show) delete wrap.dataset.shown;
+      renderOrigSum();
+    }
+    function renderOrigSum(){
+      var el=$('pdOrigSum'); if(!el) return;
+      var client=$('assignClient')?$('assignClient').value:'';
+      if(!pdOriginalsOn(client)){ el.hidden=true; el.innerHTML=''; return; }
+      var q=originalQuota(client), b=originalsBatch(client, null);
+      if(b.cur==null){ el.innerHTML='<span>'+esc(client)+'</span> <span>originals</span> · <span>No batch numbers found in the Piece IDs yet.</span>'; el.hidden=false; return; }
+      var over=b.planned-q;
+      el.innerHTML='<span class="origsum-k"><span>'+esc(client)+'</span> <span>originals</span> · <span>Batch</span> '+b.cur+'</span>'+
+        '<span class="origsum-n'+(over>0?' over':'')+'"><b>'+b.planned+'</b> / '+q+' <span>planned</span></span>'+
+        '<span class="origsum-n"><b>'+b.done+'</b> <span>ready or published</span></span>'+
+        (over>0?'<span class="origsum-flag">+'+over+' <span>over quota</span></span>':'')+
+        (b.noBatch?'<span class="origsum-flag">'+b.noBatch+' <span>without a batch number in the ID</span></span>':'');
+      el.hidden=false;
+    }
     $('assignStyle').onchange=function(){ PREFS.assignStyle=$('assignStyle').value; savePrefs(); renderAssign(); };
     $('assignStyle').value = PREFS.assignStyle||'alternate';
     $('assignRefresh').onclick=function(){ loadRows().then(function(){ renderAssign(); renderPdDated(); if(!$('pdCalendarView').classList.contains('hidden')) renderPdCalendar(); }); };
@@ -2235,7 +2344,7 @@
         return;
       }
       ROWS_STATE='ready';
-      allRows = data.result.rows||[]; renderPipe(); renderToday(); renderTodayPosts(); renderBatchProgress();
+      allRows = data.result.rows||[]; renderPipe(); renderToday(); renderTodayPosts();
       saveSnapshot();
     }
     function isVideoFormat(fmt){ return /reel|video|voiceover|on-?camera|sit-?down|pov/i.test(fmt||''); }
@@ -2670,57 +2779,218 @@
       $('todayCount').textContent=_first?'':pool.length+' piece(s) need attention';
     }
 
+    /* ── Activity Log ──────────────────────────────────────────────────────────
+       Every change is written as a plain sentence ("Eye moved it to Ready to Publish"), grouped by person +
+       piece + minute, so one save reads as one event. Checklist ticks that follow a Stage change are folded
+       into it (Stage drives the gates, decision #7). Search covers the whole history on the server
+       (Piece ID, title, person, field, values); the loaded page is filtered instantly while it runs. */
     function _logTH(){ try{ return document.documentElement.getAttribute('lang')==='th' || localStorage.getItem('orbitLang')==='th'; }catch(e){ return false; } }
+    function _L(en, th){ return _logTH() ? th : en; }
     function _logParseWhen(s){ var m=/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/.exec(s||''); return m? new Date(+m[1],+m[2]-1,+m[3],+m[4],+m[5]) : null; }
+    var _LOG_MON_EN=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    var _LOG_MON_TH=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+    var _LOG_DOW_EN=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], _LOG_DOW_TH=['อา.','จ.','อ.','พ.','พฤ.','ศ.','ส.'];
     function _logDayLabel(dayKey, d){ var th=_logTH();
       if(d){ var t=new Date(); t.setHours(0,0,0,0); var that=new Date(d.getFullYear(),d.getMonth(),d.getDate());
         var diff=Math.round((t-that)/86400000);
         if(diff===0) return th?'วันนี้':'Today';
         if(diff===1) return th?'เมื่อวาน':'Yesterday';
-        var mon=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-        return d.getDate()+' '+mon[d.getMonth()]+' '+d.getFullYear(); }
+        return (th?_LOG_DOW_TH:_LOG_DOW_EN)[d.getDay()]+' '+d.getDate()+' '+(th?_LOG_MON_TH:_LOG_MON_EN)[d.getMonth()]+' '+d.getFullYear(); }
       return dayKey; }
-    function _logKind(f){ f=(f||'').toLowerCase();
-      if(f.indexOf('stage')>=0) return 'stage';
-      if(f.indexOf('caption')>=0) return 'caption';
-      if(f.indexOf('link')>=0) return 'link';
-      if(f.indexOf('date')>=0||f.indexOf('ready by')>=0) return 'date';
-      if(f.indexOf('block')>=0) return 'block';
-      return 'other'; }
-    function renderLogRows(rows){
-      var tb=$('logBody'); if(!tb) return;
-      if(!rows || !rows.length){ tb.innerHTML='<div class="empty">'+(_logTH()?'ยังไม่มีความเคลื่อนไหว':'No activity yet.')+'</div>'; return; }
-      var html='', open=false, curDay=null, th=_logTH();
+    // A logged value as people read it: dates as "Thu 6 Nov", links as a short chip, long text clamped.
+    function _logClean(v){ v=String(v==null?'':v); if(v.charAt(0)==="'") v=v.slice(1); return v; }
+    function _logIsDate(v){ return /^\d{4}-\d{2}-\d{2}( 00:00)?$/.test(v); }
+    function _logDate(v){ var m=/^(\d{4})-(\d{2})-(\d{2})/.exec(v||''); if(!m) return v; var d=new Date(+m[1],+m[2]-1,+m[3]); var th=_logTH();
+      var s=(th?_LOG_DOW_TH:_LOG_DOW_EN)[d.getDay()]+' '+d.getDate()+' '+(th?_LOG_MON_TH:_LOG_MON_EN)[d.getMonth()];
+      return d.getFullYear()!==new Date().getFullYear()? s+' '+d.getFullYear() : s; }
+    function _logLink(u){ var host=String(u).replace(/^https?:\/\//i,'').split(/[\/?#]/)[0].replace(/^www\./,'');
+      return '<a class="llink" href="'+esc(u)+'" target="_blank" rel="noopener">'+esc(host||_L('link','ลิงก์'))+'<span aria-hidden="true">↗</span></a>'; }
+    function _logVal(v){ v=_logClean(v).trim(); if(!v) return '';
+      if(/^https?:\/\//i.test(v) && !/\s/.test(v)) return _logLink(v);
+      if(_logIsDate(v)) return '<b class="lv">'+esc(_logDate(v))+'</b>';
+      var one=v.replace(/\s+/g,' ');
+      return '<span class="lv lv-long" title="'+esc(one.slice(0,600))+'">'+esc(one)+'</span>'; }
+    function _logQ(v){ return '<b class="lv">“'+esc(_logClean(v).replace(/\s+/g,' '))+'”</b>'; }
+    function _logB(v){ return '<b class="lv">'+esc(_logClean(v))+'</b>'; }
+    function _logSoft(s){ return ' <span class="lsoft">'+s+'</span>'; }
+    var _LOG_GATES=['1 Direction','2 Copy or Pack','3 Copywriting Approved','4 Filmed','5 Selects','6 Built','7 Content Approved','8 Caption','9 Scheduled'];
+    var _LOG_AUTO={'Viral Marked On':1,'Sent On':1};   // stamped by Orbit itself alongside another change
+    function _logIsOn(v){ return /^(true|yes|1)$/i.test(String(v||'').trim()); }
+    // One change -> one sentence. `ctx` lets a sentence soften when it rides along with another change.
+    function _logSentence(r, ctx){
+      var f=r.field||'', a=_logClean(r.from).trim(), b=_logClean(r.to).trim();
+      switch(f){
+        case 'Stage': return a ? _L('moved it to ','ย้ายไปขั้น ')+_logB(b)+_logSoft(_L('from ','จาก ')+esc(a)) : _L('set the stage to ','ตั้งขั้นเป็น ')+_logB(b);
+        case 'Publish Date':
+          if(!b) return _L('removed the publish date','ลบวันโพสต์ออก')+(a?_logSoft(_L('was ','เดิม ')+esc(_logDate(a))):'');
+          return a ? _L('moved the publish date to ','ย้ายวันโพสต์เป็น ')+_logVal(b)+_logSoft(_L('from ','จาก ')+esc(_logDate(a))) : _L('set the publish date to ','ตั้งวันโพสต์เป็น ')+_logVal(b);
+        case 'Ready By':
+          if(ctx.hasPublish) return '<span class="lsoft">'+(b?_L('Deadline follows: ','กำหนดส่งงานปรับตาม: ')+esc(_logDate(b)):_L('Deadline removed','ลบกำหนดส่งงาน'))+'</span>';
+          if(!b) return _L('removed the deadline (Ready By)','ลบกำหนดส่งงาน (Ready By)');
+          return _L('moved the deadline (Ready By) to ','ย้ายกำหนดส่งงาน (Ready By) เป็น ')+_logVal(b)+(a?_logSoft(_L('from ','จาก ')+esc(_logDate(a))):'');
+        case 'IG Date': case 'TikTok Date':
+          var pl=f==='IG Date'?'Instagram & Facebook':'TikTok';
+          if(!b) return _L('removed the separate '+pl+' date — it posts on the publish date','ลบวันโพสต์ '+pl+' ที่ตั้งแยกไว้ ให้โพสต์ตามวันโพสต์หลัก');
+          return _L('set the '+pl+' date to ','ตั้งวันโพสต์ '+pl+' เป็น ')+_logVal(b)+(a?_logSoft(_L('from ','จาก ')+esc(_logDate(a))):'');
+        case 'Platform': return b ? _L('set where it posts: ','ตั้งแพลตฟอร์มที่โพสต์: ')+_logB(b) : _L('cleared the platforms','ล้างแพลตฟอร์มทั้งหมด');
+        case 'Caption':
+          if(!b) return _L('removed the caption','ลบแคปชันออก');
+          return (a?_L('edited the caption','แก้แคปชัน'):_L('added the caption','ใส่แคปชัน'))+'<div class="lquote">'+_logVal(b)+'</div>';
+        case 'Work Link': case 'Copy Link': case 'Assets Link': case 'Viral IG Link': case 'Viral TT Link':
+          var what={ 'Work Link':_L('the final work link','ลิงก์งานจริง'), 'Copy Link':_L('the copy page link','ลิงก์หน้าก็อปปี้'),
+            'Assets Link':_L('the assets link','ลิงก์ไฟล์ประกอบ'), 'Viral IG Link':_L('the viral Instagram link','ลิงก์ Instagram ที่ไวรัล'),
+            'Viral TT Link':_L('the viral TikTok link','ลิงก์ TikTok ที่ไวรัล') }[f];
+          if(!b) return _L('removed ','ลบ')+what;
+          return (a?_L('changed ','เปลี่ยน'):_L('added ','ใส่'))+what+' '+_logVal(b);
+        case 'Title': return a ? _L('renamed it to ','เปลี่ยนชื่อเป็น ')+_logQ(b)+_logSoft(_L('was ','เดิม ')+'“'+esc(a)+'”') : _L('set the title to ','ตั้งชื่อเป็น ')+_logQ(b);
+        case 'Post From': return b ? _L('set it to post from ','ตั้งให้โพสต์จากบัญชี ')+_logB(b)+_L(' account','') : _L('set it to post from the client’s own account','ตั้งให้โพสต์จากบัญชีของลูกค้าเอง')+(a?_logSoft(_L('was ','เดิม ')+esc(a)):'');
+        case 'Founder': return b ? _L('set the collab partner to ','ตั้งพาร์ทเนอร์ collab เป็น ')+_logB(b) : _L('removed the collab partner','ลบพาร์ทเนอร์ collab')+(a?_logSoft(_L('was ','เดิม ')+esc(a)):'');
+        case 'Blocked': return _logIsOn(b) ? _L('marked it as blocked','ทำเครื่องหมายว่าติดปัญหา') : _L('cleared the blocked flag','เอาเครื่องหมายติดปัญหาออก');
+        case 'Notes': return b ? _L('updated the notes','แก้โน้ต')+'<div class="lquote">'+_logVal(b)+'</div>' : _L('cleared the notes','ลบโน้ต');
+        case 'Viral': return _logIsOn(b) ? _L('marked it as viral ★','ทำเครื่องหมายว่าไวรัล ★') : _L('removed the viral mark','เอาเครื่องหมายไวรัลออก');
+        case 'Approval': return b ? _L('recorded the client’s approval: ','บันทึกการอนุมัติของลูกค้า: ')+_logB(b) : _L('cleared the approval','ล้างการอนุมัติ');
+        case 'Approved On': return b ? _L('recorded the approval time: ','บันทึกเวลาที่อนุมัติ: ')+_logVal(b) : _L('cleared the approval time','ล้างเวลาที่อนุมัติ');
+        case '(deleted)':
+          var t=(/(?:^|\|)\s*Title=([^|]*)/.exec(a)||[])[1];
+          return _L('deleted this piece','ลบชิ้นงานนี้')+(t&&t.trim()?_logSoft('“'+esc(t.trim())+'”'):'');
+        case 'importBatch':
+          var n=parseInt(b,10)||0, ids=(b.split(':')[1]||'').trim();
+          return _L('imported '+n+' piece'+(n===1?'':'s'),'นำเข้า '+n+' ชิ้น')+(ids?'<div class="lids">'+ids.split(/,\s*/).map(function(x){ return '<span class="lid">'+esc(x)+'</span>'; }).join('')+'</div>':'');
+        case 'request:add': return _L('asked the client for footage / photos: ','ขอฟุตเทจ / รูปจากลูกค้า: ')+'<span class="lv lv-long">'+esc(b)+'</span>';
+        case 'request:received': return _L('marked the footage / photo request as received','ทำเครื่องหมายว่าได้รับฟุตเทจ / รูปแล้ว')+(a?_logSoft(esc(a)):'');
+        case 'invoice:generate': return _L('issued invoice ','ออกใบแจ้งหนี้ ')+_logB(b.split(' ')[0])+_logSoft(esc(b.split(' ').slice(1).join(' ')));
+        case 'invoice:paid': return _L('marked invoice ','ทำเครื่องหมายว่าใบแจ้งหนี้ ')+_logB(a)+_L(' as paid',' ชำระแล้ว');
+        case 'client:onboard': return _L('added a new client: ','เพิ่มลูกค้าใหม่: ')+_logB(a);   // the link key (value) is never shown
+        case 'days off':
+          var ad=parseInt(b,10)||0, rm=parseInt(a,10)||0;
+          return _L('updated the team’s days off','แก้วันหยุดของทีม')+_logSoft(_L(ad+' added · '+rm+' removed','เพิ่ม '+ad+' · ลบ '+rm));
+        case 'team link key': return a==='rotated' ? _L('replaced the team share link — old links stop working','เปลี่ยนลิงก์แชร์ของทีม ลิงก์เดิมใช้ไม่ได้แล้ว') : _L('created the team share link','สร้างลิงก์แชร์ของทีม');
+      }
+      if(_LOG_GATES.indexOf(f)>=0) return (_logIsOn(b)?_L('ticked ','ติ๊ก '):_L('unticked ','เอาติ๊กออก '))+'“'+esc(f)+'”'+_L(' on the checklist',' ในเช็กลิสต์');
+      if(!b) return _L('cleared ','ล้างค่า ')+_logB(f)+(a?_logSoft(_L('was ','เดิม ')+esc(a)):'');
+      return _L('changed ','เปลี่ยน ')+_logB(f)+_L(' to ',' เป็น ')+_logVal(b)+(a?_logSoft(_L('from ','จาก ')+esc(a)):'');
+    }
+    // Consecutive rows by the same person, on the same piece, within 2 minutes = one event.
+    function _logGroup(rows){
+      var out=[], cur=null;
       rows.forEach(function(r){
-        var d=_logParseWhen(r.when), dayKey=(r.when||'').slice(0,10);
-        if(dayKey!==curDay){ if(open) html+='</div>'; curDay=dayKey;
-          html+='<div class="logday-h">'+esc(_logDayLabel(dayKey,d))+'</div><div class="logday">'; open=true; }
-        var time=(r.when||'').slice(11,16);
-        var chg='';
-        if(r.from && r.to) chg='<span class="logfrom">'+esc(r.from)+'</span><span class="logarrow">\u2192</span><span class="logto">'+esc(r.to)+'</span>';
-        else if(r.to) chg='<span class="logto">'+esc(r.to)+'</span>';
-        else if(r.from) chg='<span class="logfrom">'+(th?'ล้างค่า (เดิม ':'cleared (was ')+esc(r.from)+')</span>';
-        html+='<div class="logrow"><span class="logdot k-'+_logKind(r.field)+'"></span>'
-          +'<div class="logmain"><span class="logpiece">'+(r.piece?esc(r.piece):'')+'</span>'
-          +'<span class="logfield">'+esc(r.field)+'</span>'
-          +'<span class="logchange">'+(chg||'')+'</span></div>'
-          +'<div class="logmeta"><span class="logtime" title="'+esc(r.when)+'">'+esc(time)+'</span>'+(r.who?'<span class="logwho">'+esc(r.who)+'</span>':'')+'</div></div>';
+        var d=_logParseWhen(r.when), t=d?d.getTime():0;
+        if(cur && cur.who===r.who && cur.piece===r.piece && cur.day===(r.when||'').slice(0,10) && Math.abs(cur.t-t)<=120000){ cur.rows.push(r); return; }
+        cur={ who:r.who, piece:r.piece, when:r.when, t:t, d:d, day:(r.when||'').slice(0,10), rows:[r] }; out.push(cur);
+      });
+      return out;
+    }
+    function _logName(email){ var e=String(email||'').toLowerCase().trim(); var t=(META&&META.team)||{};
+      return t[e] || (e ? e.split('@')[0] : _L('Someone','มีคน')); }
+    function _logHue(s){ var h=0; s=String(s||''); for(var i=0;i<s.length;i++) h=(h*31+s.charCodeAt(i))>>>0; return h%360; }
+    var _LOG_TITLES=null;
+    function _logTitles(){ var m={}; (allRows||[]).forEach(function(r){ var id=String(r['Piece ID']||'').trim(); if(id) m[id]=r; }); _LOG_TITLES=m; return m; }
+    function _logEventHtml(ev){
+      var rows=ev.rows, hasStage=rows.some(function(r){ return r.field==='Stage'; }), hasPublish=rows.some(function(r){ return r.field==='Publish Date'; });
+      var acts=[], gates=0;
+      rows.slice().reverse().forEach(function(r){            // oldest first inside one event, the order it happened
+        if(_LOG_AUTO[r.field]) return;
+        if(_LOG_GATES.indexOf(r.field)>=0){ if(hasStage) return; gates++; if(gates>3) return; }
+        acts.push('<li>'+_logSentence(r, { hasPublish:hasPublish })+'</li>');
+      });
+      if(gates>3) acts.push('<li class="lsoft">'+_L('…and '+(gates-3)+' more checklist steps','…และขั้นในเช็กลิสต์อีก '+(gates-3)+' ขั้น')+'</li>');
+      if(hasStage && rows.some(function(r){ return _LOG_GATES.indexOf(r.field)>=0; })) acts.push('<li class="lsoft">'+_L('Checklist updated to match the stage','เช็กลิสต์ปรับตามขั้นอัตโนมัติ')+'</li>');
+      if(!acts.length) return '';
+      var name=_logName(ev.who), piece=String(ev.piece||'').trim(), sys=/^\(.*\)$/.test(piece);
+      var row=!sys && _LOG_TITLES ? _LOG_TITLES[piece] : null, title=row ? String(row['Title']||'') : '';
+      var head='<b class="lwho">'+esc(name)+'</b>'+
+        (sys ? '' : '<button type="button" class="lpiece" data-piece="'+esc(piece)+'"'+(row?'':' disabled')+'>'+esc(piece)+'</button>')+
+        (title ? '<span class="ltitle" title="'+esc(title)+'">'+esc(title)+'</span>' : '');
+      var time=(ev.when||'').slice(11,16);
+      return '<article class="lev"><span class="lav" style="--h:'+_logHue(ev.who)+'" aria-hidden="true">'+esc(name.charAt(0).toUpperCase())+'</span>'+
+        '<div class="lbody"><div class="lhead">'+head+'</div><ul class="lacts">'+acts.join('')+'</ul></div>'+
+        '<time class="ltime" datetime="'+esc(ev.when)+'" title="'+esc(ev.when)+(ev.who?' · '+esc(ev.who):'')+'">'+esc(time)+'</time></article>';
+    }
+    // "Who worked on this" — shown above search results so the answer is the first thing you read.
+    function _logPeopleHtml(rows){
+      var by={}, imp=[];
+      rows.forEach(function(r){ var k=String(r.who||'').toLowerCase(); if(!k) return;
+        var p=by[k]||(by[k]={ who:r.who, n:0, last:r.when }); p.n++; if(r.when>p.last) p.last=r.when;
+        if(r.field==='importBatch') imp.push(r); });
+      var list=Object.keys(by).map(function(k){ return by[k]; }).sort(function(a,b){ return b.n-a.n; });
+      if(!list.length) return '';
+      var chips=list.map(function(p){ var d=_logParseWhen(p.last);
+        return '<div class="lperson"><span class="lav sm" style="--h:'+_logHue(p.who)+'" aria-hidden="true">'+esc(_logName(p.who).charAt(0).toUpperCase())+'</span>'+
+          '<div><b>'+esc(_logName(p.who))+'</b><span>'+_L(p.n+' change'+(p.n===1?'':'s'),p.n+' รายการ')+(d?' · '+_L('last ','ล่าสุด ')+esc(_logDayLabel(p.last.slice(0,10),d)):'')+'</span></div></div>'; }).join('');
+      var made=imp.length ? '<p class="lmade">'+imp.slice(0,3).map(function(r){ var d=_logParseWhen(r.when);
+        return _L('Imported by ','นำเข้าโดย ')+'<b>'+esc(_logName(r.who))+'</b>'+(d?' · '+esc(_logDayLabel(r.when.slice(0,10),d))+' '+esc(r.when.slice(11,16)):''); }).join('<br>')+'</p>' : '';
+      return '<section class="lpeople"><h3>'+_L('Who worked on this','ใครทำอะไรกับงานนี้')+'</h3><div class="lpeople-row">'+chips+'</div>'+made+'</section>';
+    }
+    var LOG={ rows:null, limit:200, total:0, q:'', seq:0, serverRows:null, serverTotal:0, timer:null };
+    function _logMatch(r, q, titleIds){
+      var hay=[r.piece, r.who, _logName(r.who), r.field, r.from, r.to].join(' ').toLowerCase();
+      return hay.indexOf(q)>=0 || !!titleIds[String(r.piece||'').trim()];
+    }
+    function _logTitleIds(q){ var out={}; var m=_LOG_TITLES||_logTitles(); Object.keys(m).forEach(function(id){ if(String(m[id]['Title']||'').toLowerCase().indexOf(q)>=0) out[id]=1; }); return out; }
+    function renderLogRows(rows){
+      if(rows) LOG.rows=rows;
+      var tb=$('logBody'); if(!tb) return; _logTitles();
+      var q=LOG.q, list, searching=!!q, cnt=$('logCount');
+      if(searching){ list = LOG.serverRows || (LOG.rows||[]).filter((function(t){ return function(r){ return _logMatch(r,q,t); }; })(_logTitleIds(q))); }
+      else list=LOG.rows||[];
+      if(cnt){
+        if(searching){ var n=LOG.serverRows?LOG.serverTotal:list.length;
+          cnt.innerHTML = LOG.serverRows ? esc(_L(n+' change'+(n===1?'':'s')+' found','พบ '+n+' รายการ')) + (n>list.length?' · '+esc(_L('showing the newest '+list.length,'แสดง '+list.length+' รายการล่าสุด')):'')
+                                          : esc(_L('Searching the full history…','กำลังค้นทั้งประวัติ…'));
+          cnt.hidden=false; }
+        else { cnt.hidden=true; cnt.innerHTML=''; }
+      }
+      if(!list.length){ tb.innerHTML='<div class="empty">'+esc(searching ? (LOG.serverRows?_L('Nothing in the log matches that. Try a Piece ID, part of a title, or a name.','ไม่พบรายการที่ตรงกัน ลองพิมพ์ Piece ID บางส่วนของชื่อเรื่อง หรือชื่อคน'):_L('Searching…','กำลังค้นหา…')) : _L('No activity yet.','ยังไม่มีความเคลื่อนไหว'))+'</div>'; return; }
+      var html=searching ? _logPeopleHtml(list) : '', open=false, curDay=null;
+      _logGroup(list).forEach(function(ev){
+        var item=_logEventHtml(ev); if(!item) return;
+        if(ev.day!==curDay){ if(open) html+='</div>'; curDay=ev.day; html+='<h3 class="logday-h">'+esc(_logDayLabel(ev.day, ev.d))+'</h3><div class="logday">'; open=true; }
+        html+=item;
       });
       if(open) html+='</div>';
+      if(!searching && LOG.rows && LOG.rows.length>=LOG.limit && LOG.limit<500)
+        html+='<div class="lmore"><button type="button" class="small" id="logMore">'+esc(_L('Show older changes','แสดงรายการที่เก่ากว่า'))+'</button></div>';
       tb.innerHTML=html;
+      var more=$('logMore'); if(more) more.onclick=function(){ LOG.limit=Math.min(500, LOG.limit+200); more.disabled=true; loadLog(true); };
     }
-    async function loadLog(){
+    // Piece ID in an event opens that piece.
+    document.addEventListener('click', function(e){ var b=e.target && e.target.closest ? e.target.closest('#logBody .lpiece') : null; if(!b || b.disabled) return;
+      var r=(allRows||[]).filter(function(x){ return String(x['Piece ID']||'').trim()===b.dataset.piece; })[0]; if(r && typeof openPanel==='function') openPanel(r); });
+    async function loadLog(keep){
       const tb=$('logBody');
-      let cached=null; try{ cached=JSON.parse(localStorage.getItem('orbitLog')||'null'); }catch(e){}
+      let cached=null; if(!keep){ try{ cached=JSON.parse(localStorage.getItem('orbitLog')||'null'); }catch(e){} }
       if(cached && cached.length){ renderLogRows(cached); }                 // instant from cache
-      else { tb.innerHTML='<div class="logday" aria-hidden="true">'+[0,1,2,3,4,5].map(function(i){
-          return '<div class="logrow"><span class="logdot"></span><div class="logmain"><span class="skel" style="width:'+[220,180,260,200,240,170][i]+'px"></span></div><div class="logmeta"><span class="skel" style="width:40px"></span></div></div>'; }).join('')+'</div>'; }
-      const data=await call('listLog',{limit:200});
-      if(!data.ok){ if(!(cached&&cached.length)) tb.innerHTML='<div class="errnote" role="alert"><span>'+esc(TT('Couldn’t load the activity log.'))+' '+esc(shortErr(data.error))+'</span><button class="small" type="button" onclick="loadLog()">'+esc(TT('Try again'))+'</button></div>'; return; }
+      else if(!keep){ tb.innerHTML='<div class="logday" aria-hidden="true">'+[0,1,2,3,4,5].map(function(i){
+          return '<div class="lev"><span class="lav skelav"></span><div class="lbody"><span class="skel" style="width:'+[220,180,260,200,240,170][i]+'px"></span><span class="skel" style="width:'+[140,200,120,170,150,210][i]+'px;margin-top:8px"></span></div></div>'; }).join('')+'</div>'; }
+      const data=await call('listLog',{limit:LOG.limit});
+      if(!data.ok){ if(!(cached&&cached.length) && !keep) tb.innerHTML='<div class="errnote" role="alert"><span>'+esc(TT('Couldn’t load the activity log.'))+' '+esc(shortErr(data.error))+'</span><button class="small" type="button" onclick="loadLog()">'+esc(TT('Try again'))+'</button></div>'; return; }
       const rows=data.result.rows||[];
       renderLogRows(rows);
-      try{ localStorage.setItem('orbitLog', JSON.stringify(rows)); }catch(e){}
+      if(LOG.q) logSearchServer();
+      try{ localStorage.setItem('orbitLog', JSON.stringify(rows.slice(0,200))); }catch(e){}
     }
+    async function logSearchServer(){
+      var q=LOG.q, my=++LOG.seq; if(!q) return;
+      const data=await call('listLog',{ q:q, limit:300 });
+      if(my!==LOG.seq || q!==LOG.q) return;                 // a newer search started; drop this answer
+      if(!data.ok){ LOG.serverRows=null; var c=$('logCount'); if(c){ c.hidden=false; c.textContent=_L('Couldn’t search the full history — showing matches from the loaded page.','ค้นทั้งประวัติไม่สำเร็จ แสดงเฉพาะที่โหลดไว้'); } return; }
+      LOG.serverRows=data.result.rows||[]; LOG.serverTotal=data.result.total||LOG.serverRows.length;
+      renderLogRows();
+    }
+    (function(){
+      var inp=$('logSearch'), clr=$('logClear'); if(!inp) return;
+      function run(){ var v=inp.value.trim().toLowerCase(); if(clr) clr.hidden=!inp.value;
+        if(v===LOG.q) return; LOG.q=v; LOG.serverRows=null; LOG.seq++;
+        renderLogRows();                                      // instant: filter what's loaded
+        clearTimeout(LOG.timer); if(v) LOG.timer=setTimeout(logSearchServer, 280); }
+      inp.addEventListener('input', run);
+      inp.addEventListener('keydown', function(e){ if(e.key==='Escape' && inp.value){ e.preventDefault(); inp.value=''; run(); } });
+      if(clr) clr.addEventListener('click', function(){ inp.value=''; run(); inp.focus(); });
+      // "/" jumps to search while the Activity Log is open (not while typing elsewhere).
+      document.addEventListener('keydown', function(e){ if(e.key!=='/' || e.metaKey || e.ctrlKey) return; var t=e.target&&e.target.tagName;
+        if(t==='INPUT'||t==='TEXTAREA'||t==='SELECT'||(e.target&&e.target.isContentEditable)) return;
+        var sec=$('tab-log'); if(!sec || sec.classList.contains('hidden')) return; e.preventDefault(); inp.focus(); inp.select(); });
+    })();
 
     function toggleViralLinks(){ $('pViralLinks').classList.toggle('hidden', !$('pViral').checked); }
     document.addEventListener('DOMContentLoaded',function(){ var v=$('pViral'); if(v) v.addEventListener('change',toggleViralLinks); });
@@ -2800,7 +3070,8 @@
       (function(){ var sel=$('pPostFrom'); if(!sel) return; var cur=(r['Post From']||'').trim();
         var opts=['<option value="">'+esc(r['Client'])+' (own \u2014 not a collab)</option>'];
         ((META&&META.clients)||[]).forEach(function(cl){ if(cl!==r['Client']) opts.push('<option value="'+esc(cl)+'">'+esc(cl)+'</option>'); });
-        sel.innerHTML=opts.join(''); sel.value=(cur&&cur!==r['Client'])?cur:''; })();
+        sel.innerHTML=opts.join(''); sel.value=(cur&&cur!==r['Client'])?cur:'';
+        renderPosterWarn(r, sel.value); sel.onchange=function(){ renderPosterWarn(r, sel.value); }; })();
       (function(){ var sel=$('pCollab'); if(!sel) return;
         var partner=knownClient_(r['Founder']);
         if(!partner){ var p=personCode_(r['Piece ID']); if(p && p.indexOf('+')>=0) partner=personName_(p.split('+')[1]); }
@@ -2836,7 +3107,7 @@
       if(!data||!data.ok){ setPStatus((data&&data.error)||_t('Could not delete.'),'err'); return; }
       allRows=allRows.filter(function(x){ return x.row!==r.row; });
       $('overlay').classList.remove('show');
-      renderPipe(); renderToday(); renderTodayPosts(); renderBatchProgress(); if(typeof renderAssign==='function') renderAssign();
+      renderPipe(); renderToday(); renderTodayPosts(); if(typeof renderAssign==='function') renderAssign();
       await loadRows();   // a delete shifts every row below it — re-sync cached row numbers with the sheet
     };
     $('overlay').onclick=function(e){ if(e.target===$('overlay')) $('overlay').classList.remove('show'); };
@@ -2905,6 +3176,9 @@
       const pickedPlat=Array.from($('pPlat').querySelectorAll('input:checked')).map(function(i){ return i.value; }).join(', ');
       if(pickedPlat!==origPlat) changes['Platform']=pickedPlat;
       if(!Object.keys(changes).length){ setPStatus('No changes.','muted'); return; }
+      if(Object.prototype.hasOwnProperty.call(changes,'Post From')){ var _pm=posterMismatch(current, changes['Post From']);
+        if(_pm && !(await OSheet.ask({ trigger:$('pSave'), title:TT('Check poster'), sub:esc(current['Piece ID']),
+          body:'<p class="osh-note" style="margin-top:0">'+posterMsgHtml(_pm)+'</p>', yes:TT('Save anyway'), no:TT('Go back') }))) return; }
       if(changes['Stage']){ var _probe=Object.assign({}, current, {Caption:$('pCaption').value||''});
         if(!(await captionOK([_probe], changes['Stage'], $('pSave')))) return; }
       $('pSave').disabled=true; setPStatus('Saving…','muted');
@@ -3022,7 +3296,7 @@
     function infoMark(r){
       var m=needsInfo(r), out='';
       if(m.length) out='<span class="needsinfo" title="'+esc(TT('Missing: ')+m.map(function(x){return TT(x);}).join(', '))+'">⚠ '+esc(m.length===1?TT(m[0]):m.length+TT(' missing'))+'</span>';
-      return out+capMark(r);
+      return out+capMark(r)+posterMark(r);
     }
     // ── Missing-caption reminder (decision #22) ──
     // Rule: final work is uploaded (Work Link) but there is no Caption, on a live piece.
@@ -3120,6 +3394,36 @@
       var a=accountsFor(r); if(a.accounts.length<2) return null;
       var others=a.accounts.filter(function(x){ return x!==a.poster; });
       return { poster:a.poster, others:others }; }
+    // ── Poster check (decision #25) ──
+    // The Piece ID names who posts (SDV-ICE-… = Ice; A+B = A). Warn only when Post From is set
+    // explicitly to a different account. Blank Post From derives from the ID, so it never warns.
+    function idPoster(r){ var p=personCode_(r['Piece ID']); if(!p) return ''; var o=p.indexOf('+')>=0?p.split('+')[0]:p; var nm=personName_(o); return knownClient_(nm)?nm:''; }
+    function posterMismatch(r, pf){ var set=String(pf==null?(r['Post From']||''):pf).trim(); var want=idPoster(r); if(!want||!set||set===want) return null; return { id:want, set:set }; }
+    // English phrases sit in their own spans so the EN/TH overlay can swap them either way.
+    function posterMsgHtml(m){ return '<span>Piece ID says</span> <b>'+esc(m.id)+'</b> <span>posts this, but Post From is</span> <b>'+esc(m.set)+'</b>. '+
+      '<span>If that is wrong, the LINE brief sends the posting kit to the wrong account.</span>'; }
+    function posterMark(r){ var m=posterMismatch(r); if(!m) return '';
+      return '<span class="postermark" title="'+esc(TT('Piece ID says')+' '+m.id+' · Post From: '+m.set)+'"><span>Check poster</span></span>'; }
+    // Live warning under the panel's Post from dropdown. Shown the moment the pick disagrees with the ID.
+    function renderPosterWarn(r, pf){ var el=$('pPostWarn'); if(!el) return; var m=posterMismatch(r, pf);
+      if(!m){ el.hidden=true; el.innerHTML=''; return; }
+      el.innerHTML='<b class="pfwarn-t"><span>Check poster</span></b><div>'+posterMsgHtml(m)+'</div>'; el.hidden=false; }
+    // ── Originals (decision #24): the client's own solo posts, counted against Original quota per batch ──
+    function originalQuota(cl){ var q=(META&&META.originalQuota)||{}; var n=Number(q[cl]); return n>0?n:0; }
+    function isOriginal(r, cl){ if(String(r['Client']||'').trim()!==cl) return false; var a=accountsFor(r).accounts; return a.length===1 && a[0]===cl; }
+    function pdOriginalsOn(client){ return !!(client && PREFS.pdOriginals && originalQuota(client)); }
+    // One scope rule for every Publish Dates list: shows on that account's feed, and (if ticked) originals only.
+    function pdInScope(r, client){ if(!client) return true; if(accountsFor(r).accounts.indexOf(client)===-1) return false;
+      return pdOriginalsOn(client) ? isOriginal(r, client) : true; }
+    function isOnHold(r){ return /On Hold/.test(r['Stage']||''); }
+    // Originals in the current batch (highest batch number among that client's originals; On Hold doesn't count).
+    function originalsBatch(cl, ov){
+      var rows=allRows.filter(function(r){ return isOriginal(r, cl) && !isOnHold(r); });
+      var cur=ov; if(cur==null){ rows.forEach(function(r){ var b=getBatch(r); if(b!==null && (cur==null || b>cur)) cur=b; }); }
+      var inB=rows.filter(function(r){ return cur!=null && getBatch(r)===cur; });
+      return { cur:cur, planned:inB.length, done:inB.filter(function(r){ return /^(9 |10 )/.test(r['Stage']||''); }).length,
+        noBatch:rows.filter(function(r){ return getBatch(r)===null; }).length };
+    }
     function collabTag(r){ var c=collabInfo(r); if(!c) return '';
       return '<span class="collabtag" title="Post from '+esc(c.poster)+' \u00b7 collab with '+esc(c.others.join(', '))+' (shows on their calendar too)">post from '+esc(c.poster)+' \u00b7 collab with '+esc(c.others.join(' + '))+'</span>'; }
     function niceDate(ymd){ if(!ymd) return '—'; const d=new Date(ymd+'T00:00:00'); if(isNaN(d)) return ymd;
@@ -3156,48 +3460,6 @@
       return '<span class="'+c+'">'+esc(v)+'</span>';
     }
     function getBatch(r){ var b=parseFloat(r['Batch']); if(!isNaN(b)&&b>=1&&b<=99) return b; var m=String(r['Piece ID']||'').match(/(\d+)\.\d+/); var n=m?parseFloat(m[1]):null; return (n!=null&&n>=1&&n<=99)?n:null; }
-    function maxBatch(cl){ let m=null; allRows.forEach(function(r){ if(r['Client']===cl){ const b=getBatch(r); if(b!==null&&(m===null||b>m)) m=b; } }); return m; }
-    function batchOverride(cl){ try{ const v=localStorage.getItem('orbitBatch:'+cl); return v!=null?parseInt(v,10):null; }catch(e){ return null; } }
-    function setBatchOverride(cl,n){ try{ localStorage.setItem('orbitBatch:'+cl,String(n)); }catch(e){} }
-    function batchDone(cl){ try{ const v=localStorage.getItem('orbitDone:'+cl); return v!=null&&v!==''?parseInt(v,10):null; }catch(e){ return null; } }
-    function setBatchDone(cl,v){ try{ if(v==null||v==='') localStorage.removeItem('orbitDone:'+cl); else localStorage.setItem('orbitDone:'+cl,String(v)); }catch(e){} }
-    function batchSize(cl){ try{ const v=localStorage.getItem('orbitSize:'+cl); return v!=null&&v!==''?parseInt(v,10):null; }catch(e){ return null; } }
-    function setBatchSize(cl,v){ try{ if(v==null||v==='') localStorage.removeItem('orbitSize:'+cl); else localStorage.setItem('orbitSize:'+cl,String(v)); }catch(e){} }
-    function renderBatchProgress(){
-      const host=$('batchProg'); if(!host) return;
-      const clients=(META && META.clients)||[], quota=(META && META.quota)||{};
-      const parts=[];
-      clients.forEach(function(cl){
-        const quotaN=Number(quota[cl])||0;
-        const sizeOv=batchSize(cl); const q = sizeOv!=null?sizeOv:quotaN; if(!q) return;
-        const ov=batchOverride(cl); const cur = ov!=null ? ov : (maxBatch(cl)||1);
-        const auto=allRows.filter(function(r){ return r['Client']===cl && getBatch(r)===cur && /^(9 |10 )/.test(r['Stage']||''); }).length;
-        const man=batchDone(cl); const within = man!=null ? man : auto;
-        const filled=Math.max(0,Math.min(within,q));
-        let boxes=''; for(let i=0;i<q;i++){ boxes+='<span class="bp-box'+(i<filled?' on':'')+'"></span>'; }
-        parts.push('<div class="bp-row" data-client="'+esc(cl)+'">'+
-          '<div class="bp-head"><span class="bp-name">'+esc(cl)+' <span class="bp-bt">\u00b7 Batch '+cur+'</span></span>'+
-          '<span style="display:flex;align-items:center"><span class="bp-num">'+within+'/'+q+'</span><button class="bp-gear" type="button" title="Advanced">\u2699</button></span></div>'+
-          '<div class="bp-boxes">'+boxes+'</div>'+
-          '<div class="bp-adv hidden">'+
-            '<label>Current batch<input type="number" class="bp-f-batch" data-client="'+esc(cl)+'" value="'+cur+'" min="1"></label>'+
-            '<label>Done so far<input type="number" class="bp-f-done" data-client="'+esc(cl)+'" value="'+(man!=null?man:'')+'" min="0" placeholder="auto ('+auto+')"></label>'+
-            '<label>Contents this batch<input type="number" class="bp-f-size" data-client="'+esc(cl)+'" value="'+(sizeOv!=null?sizeOv:'')+'" min="1" placeholder="quota ('+quotaN+')"></label>'+
-            '<button class="bp-auto" type="button" data-client="'+esc(cl)+'" title="Clear overrides and count automatically from the data">Auto-calculate</button>'+
-          '</div></div>');
-      });
-      if(!allRows.length && ROWS_STATE==='loading'){
-        host.innerHTML='<div class="skellist" aria-hidden="true">'+[150,120,170,130].map(function(w){
-          return '<div><span class="skel lg" style="width:'+w+'px;margin-bottom:12px"></span><span class="skel" style="width:100%;height:12px"></span></div>'; }).join('')+'</div>';
-        return;
-      }
-      host.innerHTML = parts.length ? parts.join('') : '<div class="empty">Set a quota per client (in Onboard Client) to see batch progress.</div>';
-      Array.prototype.forEach.call(host.querySelectorAll('.bp-f-batch'), function(inp){ inp.onchange=function(){ setBatchOverride(inp.dataset.client, parseInt(inp.value,10)||1); renderBatchProgress(); }; });
-      Array.prototype.forEach.call(host.querySelectorAll('.bp-f-done'), function(inp){ inp.onchange=function(){ setBatchDone(inp.dataset.client, inp.value===''?'':(parseInt(inp.value,10)||0)); renderBatchProgress(); }; });
-      Array.prototype.forEach.call(host.querySelectorAll('.bp-f-size'), function(inp){ inp.onchange=function(){ setBatchSize(inp.dataset.client, inp.value===''?'':(parseInt(inp.value,10)||0)); renderBatchProgress(); }; });
-      Array.prototype.forEach.call(host.querySelectorAll('.bp-auto'), function(b){ b.onclick=function(){ var c=b.dataset.client; try{ localStorage.removeItem('orbitBatch:'+c); localStorage.removeItem('orbitDone:'+c); localStorage.removeItem('orbitSize:'+c); }catch(e){} renderBatchProgress(); }; });
-      Array.prototype.forEach.call(host.querySelectorAll('.bp-gear'), function(g){ g.onclick=function(){ const adv=g.closest('.bp-row').querySelector('.bp-adv'); if(adv) adv.classList.toggle('hidden'); }; });
-    }
     function copyLink(u){ return u ? '<a class="lnk" href="'+esc(u)+'" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="Open copy page">Open Copy</a>' : '<span class="muted" title="No copy page yet">—</span>'; }
 
     // ── Import: editable confirm grid ──
@@ -3214,6 +3476,13 @@
       });
       renderImportGrid();
     };
+    // The report sits outside the EN/TH overlay, so the poster and batch-number notes are translated here.
+    function impWarnText(w){
+      var m=String(w).match(/^Poster check: Piece ID says (.+?) posts this, but Post From is (.+?)\. Check which account posts it\.$/);
+      if(m) return TT('Check poster')+': '+TT('Piece ID says')+' '+m[1]+' '+TT('posts this, but Post From is')+' '+m[2]+'. '+TT('Check which account posts it.');
+      if(/^No batch number in the Piece ID/.test(w)) return TT('No batch number in the Piece ID — it will not count toward any batch. Add one, e.g. C-SRU-2.5.');
+      return w;
+    }
     function impTsvFrom(rows){
       return [IMP_COLS.join('\t')].concat(rows.map(function(r){
         return IMP_COLS.map(function(c){ return String(r.data[c]==null?'':r.data[c]).replace(/[\t\n\r]+/g,' '); }).join('\t');
@@ -3252,7 +3521,7 @@
             return '<td><input class="impcell" data-i="'+i+'" data-c="'+esc(c)+'" value="'+esc(String(r.data[c]==null?'':r.data[c]))+'"></td>';
           }).join('')+
           '<td>'+(r.errors.map(function(e){return '<div class="ierr">❌ '+esc(e)+'</div>';}).join('')+
-                  r.warnings.map(function(w){return '<div class="iwarn">⚠️ '+esc(w)+'</div>';}).join('')||'<span class="muted">—</span>')+'</td></tr>';
+                  r.warnings.map(function(w){return '<div class="iwarn">⚠️ '+esc(impWarnText(w))+'</div>';}).join('')||'<span class="muted">—</span>')+'</td></tr>';
       });
       h+='</tbody></table></div>';
       el.innerHTML=head+h;
@@ -4227,11 +4496,12 @@ sched,
       return allRows.filter(function(r){
         if(!r['Publish Date'] && !r['IG Date'] && !r['TikTok Date']) return false;
         if(PARKED.indexOf(r['Stage']||'')!==-1) return false;
-        if(client && accountsFor(r).accounts.indexOf(client)===-1) return false;
+        if(!pdInScope(r, client)) return false;
         return true;
       }).sort(function(a,b){ return (a['Publish Date']||'').localeCompare(b['Publish Date']||''); });
     }
     function renderPdDated(){
+      syncOrigToggle();
       const client=$('assignClient')?$('assignClient').value:'';
       const rows=pdActiveRows(client);
       const tb=$('pdDatedBody'); if(!tb) return; tb.innerHTML='';
@@ -4478,7 +4748,7 @@ sched,
     function renderAssign(){
       const client=$('assignClient')?$('assignClient').value:'';
       let undated=allRows.filter(function(r){ return !r['Publish Date'] && BOARD_HIDE.indexOf(r['Stage'])===-1; });
-      if(client) undated=undated.filter(function(r){ return accountsFor(r).accounts.indexOf(client)!==-1; });
+      if(client) undated=undated.filter(function(r){ return pdInScope(r, client); });
       undated.sort(function(a,b){ return String(a['Piece ID']).localeCompare(String(b['Piece ID'])); });
       if($('assignCount')) $('assignCount').textContent=undated.length+' undated';
       if($('assignCount2')) $('assignCount2').textContent='('+undated.length+')';
@@ -4619,6 +4889,29 @@ sched,
       "Saved.": "บันทึกแล้ว",
       "Missed a post? Push by one moves this piece and the later ones in the same lane one posting day later. Collabs and other lanes don't move. You see every change before anything saves.": "โพสต์ไม่ได้ลง? กด เลื่อน 1 ช่อง ระบบจะเลื่อนชิ้นนี้และชิ้นถัดไปในช่องโพสต์เดียวกันไปวันโพสต์ถัดไป โพสต์ collab และช่องอื่นไม่ขยับ และจะเห็นทุกการเปลี่ยนแปลงก่อนบันทึก"
     });
+    Object.assign(TH, {
+      "Originals only": "เฉพาะโพสต์ต้นฉบับ",
+      "originals": "ต้นฉบับ",
+      "Batch": "Batch",
+      "planned": "ชิ้นที่วางแผนไว้",
+      "ready or published": "พร้อมโพสต์หรือโพสต์แล้ว",
+      "over quota": "เกินโควตา",
+      "without a batch number in the ID": "ชิ้นที่ไม่มีเลข Batch ใน Piece ID",
+      "No batch numbers found in the Piece IDs yet.": "ยังไม่พบเลข Batch ใน Piece ID",
+      "Check poster": "ตรวจบัญชีที่โพสต์",
+      "Piece ID says": "Piece ID ระบุว่า",
+      "posts this, but Post From is": "เป็นผู้โพสต์ แต่ Post From ตั้งไว้เป็น",
+      "If that is wrong, the LINE brief sends the posting kit to the wrong account.": "ถ้าตั้งผิด สรุปใน LINE จะส่งชุดสำหรับโพสต์ไปผิดบัญชี",
+      "Check which account posts it.": "ตรวจว่าบัญชีไหนเป็นผู้โพสต์",
+      "No batch number in the Piece ID — it will not count toward any batch. Add one, e.g. C-SRU-2.5.": "Piece ID ไม่มีเลข Batch ชิ้นนี้จะไม่ถูกนับใน Batch ใดเลย ใส่เลขให้ด้วย เช่น C-SRU-2.5",
+      "Advanced": "ตั้งค่าเพิ่มเติม",
+      "Who changed what, newest first. Search to see who worked on a piece.": "ใครแก้อะไรบ้าง เรียงจากล่าสุด ค้นหาเพื่อดูว่าใครทำงานชิ้นไหน",
+      "Search a Piece ID, title or name": "ค้นหา Piece ID ชื่อเรื่อง หรือชื่อคน",
+      "Current batch": "Batch ปัจจุบัน",
+      "Done so far": "เสร็จแล้ว",
+      "Contents this batch": "จำนวนชิ้นใน Batch นี้",
+      "Auto-calculate": "คำนวณอัตโนมัติ"
+    });
       window.TT = function(s){ return (LANG==='th' && TH[s]!=null) ? TH[s] : s; };
       window.currentLang = function(){ return LANG; };
 
@@ -4712,6 +5005,8 @@ sched,
         if(th) th.classList.toggle('on', LANG==='th');
         if(LANG==='th'){ applyTH(); startObs(); }
         else { stopObs(); revertEN(); }
+        try{ if(typeof renderImportGrid==='function' && typeof IMP_ROWS!=='undefined' && IMP_ROWS.length) renderImportGrid(); }catch(e){}
+        try{ if(typeof renderLogRows==='function' && typeof LOG!=='undefined' && LOG.rows) renderLogRows(); }catch(e){}
         try{ var _ht=document.getElementById('tab-help'); if(_ht && !_ht.classList.contains('hidden') && typeof renderHelp==='function') renderHelp(); }catch(e){}
       }
       window.orbitSetLang = setLang;
