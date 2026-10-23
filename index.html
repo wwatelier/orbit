@@ -966,6 +966,8 @@
     .qchip .qof{ font-weight:500; }
     .impq{ white-space:nowrap; } .impq .qchip{ margin-left:0; }
     .help-note{ margin-top:8px; font-size:12px; color:var(--ink-soft); }
+    .tg-list{ margin:10px 0 12px; padding-left:18px; display:flex; flex-direction:column; gap:4px; font-variant-numeric:tabular-nums; }
+    .tg-list b{ font-weight:650; }
     .qchip.over{ background:rgba(178,106,0,.12); color:var(--warn); }
     #pdQuotaSum{ margin-top:-6px; }
     .origsum-k{ font-weight:600; letter-spacing:-.005em; }
@@ -1861,7 +1863,40 @@
     function loadSess(){ try { return localStorage.getItem('orbitSess') || null; } catch(e){ return null; } }
     function clearSess(){ sessTok=null; try { localStorage.removeItem('orbitSess'); } catch(e){} }
 
+    // ── Protect today's schedule (decision #31) ──
+    // Editing and graphics plan their day from the morning schedule, so any save that moves a piece
+    // onto or off today asks first. Every date write goes through call(), so this one check covers the
+    // panel, date editor, calendar drag, bulk Remove dates, Save all, Push by one, Auto-rearrange and Reflow.
+    function todayChanges(action, payload){
+      var ups = action==='updatePiece' ? [payload] : ((payload&&payload.updates)||[]), t=todayISO(), out=[];
+      ups.forEach(function(u){
+        var ch=(u&&u.changes)||{};
+        if(!['Publish Date','IG Date','TikTok Date'].some(function(k){ return Object.prototype.hasOwnProperty.call(ch,k); })) return;
+        var r=(allRows||[]).filter(function(x){ return x.row===u.row; })[0]; if(!r) return;
+        if(/Published/.test(r['Stage']||'') || /Published/.test(ch['Stage']||'')) return;   // record corrections, not schedule changes
+        var on=function(src){ var pd=src['Publish Date']||''; return [pd, src['IG Date']||pd, src['TikTok Date']||pd].indexOf(t)>=0; };
+        var before=on(r), after=on(Object.assign({}, r, ch));
+        if(before!==after) out.push({ id:r['Piece ID'], title:r['Title']||'', off:before });
+      });
+      return out;
+    }
+    async function askTodayChange(hits){
+      var lines=hits.slice(0,6).map(function(h){ return '<li><b>'+esc(h.id)+'</b> '+esc(h.off?_L('moves off today','ย้ายออกจากวันนี้'):_L('moves onto today','ย้ายมาโพสต์วันนี้'))+'</li>'; }).join('')+
+        (hits.length>6?'<li>'+esc(_L('and '+(hits.length-6)+' more','และอีก '+(hits.length-6)+' ชิ้น'))+'</li>':'');
+      var body='<p style="margin-top:0">'+esc(_L('Editing and graphics planned their day around today’s schedule. Change it only when the client caused it — the voiceover, B-roll or a confirmation didn’t arrive.',
+          'ทีมตัดต่อและกราฟิกวางแผนงานวันนี้ตามตารางเมื่อเช้า เปลี่ยนเฉพาะเมื่อปัญหามาจากลูกค้า เช่น ยังไม่ได้รับ Voiceover, B-roll หรือคำยืนยัน'))+'</p>'+
+        '<ul class="tg-list">'+lines+'</ul>'+
+        '<p class="osh-note">'+esc(_L('Client caused it? Fill the slot from stock. No stock: the client loses today’s slot. Not urgent? Make the change on Friday or Saturday evening.',
+          'ปัญหามาจากลูกค้า: ใช้งานในสต็อกมาแทน ถ้าไม่มีสต็อก ลูกค้าจะเสียช่องโพสต์วันนี้ ถ้าไม่ด่วน: เปลี่ยนตอนเย็นวันศุกร์หรือเสาร์'))+'</p>';
+      return OSheet.ask({ trigger:document.activeElement, title:_L('This changes what posts today','การเปลี่ยนนี้กระทบโพสต์วันนี้'),
+        sub:hits.length>1?esc(_L(hits.length+' pieces',hits.length+' ชิ้น')):'', body:body,
+        yes:_L('Change it anyway','เปลี่ยนเลย'), no:_L('Keep today as planned','คงตารางวันนี้ไว้') });
+    }
     async function call(action, payload){
+      if((action==='updatePiece'||action==='updatePieces') && !(payload&&payload._todayOK)){
+        var _th=todayChanges(action, payload);
+        if(_th.length && !(await askTodayChange(_th))) return { ok:false, cancelled:true, error:_L('Not changed. Today’s posts stay as planned.','ไม่ได้เปลี่ยน โพสต์วันนี้คงเดิม') };
+      }
       const showProg = WRITE_ACT[action] && !PROG_SUPPRESS;
       if(showProg) Progress.begin();
       const busyBtn = Busy.claim();
@@ -2213,6 +2248,7 @@
         if(!v.ok){ b.disabled=false; acStatus(v.error,'err'); return; }
         const blocked=(v.result.rows||[]).some(function(r){ return r.errors&&r.errors.length; });
         if(blocked){ b.disabled=false; acStatus((v.result.rows[0].errors||['Blocked'])[0],'err'); return; }
+        if(date===todayISO() && !(await askTodayChange([{ id:id, off:false }]))){ b.disabled=false; acStatus(_L('Not added. Today’s posts stay as planned.','ยังไม่ได้เพิ่ม โพสต์วันนี้คงเดิม'),'muted'); return; }
         // Quota count (decision #30): say which number this piece takes; ask first if it goes past the quota.
         const _pr={'Piece ID':id,'Client':row[1],'Publish Date':date,'Founder':'','Stage':row[7],row:1e9};
         const _o=quotaPositions([_pr]).pos.get(_pr);
@@ -3899,6 +3935,8 @@
     $('save').onclick=async function(){
       const chosen=IMP_ROWS.filter(function(r){ return r.include && !r.errors.length; });
       if(!chosen.length){ setImp(_L('Nothing ticked to import.','ยังไม่ได้ติ๊กแถวที่จะนำเข้า'),'err'); return; }
+      var _tod=chosen.filter(function(r){ return String(r.data['Publish Date']||'').trim()===todayISO() && !/Published/.test(r.data['Stage']||''); }).map(function(r){ return { id:r.data['Piece ID'], off:false }; });
+      if(_tod.length && !(await askTodayChange(_tod))) return;
       var _iq=impQuota(), _over=Object.keys(_iq).map(function(i){ return _iq[i]; }).filter(function(o){ return o.lane.quota>0 && o.n>o.lane.quota; });
       if(_over.length && !(await OSheet.ask({ trigger:$('save'), title:_L('Over quota','เกินโควตา'),
           sub:esc(_over.length+_L(' piece(s) go past the quota',' ชิ้นเกินโควตา')),
@@ -5412,6 +5450,7 @@ sched,
         { id:"how", label:{en:"How it works",th:"ระบบทำงานยังไง"},
           intro:{en:"The rules the whole team works by. Most mix-ups come from the Piece ID, the Client column or Post From, so start with those.",th:"กติกาที่ทั้งทีมใช้ร่วมกัน ความสับสนส่วนใหญ่มาจาก Piece ID, ช่อง Client หรือ Post From เริ่มอ่านจากตรงนั้นก่อน"},
           cards:[
+            {t:{en:"Protect today’s schedule",th:"รักษาตารางโพสต์ของวันนี้"},b:{en:"Editing and graphics plan their day from the schedule each morning, so don’t change what posts today. The only exception is when the client caused it (voiceover, B-roll or a confirmation didn’t arrive): fill the slot from stock, and if there’s no stock the client loses that slot. Other changes are best made on Friday or Saturday evening. Orbit asks before any change to today.",th:"ทีมตัดต่อและกราฟิกวางแผนงานจากตารางทุกเช้า จึงไม่ควรเปลี่ยนสิ่งที่โพสต์วันนี้ ยกเว้นเมื่อปัญหามาจากลูกค้า (ยังไม่ได้รับ Voiceover, B-roll หรือคำยืนยัน): ใช้งานในสต็อกมาแทน ถ้าไม่มีสต็อก ลูกค้าเสียช่องโพสต์นั้น การเปลี่ยนอื่น ๆ ควรทำตอนเย็นวันศุกร์หรือเสาร์ Orbit จะถามก่อนทุกครั้งที่มีการเปลี่ยนวันนี้"}},
             {t:{en:"Reading a Piece ID",th:"อ่าน Piece ID ยังไง"},b:{en:"FORMAT-PERSON-BATCH.NUMBER, e.g. SDV-ICE-2.3. Format: C carousel, VO VO reel, SDV sit-down, POV POV reel. Person: whose quota it uses and who posts it. SRU+DIA means SRU posts and Dianna appears in it. Batch: the number before the dot. Every ID needs a batch number, or the piece is not counted in any batch.",th:"FORMAT-PERSON-BATCH.NUMBER เช่น SDV-ICE-2.3 · Format: C คารูเซล, VO รีล VO, SDV นั่งคุย, POV รีล POV · Person: ใช้โควตาของใครและใครเป็นคนโพสต์ SRU+DIA คือ SRU โพสต์และมี Dianna ร่วม · Batch: ตัวเลขก่อนจุด ทุก ID ต้องมีเลข Batch ไม่อย่างนั้นชิ้นนั้นจะไม่ถูกนับใน Batch ไหนเลย"}},
             {t:{en:"Client vs Post From",th:"Client กับ Post From ต่างกันยังไง"},b:{en:"Client = the feed the piece is planned in. Post From = the account that actually posts it. Leave Post From blank: Orbit reads it from the Piece ID. Example: an Ice piece made for the SRU feed is Client SRU with an -ICE- ID, and Post From stays blank. Setting Post From to the wrong account sends the posting kit (caption and work link) to the wrong LINE group.",th:"Client = ฟีดที่วางแผนชิ้นนี้ไว้ · Post From = บัญชีที่โพสต์จริง ปล่อย Post From ว่างไว้ได้ Orbit จะอ่านจาก Piece ID เอง ตัวอย่าง: ชิ้นของ Ice ที่ทำให้ฟีด SRU คือ Client SRU ใช้ ID แบบ -ICE- และไม่ต้องใส่ Post From ถ้าใส่ Post From ผิดบัญชี ชุดโพสต์ (แคปชันและลิงก์งาน) จะส่งไปผิดกลุ่ม LINE"}},
             {t:{en:"Quota: what counts",th:"โควตา: อะไรนับบ้าง"},b:{en:"Every piece with a publish date counts as one, including spin-offs (like 2.5.1) and extras the client asks for. On Hold and undated pieces do not count; Unselected does. A piece split into -IG and -TT rows counts once. Each piece on Publish Dates shows its place, e.g. 7 of 10. Amber = past the quota. A ? means the piece is filed somewhere it has no quota, so check its Client and Post From.",th:"ทุกชิ้นที่มีวันโพสต์นับเป็น 1 ชิ้น รวมชิ้นที่แตกออกมา (เช่น 2.5.1) และงานพิเศษที่ลูกค้าขอ ชิ้นที่ On Hold และชิ้นที่ยังไม่มีวันไม่นับ ส่วน Unselected นับ ชิ้นที่แยกแถว -IG กับ -TT นับเป็นชิ้นเดียว ทุกชิ้นในหน้าวันเผยแพร่จะบอกลำดับ เช่น 7 จาก 10 สีส้ม = เกินโควตา เครื่องหมาย ? คือชิ้นนี้อยู่ในที่ที่ไม่มีโควตา ให้ตรวจ Client และ Post From"}},
@@ -5447,27 +5486,33 @@ sched,
               {en:"Set it to Ready to Publish so it is banked ahead of its date.",th:"ตั้งเป็น Ready to Publish เพื่อเก็บไว้ล่วงหน้า"},
               {en:"It publishes on its date, then you mark it Published.",th:"มันจะโพสต์ตามวันที่ แล้วคุณค่อยตั้ง Published"}
             ]},
-            {t:{en:"4. When a client is late or sends same-day",th:"4. เมื่อลูกค้าช้าหรือส่งวันเดียวกับวันโพสต์"},steps:[
-              {en:"Do not rush same-day production. Swap instead.",th:"อย่ารีบผลิตวันเดียวกัน ให้สลับแทน"},
-              {en:"Give that day to a piece that is already Ready to Publish.",th:"ยกวันนั้นให้ชิ้นที่ Ready to Publish อยู่แล้ว"},
-              {en:"Set the late piece to Unselected or Rolled over.",th:"ตั้งชิ้นที่ช้าเป็น Unselected หรือ Rolled over"},
+            {t:{en:"4. When the client hasn’t delivered for today’s post",th:"4. เมื่อลูกค้ายังไม่ส่งของสำหรับโพสต์วันนี้"},steps:[
+              {en:"Only this case allows a same-day change: the voiceover, B-roll or a confirmation didn’t arrive.",th:"กรณีนี้กรณีเดียวที่เปลี่ยนในวันเดียวกันได้: ยังไม่ได้รับ Voiceover, B-roll หรือคำยืนยัน"},
+              {en:"Do not rush same-day production. Fill the slot with a piece from stock (Ready to Publish).",th:"อย่ารีบผลิตวันเดียวกัน ใช้ชิ้นในสต็อก (Ready to Publish) มาแทน"},
+              {en:"No stock? The client loses that posting slot. Set the late piece to Unselected or Rolled over.",th:"ไม่มีสต็อก: ลูกค้าเสียช่องโพสต์นั้น ตั้งชิ้นที่ช้าเป็น Unselected หรือ Rolled over"},
               {en:"In the reason sheet, pick the client-caused reason (it is recorded); pick Our side if it was internal (not recorded).",th:"ในแผงเหตุผล เลือกเหตุผลที่มาจากลูกค้า (จะถูกบันทึก) เลือก Our side ถ้าเป็นเรื่องภายใน (ไม่บันทึก)"},
               {en:"Produce the late piece for a later date.",th:"ผลิตชิ้นที่ช้าไว้สำหรับวันหลัง"}
             ]},
-            {t:{en:"5. Setting publish dates",th:"5. ตั้งวันโพสต์"},steps:[
+            {t:{en:"5. Changing the schedule",th:"5. การเปลี่ยนตารางโพสต์"},steps:[
+              {en:"Don’t change what posts today unless the client caused it (step 4). Orbit asks before every change to today.",th:"อย่าเปลี่ยนสิ่งที่โพสต์วันนี้ ยกเว้นปัญหามาจากลูกค้า (ขั้นตอนที่ 4) Orbit จะถามก่อนทุกครั้ง"},
+              {en:"Make other changes on Friday or Saturday evening before you clock out, so the team picks them up on Monday, the same way we do with Ice.",th:"การเปลี่ยนอื่น ๆ ให้ทำตอนเย็นวันศุกร์หรือเสาร์ก่อนเลิกงาน ทีมจะได้เริ่มต่อวันจันทร์ เหมือนที่ทำกับ Ice"},
+              {en:"Keep each client’s fixed posting days.",th:"รักษาวันโพสต์ประจำของลูกค้าแต่ละราย"},
+              {en:"Stock is a buffer, not something to use up whenever a piece is missing. It also lets us get ahead.",th:"สต็อกคือ buffer ไม่จำเป็นต้องใช้ทุกครั้งที่มีชิ้นขาด มันช่วยให้เราทำงานล่วงหน้าได้ด้วย"}
+            ]},
+            {t:{en:"6. Setting publish dates",th:"6. ตั้งวันโพสต์"},steps:[
               {en:"Go to Publish Dates and pick the client.",th:"ไปที่ วันเผยแพร่ แล้วเลือกลูกค้า"},
               {en:"Read the Quota line: each feed's count for the batch running now. Amber means over.",th:"อ่านบรรทัดโควตา: จำนวนชิ้นของแต่ละฟีดใน Batch ปัจจุบัน สีส้มคือเกิน"},
               {en:"Under Needs a date, check the suggested dates, then Save, or Save all suggested.",th:"ในส่วน ยังไม่มีวันที่ ตรวจวันที่ระบบแนะนำ แล้วกด Save หรือ บันทึกที่แนะนำทั้งหมด"},
               {en:"For SRU, tick Own quota only to see just SRU's own pieces.",th:"สำหรับ SRU ติ๊ก เฉพาะโควตาของตัวเอง เพื่อดูเฉพาะชิ้นของ SRU"},
               {en:"Check the calendar looks right. Drag a card to move its date.",th:"เช็คว่าปฏิทินถูกต้อง ลากการ์ดเพื่อย้ายวันได้"}
             ]},
-            {t:{en:"6. Publishing a piece (Open Post)",th:"6. การโพสต์ (Open Post)"},steps:[
+            {t:{en:"7. Publishing a piece (Open Post)",th:"7. การโพสต์ (Open Post)"},steps:[
               {en:"On the day, click the piece (it must be Ready to Publish).",th:"ในวันนั้น คลิกที่ชิ้นงาน (ต้องเป็น Ready to Publish)"},
               {en:"In the chooser, use Copy caption and Open final work.",th:"ในตัวเลือก ใช้ Copy caption และ Open final work"},
               {en:"Post it from the account the piece says (its Post From).",th:"โพสต์จากบัญชีที่ชิ้นงานระบุไว้ (Post From)"},
               {en:"Come back and set the piece to Published.",th:"กลับมาตั้งชิ้นงานเป็น Published"}
             ]},
-            {t:{en:"7. Next batch proposal",th:"7. ข้อเสนอ Batch ถัดไป"},steps:[
+            {t:{en:"8. Next batch proposal",th:"8. ข้อเสนอ Batch ถัดไป"},steps:[
               {en:"Open Next Batch. Each card shows when the next batch starts and the dates to start, send and get approval.",th:"เปิด Batch ถัดไป แต่ละการ์ดบอกว่า Batch ถัดไปเริ่มเมื่อไร และวันที่ต้องเริ่มร่าง ส่ง และได้รับอนุมัติ"},
               {en:"Paste the proposal link (Notion or a doc) into the card.",th:"วางลิงก์ข้อเสนอ (Notion หรือเอกสาร) ลงในการ์ด"},
               {en:"Tap the status as it moves: Drafting, Sent, Changes requested, Approved. Sent and Approved record the date.",th:"แตะสถานะตามความคืบหน้า: กำลังร่าง, ส่งให้ลูกค้าแล้ว, ลูกค้าขอแก้, อนุมัติแล้ว สถานะส่งและอนุมัติจะบันทึกวันที่ให้เอง"},
@@ -5485,6 +5530,8 @@ sched,
               {q:{en:"Should I renumber Piece IDs to match the quota?",th:"ต้องเปลี่ยนเลข Piece ID ให้ตรงกับโควตาไหม"},a:{en:"No. Keep numbering by format as now (VO4.1, C4.1, POV4.1). Orbit works out the quota count by itself.",th:"ไม่ต้อง ใช้เลขแยกตามรูปแบบเหมือนเดิม (VO4.1, C4.1, POV4.1) Orbit นับโควตาให้เอง"}}
             ]},
             { title:{en:"Using the system",th:"การใช้งาน"}, items:[
+              {q:{en:"Can I change what posts today?",th:"เปลี่ยนสิ่งที่โพสต์วันนี้ได้ไหม"},a:{en:"Only when the client caused the problem, e.g. the voiceover, B-roll or a confirmation for today’s post didn’t arrive. Then fill the slot from stock; with no stock, the client loses the slot. Orbit asks before any change to today. Anything else waits for Friday or Saturday evening.",th:"ได้เฉพาะเมื่อปัญหามาจากลูกค้า เช่น ยังไม่ได้รับ Voiceover, B-roll หรือคำยืนยันของโพสต์วันนี้ ให้ใช้งานในสต็อกแทน ถ้าไม่มีสต็อก ลูกค้าเสียช่องนั้น Orbit จะถามก่อนทุกครั้ง การเปลี่ยนอื่นรอทำตอนเย็นวันศุกร์หรือเสาร์"}},
+              {q:{en:"Should I always use stock when a piece is missing?",th:"ต้องใช้สต็อกทุกครั้งที่มีชิ้นขาดไหม"},a:{en:"No. Stock is our buffer. Use it to cover a client-caused gap on the day; otherwise keep it, because it is what lets the team get ahead.",th:"ไม่ สต็อกคือ buffer ใช้เพื่อปิดช่องที่เกิดจากลูกค้าในวันนั้น นอกจากนั้นเก็บไว้ เพราะมันช่วยให้ทีมทำงานล่วงหน้าได้"}},
               {q:{en:"A LINE group did not get the caption and work link. Why?",th:"กลุ่ม LINE ไม่ได้รับแคปชันและลิงก์งาน เพราะอะไร"},a:{en:"The posting kit goes to the account that posts the piece: Post From, or the person code in the Piece ID. If Post From was set to another account, the kit went to that account's group. The panel shows Check poster when the two disagree. Fix it there.",th:"ชุดโพสต์จะส่งไปยังบัญชีที่โพสต์ชิ้นนั้น คือ Post From หรือรหัสคนใน Piece ID ถ้า Post From ถูกตั้งเป็นบัญชีอื่น ชุดโพสต์จะไปกลุ่มของบัญชีนั้น แผงชิ้นงานจะขึ้น Check poster เมื่อสองอย่างนี้ไม่ตรงกัน ให้แก้ตรงนั้น"}},
               {q:{en:"How do I find who changed or imported a piece?",th:"จะรู้ได้ยังไงว่าใครแก้หรือนำเข้าชิ้นงาน"},a:{en:"Activity Log: search the Piece ID, a title or a name. Who worked on this lists the people and how many changes each made.",th:"บันทึกกิจกรรม: ค้นด้วย Piece ID ชื่อเรื่อง หรือชื่อคน ส่วน ใครทำงานกับชิ้นนี้ จะบอกรายชื่อและจำนวนครั้งที่แต่ละคนแก้"}},
               {q:{en:"A post didn't go out. What do I do?",th:"โพสต์ไม่ได้ลงตามวัน ต้องทำยังไง"},a:{en:"Open the piece and press Push by one (missed post). It moves that piece and the later ones in the same lane (for example Ice solo, or the Ice + SRU collab on Tue/Fri) one posting day later. Collabs and other lanes stay where they are, so the weekly pattern holds. You see every old and new date first; nothing saves until you press Move these dates. A day off never moves posts by itself.",th:"เปิดชิ้นงานแล้วกด เลื่อน 1 ช่อง (โพสต์ที่พลาด) ระบบจะเลื่อนชิ้นนั้นและชิ้นถัดไปในช่องโพสต์เดียวกัน (เช่น Ice โพสต์เดี่ยว หรือ Ice + SRU collab วันอังคาร/ศุกร์) ไปวันโพสต์ถัดไปทีละ 1 ช่อง โพสต์ collab และช่องอื่นไม่ขยับ รูปแบบรายสัปดาห์จึงไม่เพี้ยน จะเห็นวันเดิมและวันใหม่ทุกชิ้นก่อน ไม่มีอะไรถูกบันทึกจนกว่าจะกด ย้ายวันตามนี้ และวันหยุดของทีมจะไม่ทำให้วันโพสต์เลื่อนเอง"}},
