@@ -961,6 +961,13 @@
       border-radius:var(--r-m); background:var(--brand-soft); box-shadow:inset 0 0 0 1px var(--brand-line);
       font-size:13px; color:var(--brand-ink); animation:origIn .26s var(--ease-out) both; }
     .origsum[hidden]{ display:none; }
+    .qchip{ display:inline-block; margin-left:8px; padding:1px 8px; border-radius:999px; background:var(--fill, rgba(0,0,0,.05));
+      color:var(--ink-soft); font-size:12px; font-weight:700; font-variant-numeric:tabular-nums; letter-spacing:-.005em; white-space:nowrap; vertical-align:1px; }
+    .qchip .qof{ font-weight:500; }
+    .impq{ white-space:nowrap; } .impq .qchip{ margin-left:0; }
+    .help-note{ margin-top:8px; font-size:12px; color:var(--ink-soft); }
+    .qchip.over{ background:rgba(178,106,0,.12); color:var(--warn); }
+    #pdQuotaSum{ margin-top:-6px; }
     .origsum-k{ font-weight:600; letter-spacing:-.005em; }
     .origsum-n{ font-variant-numeric:tabular-nums; color:var(--ink-soft); }
     .origsum-n b{ color:var(--ink); font-size:15px; font-weight:700; letter-spacing:-.01em; }
@@ -973,6 +980,7 @@
     }
     @media (prefers-contrast: more){
       .origtog{ box-shadow:inset 0 0 0 1px rgba(0,0,0,.5); } .pfwarn, .origsum{ box-shadow:inset 0 0 0 1px currentColor; }
+      .qchip{ box-shadow:inset 0 0 0 1px currentColor; color:#3a3a3c; } .qchip.over{ color:var(--warn); }
     }
     .urg{ border-radius:6px; background:var(--bad); }
 
@@ -1254,6 +1262,7 @@
           <span class="pstatus muted" id="assignStatus"></span>
         </div>
         <div class="origsum" id="pdOrigSum" role="status" aria-live="polite" hidden></div>
+        <div class="origsum" id="pdQuotaSum" role="status" aria-live="polite" hidden></div>
 
         <div id="pdTableView">
           <h3 style="margin:22px 0 4px">Needs a date <span class="muted" id="assignCount2"></span></h3>
@@ -2195,18 +2204,26 @@
     document.addEventListener('DOMContentLoaded',function(){ if($('acStage')) $('acStage').innerHTML=STAGES.map(function(s){return '<option>'+esc(s)+'</option>';}).join(''); });
     (function(){ var b=document.getElementById('acAdd'); if(!b) return;
       b.onclick=async function(){
-        const id=($('acId').value||'').trim(); if(!id){ acStatus('Piece ID is required.','err'); return; }
+        const id=($('acId').value||'').trim(); if(!id){ acStatus(_L('Piece ID is required.','ต้องใส่ Piece ID'),'err'); return; }
         const date=($('acDate').value||'').trim(); const ready=date?readyByFor(date, $('acFormat').value):'';
         const row=[id,$('acClient').value,$('acFormat').value,($('acPlatform').value||'').trim(),($('acTitle').value||'').trim(),date,ready,$('acStage').value,'',''];
         const tsv=BLOCK_A_HEADER+'\n'+row.join('\t');
-        b.disabled=true; acStatus('Adding…','muted');
+        b.disabled=true; acStatus(_L('Adding…','กำลังเพิ่ม…'),'muted');
         const v=await call('validateBatch',{tsv:tsv});
         if(!v.ok){ b.disabled=false; acStatus(v.error,'err'); return; }
         const blocked=(v.result.rows||[]).some(function(r){ return r.errors&&r.errors.length; });
         if(blocked){ b.disabled=false; acStatus((v.result.rows[0].errors||['Blocked'])[0],'err'); return; }
+        // Quota count (decision #30): say which number this piece takes; ask first if it goes past the quota.
+        const _pr={'Piece ID':id,'Client':row[1],'Publish Date':date,'Founder':'','Stage':row[7],row:1e9};
+        const _o=quotaPositions([_pr]).pos.get(_pr);
+        if(_o && ((_o.lane.quota>0 && _o.n>_o.lane.quota) || noLaneQuota(_o.lane))){
+          const _msg=noLaneQuota(_o.lane)?noLaneText(_o.lane):impOverText(_o);
+          if(!(await OSheet.ask({ trigger:b, title:_L('Over quota','เกินโควตา'), sub:esc(id), body:'<p>'+esc(_msg)+'</p><p>'+esc(_L('Client extras count too. Add anyway?','งานพิเศษที่ลูกค้าขอก็นับด้วย ยืนยันเพิ่มหรือไม่?'))+'</p>',
+              yes:_L('Add anyway','เพิ่มเลย'), no:_L('Go back','กลับไปแก้') }))){ b.disabled=false; acStatus(_L('Not added.','ยังไม่ได้เพิ่ม'),'muted'); return; }
+        }
         const d=await call('importBatch',{tsv:tsv}); b.disabled=false;
         if(!d.ok){ acStatus(d.error,'err'); return; }
-        acStatus('Added '+id+'.','ok'); $('acId').value='';$('acTitle').value='';$('acPlatform').value='';$('acDate').value='';
+        acStatus(_L('Added ','เพิ่มแล้ว ')+id+(_o&&_o.lane.quota?_L(' · piece '+_o.n+' of '+_o.lane.quota+' for '+quotaLaneLabel(_o.lane)+', batch '+_o.lane.batch,' · ชิ้นที่ '+_o.n+' จาก '+_o.lane.quota+' ของ '+quotaLaneLabel(_o.lane)+' Batch '+_o.lane.batch):'')+_L('.',''),'ok'); $('acId').value='';$('acTitle').value='';$('acPlatform').value='';$('acDate').value='';
         loadRows();
       };
     })();
@@ -3679,6 +3696,73 @@
         done:dated.filter(function(r){ return /^(9 |10 )/.test(r['Stage']||''); }).length,
         noBatch:rows.filter(function(r){ return getBatch(r)===null; }).length };
     }
+    // ── Quota count per piece (decision #30) — derived every render, never stored ──
+    // Lane = Client (feed) + quota owner (poster, owner reads first) + batch. Numbered in Publish Date order, one per base ID.
+    function baseIdOf(id){ return String(id||'').trim().replace(/-(IG|TT|FB|TIKTOK)$/i,''); }
+    function parseCollabQuota_(v){ var out={}; String(v==null?'':v).split(/[,;\n·]+/).forEach(function(p){
+        var m=p.trim().match(/^(.+?)\s*[:=]?\s*(\d+)$/); if(!m) return; var nm=m[1].trim(); out[knownClient_(nm)||nm]=Number(m[2]); }); return out; }
+    function guestQuotas_(){ var cq=(META&&META.collabQuota)||{}, out={}; Object.keys(cq).forEach(function(h){ out[h]=parseCollabQuota_(cq[h]); }); return out; }
+    function laneQuota(host, owner){
+      var g=guestQuotas_();
+      if(host!==owner) return (g[host]&&g[host][owner])||0;
+      var own=originalQuota(host); if(own) return own;
+      var total=Number(((META&&META.quota)||{})[host])||0; if(!total) return 0;
+      var hosted=0, away=0;
+      Object.keys(g[host]||{}).forEach(function(o){ if(o!==host) hosted+=g[host][o]; });
+      Object.keys(g).forEach(function(h){ if(h!==host && g[h][host]) away+=g[h][host]; });
+      return Math.max(0, total-hosted-away);
+    }
+    function quotaLaneLabel(l){ return l.owner===l.host ? l.owner : _L(l.owner+' in '+l.host+' feed', l.owner+' ในฟีด '+l.host); }
+    // extra = pseudo rows (import preview). Rows in extra replace Master rows with the same Piece ID.
+    function quotaPositions(extra){
+      var ids={}; (extra||[]).forEach(function(r){ ids[String(r['Piece ID']||'').trim()]=1; });
+      var rows=(allRows||[]).filter(function(r){ return !ids[String(r['Piece ID']||'').trim()]; }).concat(extra||[]);
+      var lanes={};
+      rows.forEach(function(r){
+        if(!r['Publish Date'] || isOnHold(r)) return;
+        var b=getBatch(r); if(b==null) return;
+        var a=accountsFor(r); if(!a.client) return;
+        var k=a.client+'|'+a.poster+'|'+b; (lanes[k]=lanes[k]||[]).push(r);
+      });
+      var pos=new Map(), list=[];
+      Object.keys(lanes).forEach(function(k){
+        var rs=lanes[k].slice().sort(function(x,y){ var d=String(x['Publish Date']).localeCompare(String(y['Publish Date'])); return d||((x.row||1e9)-(y.row||1e9)); });
+        var p=k.split('|'), seen={}, n=0, first='', last='';
+        var info={host:p[0], owner:p[1], batch:Number(p[2]), quota:laneQuota(p[0],p[1]), total:0, first:'', last:''};
+        rs.forEach(function(r){ var b=baseIdOf(r['Piece ID']); if(!seen[b]) seen[b]=++n; pos.set(r,{n:seen[b], lane:info});
+          var d=String(r['Publish Date']); if(!first||d<first) first=d; if(d>last) last=d; });
+        info.total=n; info.first=first; info.last=last; list.push(info);
+      });
+      return { pos:pos, lanes:list };
+    }
+    function noLaneQuota(l){ return l.host!==l.owner && !l.quota; }
+    function noLaneText(l){ return _L('No quota for '+l.owner+' on '+l.host+'. Check the Client and Post From.','ไม่มีโควตาของ '+l.owner+' ใน '+l.host+' ตรวจ Client และ Post From'); }
+    function quotaChip(o){ if(!o) return '';
+      var q=o.lane.quota, over=q>0 && o.n>q;
+      if(noLaneQuota(o.lane)) return '<span class="qchip over" role="img" aria-label="'+esc(noLaneText(o.lane))+'" title="'+esc(noLaneText(o.lane))+'">'+o.n+'<span class="qof"> · ?</span></span>';
+      var tip=quotaLaneLabel(o.lane)+' · '+_L('Batch ','Batch ')+o.lane.batch+' · '+o.lane.total+(q?_L(' of ',' จาก ')+q:'')+_L(' planned',' ชิ้นที่วางแผนแล้ว');
+      return '<span class="qchip'+(over?' over':'')+'" role="img" aria-label="'+esc(o.n+(q?_L(' of ',' จาก ')+q:'')+' · '+tip)+'" title="'+esc(tip)+'">'+o.n+(q?'<span class="qof">'+_L(' of ',' จาก ')+q+'</span>':'')+'</span>'; }
+    // The lane summary for the picked client: for each lane it is in, the batch running now (or next up).
+    function renderQuotaSum(qp){
+      var el=$('pdQuotaSum'); if(!el) return;
+      var client=$('assignClient')?$('assignClient').value:'';
+      if(!client || pdOriginalsOn(client)){ el.hidden=true; el.innerHTML=''; return; }
+      var today=todayISO(), byLane={};
+      qp.lanes.forEach(function(l){ if(l.host!==client && l.owner!==client) return; var k=l.host+'|'+l.owner; (byLane[k]=byLane[k]||[]).push(l); });
+      var keys=Object.keys(byLane); if(!keys.length){ el.hidden=true; el.innerHTML=''; return; }
+      keys.sort(function(a,b){ var A=a.split('|'), B=b.split('|'); return (A[0]===A[1]?0:1)-(B[0]===B[1]?0:1) || a.localeCompare(b); });
+      el.innerHTML='<span class="origsum-k">'+_L('Quota','โควตา')+'</span>'+keys.map(function(k){
+        var ls=byLane[k].sort(function(a,b){ return a.batch-b.batch; });
+        // Running now = the latest batch whose dates span today; else the next one up; else the last one.
+        var now=ls.filter(function(l){ return l.first<=today && l.last>=today; });
+        var cur=now.length?now[now.length-1]:(ls.filter(function(l){ return l.first>today; })[0] || ls[ls.length-1]);
+        var over=cur.quota>0 && cur.total>cur.quota;
+        if(noLaneQuota(cur)) return '<span class="origsum-flag" title="'+esc(noLaneText(cur))+'">'+esc(quotaLaneLabel(cur))+' · '+_L('Batch ','Batch ')+cur.batch+' · '+cur.total+' · '+_L('no quota set','ไม่ได้ตั้งโควตา')+'</span>';
+        return '<span class="origsum-n'+(over?' over':'')+'">'+esc(quotaLaneLabel(cur))+' · '+_L('Batch ','Batch ')+cur.batch+' · <b>'+cur.total+'</b>'+
+          (cur.quota?_L(' of ',' จาก ')+cur.quota:'')+(over?' <span class="origsum-flag">+'+(cur.total-cur.quota)+_L(' over',' เกินโควตา')+'</span>':'')+'</span>';
+      }).join('');
+      el.hidden=false;
+    }
     function collabTag(r){ var c=collabInfo(r); if(!c) return '';
       return '<span class="collabtag" title="Post from '+esc(c.poster)+' \u00b7 collab with '+esc(c.others.join(', '))+' (shows on their calendar too)">post from '+esc(c.poster)+' \u00b7 collab with '+esc(c.others.join(' + '))+'</span>'; }
     function niceDate(ymd){ if(!ymd) return '—'; const d=new Date(ymd+'T00:00:00'); if(isNaN(d)) return ymd;
@@ -3756,32 +3840,48 @@
       });
       renderImportGrid();
     }
+    // Quota count for the ticked import rows, as if they were already saved (decision #30).
+    function impQuota(){
+      var extra=[], idx=[];
+      IMP_ROWS.forEach(function(r,i){ if(!r.include||r.errors.length) return; var d=r.data;
+        extra.push({'Piece ID':d['Piece ID'],'Client':d['Client'],'Publish Date':d['Publish Date'],'Founder':d['Founder'],'Stage':d['Stage'],row:1e9+i}); idx.push(i); });
+      var qp=quotaPositions(extra), out={};
+      extra.forEach(function(r,j){ var o=qp.pos.get(r); if(o) out[idx[j]]=o; });
+      return out;
+    }
+    function impOverText(o){ return _L('Over quota: this would be piece '+o.n+' of '+o.lane.quota+' for '+quotaLaneLabel(o.lane)+', batch '+o.lane.batch+'.',
+      'เกินโควตา: ชิ้นนี้จะเป็นชิ้นที่ '+o.n+' จาก '+o.lane.quota+' ของ '+quotaLaneLabel(o.lane)+' Batch '+o.lane.batch); }
     function renderImportGrid(){
       const el=$('report'); if(!el) return;
       if(!IMP_ROWS.length){ el.innerHTML=''; return; }
+      const IQ=impQuota();
+      const overN=Object.keys(IQ).filter(function(i){ var o=IQ[i]; return o.lane.quota>0 && o.n>o.lane.quota; }).length;
       const chosen=IMP_ROWS.filter(function(r){ return r.include; });
       const blocked=IMP_ROWS.filter(function(r){ return r.errors.length; }).length;
       const warned=IMP_ROWS.filter(function(r){ return r.warnings.length; }).length;
       var head='<div class="rrow sum"><b>'+IMP_ROWS.length+'</b>'+TT(' row(s)')+' · <b>'+chosen.length+'</b>'+TT(' ticked to import')+
-        (blocked?' · <b>'+blocked+'</b>'+TT(' need fixing'):'')+(warned?' · '+warned+TT(' with notes'):'')+
-        '<div class="muted" style="margin-top:4px;font-size:12px">Edit any cell, then tick the rows to import. Rows with a red issue cannot be ticked until fixed. Blank dates and links are fine, they get flagged in the pipeline.</div></div>';
-      var h='<div class="controls" style="margin:8px 0"><button class="small" id="impAll">Tick all importable</button><button class="small" id="impNone">Untick all</button><button class="small" id="impRecheck">Re-check</button></div>'+
+        (blocked?' · <b>'+blocked+'</b>'+TT(' need fixing'):'')+(warned?' · '+warned+TT(' with notes'):'')+(overN?' · <b class="t-amber">'+overN+'</b>'+_L(' over quota',' เกินโควตา'):'')+
+        '<div class="muted" style="margin-top:4px;font-size:12px">'+_L('Edit any cell, then tick the rows to import. Rows with a red issue cannot be ticked until fixed. Blank dates and links are fine, they get flagged in the pipeline.','แก้ไขช่องไหนก็ได้ แล้วติ๊กแถวที่จะนำเข้า แถวที่มีปัญหาสีแดงต้องแก้ก่อนจึงจะติ๊กได้ วันที่หรือลิงก์ที่เว้นว่างไว้ไม่เป็นไร ระบบจะแจ้งเตือนในรายการงาน')+'</div></div>';
+      var h='<div class="controls" style="margin:8px 0"><button class="small" id="impAll">'+_L('Tick all importable','ติ๊กทุกแถวที่นำเข้าได้')+'</button><button class="small" id="impNone">'+_L('Untick all','เอาติ๊กออกทั้งหมด')+'</button><button class="small" id="impRecheck">'+_L('Re-check','ตรวจอีกครั้ง')+'</button></div>'+
         '<div class="tablewrap"><table class="imptable"><thead><tr><th style="width:34px"></th><th>#</th>'+
-        IMP_COLS.map(function(c){ return '<th>'+esc(c)+'</th>'; }).join('')+'<th>Issues</th></tr></thead><tbody>';
+        IMP_COLS.map(function(c){ return '<th>'+esc(c)+'</th>'+(c==='Publish Date'?'<th>'+_L('Quota','โควตา')+'</th>':''); }).join('')+'<th>'+_L('Issues','ปัญหา')+'</th></tr></thead><tbody>';
       IMP_ROWS.forEach(function(r,i){
         var cls=r.errors.length?'imperr':(r.warnings.length?'impwarn':'');
         h+='<tr class="'+cls+'"><td><input type="checkbox" data-inc="'+i+'"'+(r.include?' checked':'')+(r.errors.length?' disabled':'')+'></td>'+
           '<td class="muted">'+r.line+'</td>'+
           IMP_COLS.map(function(c){
-            return '<td><input class="impcell" data-i="'+i+'" data-c="'+esc(c)+'" value="'+esc(String(r.data[c]==null?'':r.data[c]))+'"></td>';
+            return '<td><input class="impcell" data-i="'+i+'" data-c="'+esc(c)+'" value="'+esc(String(r.data[c]==null?'':r.data[c]))+'"></td>'+
+              (c==='Publish Date'?'<td class="impq">'+(IQ[i]?quotaChip(IQ[i]):'<span class="muted">—</span>')+'</td>':'');
           }).join('')+
           '<td>'+(r.errors.map(function(e){return '<div class="ierr">❌ '+esc(e)+'</div>';}).join('')+
-                  r.warnings.map(function(w){return '<div class="iwarn">⚠️ '+esc(impWarnText(w))+'</div>';}).join('')||'<span class="muted">—</span>')+'</td></tr>';
+                  r.warnings.map(function(w){return '<div class="iwarn">⚠️ '+esc(impWarnText(w))+'</div>';}).join('')+
+                  (IQ[i]&&IQ[i].lane.quota>0&&IQ[i].n>IQ[i].lane.quota?'<div class="iwarn">⚠️ '+esc(impOverText(IQ[i]))+'</div>':'')+
+                  (IQ[i]&&noLaneQuota(IQ[i].lane)?'<div class="iwarn">⚠️ '+esc(noLaneText(IQ[i].lane))+'</div>':'')||'<span class="muted">—</span>')+'</td></tr>';
       });
       h+='</tbody></table></div>';
       el.innerHTML=head+h;
       Array.prototype.forEach.call(el.querySelectorAll('.impcell'), function(inp){
-        inp.onchange=function(){ IMP_ROWS[+inp.dataset.i].data[inp.dataset.c]=inp.value; };
+        inp.onchange=function(){ IMP_ROWS[+inp.dataset.i].data[inp.dataset.c]=inp.value; if(/^(Piece ID|Client|Publish Date|Founder|Stage)$/.test(inp.dataset.c)) renderImportGrid(); };
       });
       Array.prototype.forEach.call(el.querySelectorAll('input[data-inc]'), function(cb){
         cb.onchange=function(){ IMP_ROWS[+cb.dataset.inc].include=cb.checked; renderImportGrid(); };
@@ -3793,12 +3893,17 @@
       var okCount=chosen.length;
       $('save').disabled = okCount===0;
       $('save').textContent = okCount? (TT('Import ')+okCount+TT(' piece(s)')) : TT('Import');
-      if(okCount) setImp(okCount+TT(' ready to import')+(blocked?' · '+blocked+TT(' still need fixing'):'')+'.','muted');
-      else setImp(blocked? 'Fix the red issues, then tick the rows.' : 'Tick the rows you want to import.','muted');
+      if(okCount) setImp(okCount+TT(' ready to import')+(blocked?' · '+blocked+TT(' still need fixing'):'')+_L('.',''),'muted');
+      else setImp(blocked? _L('Fix the red issues, then tick the rows.','แก้ปัญหาสีแดงก่อน แล้วติ๊กแถว') : _L('Tick the rows you want to import.','ติ๊กแถวที่ต้องการนำเข้า'),'muted');
     }
     $('save').onclick=async function(){
       const chosen=IMP_ROWS.filter(function(r){ return r.include && !r.errors.length; });
-      if(!chosen.length){ setImp('Nothing ticked to import.','err'); return; }
+      if(!chosen.length){ setImp(_L('Nothing ticked to import.','ยังไม่ได้ติ๊กแถวที่จะนำเข้า'),'err'); return; }
+      var _iq=impQuota(), _over=Object.keys(_iq).map(function(i){ return _iq[i]; }).filter(function(o){ return o.lane.quota>0 && o.n>o.lane.quota; });
+      if(_over.length && !(await OSheet.ask({ trigger:$('save'), title:_L('Over quota','เกินโควตา'),
+          sub:esc(_over.length+_L(' piece(s) go past the quota',' ชิ้นเกินโควตา')),
+          body:'<p>'+_over.slice(0,6).map(function(o){ return esc(impOverText(o)); }).join('<br>')+'</p><p>'+esc(_L('Client extras count too. Import anyway?','งานพิเศษที่ลูกค้าขอก็นับด้วย ยืนยันนำเข้าหรือไม่?'))+'</p>',
+          yes:_L('Import anyway','นำเข้าเลย'), no:_L('Go back','กลับไปแก้') }))) return;
       $('save').disabled=true; $('validate').disabled=true; setImp(TT('Importing ')+chosen.length+'…','muted');
       const data=await call('importBatch',{tsv:impTsvFrom(chosen)}); $('validate').disabled=false;
       if(!data.ok){ $('save').disabled=false; setImp(data.error,'err'); return; }
@@ -4757,6 +4862,7 @@ sched,
     }
     function renderPdDated(){
       syncOrigToggle();
+      const QP=quotaPositions(); renderQuotaSum(QP);
       const client=$('assignClient')?$('assignClient').value:'';
       const rows=pdActiveRows(client);
       const tb=$('pdDatedBody'); if(!tb) return; tb.innerHTML='';
@@ -4765,7 +4871,7 @@ sched,
       if(PD_PAGE>=pages) PD_PAGE=0;
       rows.slice(PD_PAGE*PER,(PD_PAGE+1)*PER).forEach(function(r){
         const tr=document.createElement('tr'); tr.className='clickable'; tr.onclick=function(){ openPanel(r); };
-        tr.innerHTML='<td>'+esc(r['Piece ID'])+'<div class="rowtitle">'+esc(r['Title']||'')+'</div>'+collabTag(r)+infoMark(r)+'</td><td>'+clientChip(r['Client'])+'</td><td>'+fmtChip(r['Format'])+'</td>'+
+        tr.innerHTML='<td>'+esc(r['Piece ID'])+quotaChip(QP.pos.get(r))+'<div class="rowtitle">'+esc(r['Title']||'')+'</div>'+collabTag(r)+infoMark(r)+'</td><td>'+clientChip(r['Client'])+'</td><td>'+fmtChip(r['Format'])+'</td>'+
           '<td>'+platLabel(r['PlatformList'],r['Client'])+'</td>'+
           '<td class="cellbtn stagecell">'+stagePill(r['Stage'])+'</td>'+
           '<td>'+onTrack(r['On Track'])+'</td><td class="cellbtn datecell">'+platDates(r)+'</td><td>'+copyLink(r['Copy Link'])+'</td>';
@@ -5282,6 +5388,7 @@ sched,
         if(LANG==='th'){ applyTH(); startObs(); }
         else { stopObs(); revertEN(); }
         try{ if(typeof renderImportGrid==='function' && typeof IMP_ROWS!=='undefined' && IMP_ROWS.length) renderImportGrid(); }catch(e){}
+        try{ var _pd=document.getElementById('tab-assign'); if(_pd && !_pd.classList.contains('hidden') && typeof renderPdDated==='function') renderPdDated(); }catch(e){}
         try{ if(typeof renderLogRows==='function' && typeof LOG!=='undefined' && LOG.rows) renderLogRows(); }catch(e){}
         try{ var _nb=document.getElementById('tab-nextbatch'); if(_nb && !_nb.classList.contains('hidden')) renderNextBatch(); var _ns=document.getElementById('nbClient'); if(_ns) delete _ns.dataset.filled; renderNbBadge(); }catch(e){}
         try{ var _ht=document.getElementById('tab-help'); if(_ht && !_ht.classList.contains('hidden') && typeof renderHelp==='function') renderHelp(); }catch(e){}
@@ -5303,13 +5410,16 @@ sched,
       title:{en:"How Orbit works",th:"Orbit ทำงานยังไง"},
       tabs:[
         { id:"how", label:{en:"How it works",th:"ระบบทำงานยังไง"},
-          intro:{en:"A quick guide to the views, the status colours, and our timing rules.",th:"คู่มือสั้น ๆ เรื่องแต่ละหน้า สีสถานะ และกติกาเรื่องเวลา"},
+          intro:{en:"The rules the whole team works by. Most mix-ups come from the Piece ID, the Client column or Post From, so start with those.",th:"กติกาที่ทั้งทีมใช้ร่วมกัน ความสับสนส่วนใหญ่มาจาก Piece ID, ช่อง Client หรือ Post From เริ่มอ่านจากตรงนั้นก่อน"},
           cards:[
+            {t:{en:"Reading a Piece ID",th:"อ่าน Piece ID ยังไง"},b:{en:"FORMAT-PERSON-BATCH.NUMBER, e.g. SDV-ICE-2.3. Format: C carousel, VO VO reel, SDV sit-down, POV POV reel. Person: whose quota it uses and who posts it. SRU+DIA means SRU posts and Dianna appears in it. Batch: the number before the dot. Every ID needs a batch number, or the piece is not counted in any batch.",th:"FORMAT-PERSON-BATCH.NUMBER เช่น SDV-ICE-2.3 · Format: C คารูเซล, VO รีล VO, SDV นั่งคุย, POV รีล POV · Person: ใช้โควตาของใครและใครเป็นคนโพสต์ SRU+DIA คือ SRU โพสต์และมี Dianna ร่วม · Batch: ตัวเลขก่อนจุด ทุก ID ต้องมีเลข Batch ไม่อย่างนั้นชิ้นนั้นจะไม่ถูกนับใน Batch ไหนเลย"}},
+            {t:{en:"Client vs Post From",th:"Client กับ Post From ต่างกันยังไง"},b:{en:"Client = the feed the piece is planned in. Post From = the account that actually posts it. Leave Post From blank: Orbit reads it from the Piece ID. Example: an Ice piece made for the SRU feed is Client SRU with an -ICE- ID, and Post From stays blank. Setting Post From to the wrong account sends the posting kit (caption and work link) to the wrong LINE group.",th:"Client = ฟีดที่วางแผนชิ้นนี้ไว้ · Post From = บัญชีที่โพสต์จริง ปล่อย Post From ว่างไว้ได้ Orbit จะอ่านจาก Piece ID เอง ตัวอย่าง: ชิ้นของ Ice ที่ทำให้ฟีด SRU คือ Client SRU ใช้ ID แบบ -ICE- และไม่ต้องใส่ Post From ถ้าใส่ Post From ผิดบัญชี ชุดโพสต์ (แคปชันและลิงก์งาน) จะส่งไปผิดกลุ่ม LINE"}},
+            {t:{en:"Quota: what counts",th:"โควตา: อะไรนับบ้าง"},b:{en:"Every piece with a publish date counts as one, including spin-offs (like 2.5.1) and extras the client asks for. On Hold and undated pieces do not count; Unselected does. A piece split into -IG and -TT rows counts once. Each piece on Publish Dates shows its place, e.g. 7 of 10. Amber = past the quota. A ? means the piece is filed somewhere it has no quota, so check its Client and Post From.",th:"ทุกชิ้นที่มีวันโพสต์นับเป็น 1 ชิ้น รวมชิ้นที่แตกออกมา (เช่น 2.5.1) และงานพิเศษที่ลูกค้าขอ ชิ้นที่ On Hold และชิ้นที่ยังไม่มีวันไม่นับ ส่วน Unselected นับ ชิ้นที่แยกแถว -IG กับ -TT นับเป็นชิ้นเดียว ทุกชิ้นในหน้าวันเผยแพร่จะบอกลำดับ เช่น 7 จาก 10 สีส้ม = เกินโควตา เครื่องหมาย ? คือชิ้นนี้อยู่ในที่ที่ไม่มีโควตา ให้ตรวจ Client และ Post From"}},
+            {live:"quota", t:{en:"Each feed's quota per batch",th:"โควตาของแต่ละฟีดต่อ Batch"}},
             {t:{en:"The two dates on every piece",th:"สองวันสำคัญของทุกชิ้นงาน"},b:{en:"Publish Date = when it goes live. Ready By = the internal all-done-by date, about 14 days earlier. That gap is the production runway.",th:"Publish Date = วันโพสต์จริง · Ready By = วันที่งานต้องเสร็จภายใน อยู่ก่อนราว 14 วัน ช่วงห่างนี้คือเวลาที่ทีมใช้ผลิต"}},
-            {t:{en:"What the status colours mean",th:"สีสถานะหมายถึงอะไร"},b:{en:"On the team dashboard, colour is measured against Ready By: green On track, orange At risk, red Behind. On the client page, red Overdue means within 7 days of posting and still waiting on the client.",th:"บนหน้าทีม สีวัดจาก Ready By: เขียว On track, ส้ม At risk, แดง Behind ส่วนหน้าลูกค้า แดง Overdue คือเหลือไม่ถึง 7 วันก่อนโพสต์และยังรอลูกค้า"}},
-            {t:{en:"Behind vs Overdue",th:"Behind กับ Overdue ต่างกันยังไง"},b:{en:"Behind = our internal Ready By has passed (can show weeks before the post date). Overdue = client-facing, inside 7 days of posting and still waiting on them.",th:"Behind = เลย Ready By ภายในของเรา (อาจขึ้นก่อนวันโพสต์หลายสัปดาห์) · Overdue = ฝั่งลูกค้า เหลือไม่ถึง 7 วันก่อนโพสต์และยังรอลูกค้า"}},
-            {t:{en:"What each view is for",th:"แต่ละหน้าใช้ทำอะไร"},b:{en:"Today = what goes live today. Pipeline = how much to work on each day, by Ready By. List = everything at once. Calendar = the real posting dates. Assign / Publish Dates = set and space the posting days.",th:"Today = ที่โพสต์วันนี้ · Pipeline = ปริมาณงานแต่ละวัน อิง Ready By · List = ดูทั้งหมด · Calendar = วันโพสต์จริง · Assign / Publish Dates = ตั้งและจัดระยะวันโพสต์"}},
-            {t:{en:"Why lots of Ready to Publish is good",th:"ทำไมมี Ready to Publish เยอะถึงดี"},b:{en:"It is stored buffer. Producing early is free and protects every future date. Without buffer, a client last-minute change lands on editing at the deadline. Over-produce on purpose.",th:"มันคือ buffer ที่เก็บไว้ การเสร็จก่อนไม่มีต้นทุนและกันทุกวันข้างหน้า ถ้าไม่มี buffer การแก้นาทีสุดท้ายของลูกค้าจะไปตกที่ทีมตัดต่อตอนเดดไลน์ จึงควรผลิตเผื่อไว้"}},
+            {t:{en:"What the status colours mean",th:"สีสถานะหมายถึงอะไร"},b:{en:"On the team dashboard, colour is measured against Ready By: green On track, orange At risk, red Behind. Behind can show weeks before the post date; it means the buffer is shrinking. On the client page, red Overdue means within 7 days of posting and still waiting on the client.",th:"บนหน้าทีม สีวัดจาก Ready By: เขียว On track, ส้ม At risk, แดง Behind ซึ่งอาจขึ้นก่อนวันโพสต์หลายสัปดาห์ หมายถึง buffer กำลังหด ส่วนหน้าลูกค้า แดง Overdue คือเหลือไม่ถึง 7 วันก่อนโพสต์และยังรอลูกค้า"}},
+            {t:{en:"What each view is for",th:"แต่ละหน้าใช้ทำอะไร"},b:{en:"Today = what posts today, plus captions still missing. Pipeline = what to work on each day, by Ready By. Publish Dates = give pieces a date, check each feed's quota. Next Batch = when each client's next proposal is due. Import = paste a batch or add one piece. Activity Log = who changed what, searchable by Piece ID or name.",th:"วันนี้ = ที่โพสต์วันนี้ และแคปชันที่ยังขาด · Pipeline = งานที่ต้องทำแต่ละวัน อิง Ready By · วันเผยแพร่ = กำหนดวันโพสต์และดูโควตาของแต่ละฟีด · Batch ถัดไป = ข้อเสนอ Batch ถัดไปของลูกค้าแต่ละรายต้องเสร็จเมื่อไร · นำเข้า = วางทั้งชุดหรือเพิ่มทีละชิ้น · บันทึกกิจกรรม = ใครแก้อะไร ค้นด้วย Piece ID หรือชื่อได้"}},
+            {t:{en:"Why lots of Ready to Publish is good",th:"ทำไมมี Ready to Publish เยอะถึงดี"},b:{en:"It is stored buffer. Producing early is free and protects every future date. Without buffer, a client last-minute change lands on editing at the deadline.",th:"มันคือ buffer ที่เก็บไว้ การเสร็จก่อนไม่มีต้นทุนและกันทุกวันข้างหน้า ถ้าไม่มี buffer การแก้นาทีสุดท้ายของลูกค้าจะไปตกที่ทีมตัดต่อตอนเดดไลน์"}},
             {t:{en:"Open Copy vs Open Post",th:"Open Copy กับ Open Post"},b:{en:"Open Copy is the writing doc. When a piece is Ready to Publish, clicking it shows a chooser: Open Copy, Open final work, or Copy caption. Other stages open the copy doc directly.",th:"Open Copy คือเอกสารเขียนงาน เมื่อชิ้นงาน Ready to Publish การคลิกจะขึ้นตัวเลือก: Open Copy, Open final work หรือ Copy caption ส่วนสถานะอื่นจะเปิด copy ตรง ๆ"}}
           ]},
         { id:"sop", label:{en:"SOP",th:"ขั้นตอนงาน"},
@@ -5317,50 +5427,73 @@ sched,
           ladder:["Copywriting","Waiting on client","Production","Review","Ready to Publish","Published"],
           procs:[
             {t:{en:"1. Your daily routine",th:"1. งานประจำวัน"},steps:[
-              {en:"Open Orbit and go to Today.",th:"เปิด Orbit แล้วไปที่ Today"},
+              {en:"Open Orbit and go to Today.",th:"เปิด Orbit แล้วไปที่ วันนี้"},
               {en:"Check what is publishing today, and the count at the top (published / total).",th:"ดูว่ามีอะไรต้องโพสต์วันนี้ และตัวเลขด้านบน (โพสต์แล้ว / ทั้งหมด)"},
-              {en:"As you finish each piece, update its status.",th:"พองานแต่ละชิ้นเสร็จ ให้อัปเดตสถานะ"},
-              {en:"When a piece goes live, set it to Published, it turns green and done.",th:"เมื่อชิ้นงานขึ้นจริง ให้ตั้งเป็น Published จะกลายเป็นสีเขียวและเสร็จ"},
-              {en:"Glance at Today's work for anything that needs you.",th:"ดู Today's work ว่ามีอะไรที่ต้องทำอีก"}
+              {en:"If the Today menu shows a red number, add the missing captions first.",th:"ถ้าเมนู วันนี้ มีตัวเลขสีแดง ให้ใส่แคปชันที่ขาดก่อน"},
+              {en:"As you finish each piece, update its status. When it goes live, set it to Published.",th:"พองานแต่ละชิ้นเสร็จ ให้อัปเดตสถานะ เมื่อโพสต์ขึ้นจริงแล้ว ให้ตั้งเป็น Published"},
+              {en:"If the Next Batch menu shows a number, a proposal needs moving today.",th:"ถ้าเมนู Batch ถัดไป มีตัวเลข แปลว่ามีข้อเสนอที่ต้องเดินหน้าวันนี้"}
             ]},
-            {t:{en:"2. When a client sends materials",th:"2. เมื่อลูกค้าส่งวัตถุดิบมา"},steps:[
+            {t:{en:"2. Importing a batch or adding one piece",th:"2. นำเข้าทั้งชุด หรือเพิ่มทีละชิ้น"},steps:[
+              {en:"Client = the feed it is planned in. A piece for the SRU feed is Client SRU, even when it is an Ice or Dianna piece.",th:"Client = ฟีดที่วางแผนไว้ ชิ้นที่ทำให้ฟีด SRU ใส่ Client เป็น SRU แม้จะเป็นชิ้นของ Ice หรือ Dianna"},
+              {en:"Write the Piece ID with the right person code and a batch number, e.g. SDV-ICE-4.2.",th:"เขียน Piece ID ให้มีรหัสคนที่ถูกต้องและเลข Batch เช่น SDV-ICE-4.2"},
+              {en:"Leave Post From blank unless you are sure. Orbit reads it from the ID.",th:"ไม่ต้องใส่ Post From ถ้าไม่แน่ใจ Orbit จะอ่านจาก ID เอง"},
+              {en:"Press Validate and read every note: Check poster, No batch number, Over quota.",th:"กด ตรวจสอบ แล้วอ่านทุกหมายเหตุ: Check poster, ไม่มีเลข Batch, เกินโควตา"},
+              {en:"The Quota column shows the number each piece will take. Over quota is allowed for client extras, but say yes only when the extra was really agreed.",th:"ช่องโควตาบอกว่าแต่ละชิ้นจะเป็นชิ้นที่เท่าไร เกินโควตาได้ถ้าเป็นงานพิเศษที่ลูกค้าขอ แต่กดยืนยันเฉพาะเมื่อตกลงกันแล้วจริง ๆ"}
+            ]},
+            {t:{en:"3. When a client sends materials",th:"3. เมื่อลูกค้าส่งวัตถุดิบมา"},steps:[
               {en:"Move the piece to Production.",th:"ย้ายชิ้นงานไปที่ Production"},
               {en:"Produce and edit it.",th:"ผลิตและตัดต่อ"},
               {en:"Open the piece panel and paste the final Caption and the Work link (Open Post).",th:"เปิดแผงชิ้นงาน แล้ววาง Caption สุดท้ายและ Work link (Open Post)"},
               {en:"Set it to Ready to Publish so it is banked ahead of its date.",th:"ตั้งเป็น Ready to Publish เพื่อเก็บไว้ล่วงหน้า"},
               {en:"It publishes on its date, then you mark it Published.",th:"มันจะโพสต์ตามวันที่ แล้วคุณค่อยตั้ง Published"}
             ]},
-            {t:{en:"3. When a client is late or sends same-day",th:"3. เมื่อลูกค้าช้าหรือส่งวันเดียวกับวันโพสต์"},steps:[
+            {t:{en:"4. When a client is late or sends same-day",th:"4. เมื่อลูกค้าช้าหรือส่งวันเดียวกับวันโพสต์"},steps:[
               {en:"Do not rush same-day production. Swap instead.",th:"อย่ารีบผลิตวันเดียวกัน ให้สลับแทน"},
               {en:"Give that day to a piece that is already Ready to Publish.",th:"ยกวันนั้นให้ชิ้นที่ Ready to Publish อยู่แล้ว"},
               {en:"Set the late piece to Unselected or Rolled over.",th:"ตั้งชิ้นที่ช้าเป็น Unselected หรือ Rolled over"},
               {en:"In the reason sheet, pick the client-caused reason (it is recorded); pick Our side if it was internal (not recorded).",th:"ในแผงเหตุผล เลือกเหตุผลที่มาจากลูกค้า (จะถูกบันทึก) เลือก Our side ถ้าเป็นเรื่องภายใน (ไม่บันทึก)"},
               {en:"Produce the late piece for a later date.",th:"ผลิตชิ้นที่ช้าไว้สำหรับวันหลัง"}
             ]},
-            {t:{en:"4. Setting publish dates",th:"4. ตั้งวันโพสต์"},steps:[
-              {en:"Go to Publish Dates.",th:"ไปที่ Publish Dates"},
-              {en:"Use Assign to give undated pieces a date.",th:"ใช้ Assign เพื่อกำหนดวันให้ชิ้นที่ยังไม่มีวัน"},
-              {en:"Use Reflow or Auto-rearrange to space them evenly.",th:"ใช้ Reflow หรือ Auto-rearrange เพื่อจัดระยะให้สม่ำเสมอ"},
-              {en:"Check the calendar looks right, then you are done.",th:"เช็คว่าปฏิทินถูกต้อง แล้วก็เสร็จ"}
+            {t:{en:"5. Setting publish dates",th:"5. ตั้งวันโพสต์"},steps:[
+              {en:"Go to Publish Dates and pick the client.",th:"ไปที่ วันเผยแพร่ แล้วเลือกลูกค้า"},
+              {en:"Read the Quota line: each feed's count for the batch running now. Amber means over.",th:"อ่านบรรทัดโควตา: จำนวนชิ้นของแต่ละฟีดใน Batch ปัจจุบัน สีส้มคือเกิน"},
+              {en:"Under Needs a date, check the suggested dates, then Save, or Save all suggested.",th:"ในส่วน ยังไม่มีวันที่ ตรวจวันที่ระบบแนะนำ แล้วกด Save หรือ บันทึกที่แนะนำทั้งหมด"},
+              {en:"For SRU, tick Own quota only to see just SRU's own pieces.",th:"สำหรับ SRU ติ๊ก เฉพาะโควตาของตัวเอง เพื่อดูเฉพาะชิ้นของ SRU"},
+              {en:"Check the calendar looks right. Drag a card to move its date.",th:"เช็คว่าปฏิทินถูกต้อง ลากการ์ดเพื่อย้ายวันได้"}
             ]},
-            {t:{en:"5. Publishing a piece (Open Post)",th:"5. การโพสต์ (Open Post)"},steps:[
+            {t:{en:"6. Publishing a piece (Open Post)",th:"6. การโพสต์ (Open Post)"},steps:[
               {en:"On the day, click the piece (it must be Ready to Publish).",th:"ในวันนั้น คลิกที่ชิ้นงาน (ต้องเป็น Ready to Publish)"},
               {en:"In the chooser, use Copy caption and Open final work.",th:"ในตัวเลือก ใช้ Copy caption และ Open final work"},
-              {en:"Post it on the platform.",th:"โพสต์ลงแพลตฟอร์ม"},
+              {en:"Post it from the account the piece says (its Post From).",th:"โพสต์จากบัญชีที่ชิ้นงานระบุไว้ (Post From)"},
               {en:"Come back and set the piece to Published.",th:"กลับมาตั้งชิ้นงานเป็น Published"}
+            ]},
+            {t:{en:"7. Next batch proposal",th:"7. ข้อเสนอ Batch ถัดไป"},steps:[
+              {en:"Open Next Batch. Each card shows when the next batch starts and the dates to start, send and get approval.",th:"เปิด Batch ถัดไป แต่ละการ์ดบอกว่า Batch ถัดไปเริ่มเมื่อไร และวันที่ต้องเริ่มร่าง ส่ง และได้รับอนุมัติ"},
+              {en:"Paste the proposal link (Notion or a doc) into the card.",th:"วางลิงก์ข้อเสนอ (Notion หรือเอกสาร) ลงในการ์ด"},
+              {en:"Tap the status as it moves: Drafting, Sent, Changes requested, Approved. Sent and Approved record the date.",th:"แตะสถานะตามความคืบหน้า: กำลังร่าง, ส่งให้ลูกค้าแล้ว, ลูกค้าขอแก้, อนุมัติแล้ว สถานะส่งและอนุมัติจะบันทึกวันที่ให้เอง"},
+              {en:"The bell stays on until the proposal is Approved. Red means a date has already passed.",th:"กระดิ่งจะแสดงจนกว่าข้อเสนอจะอนุมัติ สีแดงคือเลยวันที่กำหนดแล้ว"}
             ]}
           ]},
         { id:"faq", label:{en:"FAQ",th:"คำถามที่พบบ่อย"},
           groups:[
+            { title:{en:"Quota and IDs",th:"โควตาและ ID"}, items:[
+              {q:{en:"Which Client do I pick for an Ice piece on the SRU feed?",th:"ชิ้นของ Ice ที่ลงฟีด SRU ต้องเลือก Client อะไร"},a:{en:"Client SRU, with an -ICE- Piece ID (e.g. SDV-ICE-4.2). Leave Post From blank. It counts toward Ice's quota on the SRU feed, and Ice's LINE group gets the posting kit.",th:"Client เป็น SRU ใช้ Piece ID แบบ -ICE- (เช่น SDV-ICE-4.2) ไม่ต้องใส่ Post From ชิ้นนี้จะนับในโควตาของ Ice บนฟีด SRU และกลุ่ม LINE ของ Ice จะได้รับชุดโพสต์"}},
+              {q:{en:"What does 7 of 10 mean?",th:"7 จาก 10 หมายถึงอะไร"},a:{en:"This piece is the 7th of that account's 10 in this batch, counted in publish date order. Amber, e.g. 11 of 10, means past the quota. The quota numbers come from the Clients tab.",th:"ชิ้นนี้เป็นชิ้นที่ 7 จากโควตา 10 ชิ้นของบัญชีนั้นใน Batch นี้ นับตามลำดับวันโพสต์ สีส้ม เช่น 11 จาก 10 คือเกินโควตา ตัวเลขโควตามาจากแท็บ Clients"}},
+              {q:{en:"Why did a piece's number change?",th:"ทำไมลำดับของชิ้นงานเปลี่ยน"},a:{en:"The count follows publish date order, so moving a piece earlier or later can change its number. The batch total only changes when pieces are added or removed.",th:"การนับเรียงตามวันโพสต์ ถ้าย้ายชิ้นไปก่อนหรือหลัง ลำดับจะเปลี่ยนได้ ยอดรวมของ Batch จะเปลี่ยนก็ต่อเมื่อมีการเพิ่มหรือลบชิ้นเท่านั้น"}},
+              {q:{en:"What does the ? on a piece mean?",th:"เครื่องหมาย ? บนชิ้นงานหมายถึงอะไร"},a:{en:"The piece is filed somewhere it has no quota, usually a wrong Client or Post From. Example: an -ICE- piece filed as Client Ice with Post From SRU. Fix the Client or clear Post From.",th:"ชิ้นนี้ถูกจัดไว้ในที่ที่ไม่มีโควตา มักเป็นเพราะ Client หรือ Post From ผิด ตัวอย่าง: ชิ้น -ICE- ที่ใส่ Client เป็น Ice แต่ Post From เป็น SRU ให้แก้ Client หรือลบ Post From ออก"}},
+              {q:{en:"Does a client's extra request count?",th:"งานพิเศษที่ลูกค้าขอนับไหม"},a:{en:"Yes. It uses one of their pieces for that batch. Orbit asks before saving when it goes over quota, so it is a choice, not an accident.",th:"นับ งานนั้นใช้โควตา 1 ชิ้นของลูกค้าใน Batch นั้น Orbit จะถามก่อนบันทึกถ้าเกินโควตา เพื่อให้เป็นการตัดสินใจ ไม่ใช่ความผิดพลาด"}},
+              {q:{en:"Should I renumber Piece IDs to match the quota?",th:"ต้องเปลี่ยนเลข Piece ID ให้ตรงกับโควตาไหม"},a:{en:"No. Keep numbering by format as now (VO4.1, C4.1, POV4.1). Orbit works out the quota count by itself.",th:"ไม่ต้อง ใช้เลขแยกตามรูปแบบเหมือนเดิม (VO4.1, C4.1, POV4.1) Orbit นับโควตาให้เอง"}}
+            ]},
             { title:{en:"Using the system",th:"การใช้งาน"}, items:[
+              {q:{en:"A LINE group did not get the caption and work link. Why?",th:"กลุ่ม LINE ไม่ได้รับแคปชันและลิงก์งาน เพราะอะไร"},a:{en:"The posting kit goes to the account that posts the piece: Post From, or the person code in the Piece ID. If Post From was set to another account, the kit went to that account's group. The panel shows Check poster when the two disagree. Fix it there.",th:"ชุดโพสต์จะส่งไปยังบัญชีที่โพสต์ชิ้นนั้น คือ Post From หรือรหัสคนใน Piece ID ถ้า Post From ถูกตั้งเป็นบัญชีอื่น ชุดโพสต์จะไปกลุ่มของบัญชีนั้น แผงชิ้นงานจะขึ้น Check poster เมื่อสองอย่างนี้ไม่ตรงกัน ให้แก้ตรงนั้น"}},
+              {q:{en:"How do I find who changed or imported a piece?",th:"จะรู้ได้ยังไงว่าใครแก้หรือนำเข้าชิ้นงาน"},a:{en:"Activity Log: search the Piece ID, a title or a name. Who worked on this lists the people and how many changes each made.",th:"บันทึกกิจกรรม: ค้นด้วย Piece ID ชื่อเรื่อง หรือชื่อคน ส่วน ใครทำงานกับชิ้นนี้ จะบอกรายชื่อและจำนวนครั้งที่แต่ละคนแก้"}},
               {q:{en:"A post didn't go out. What do I do?",th:"โพสต์ไม่ได้ลงตามวัน ต้องทำยังไง"},a:{en:"Open the piece and press Push by one (missed post). It moves that piece and the later ones in the same lane (for example Ice solo, or the Ice + SRU collab on Tue/Fri) one posting day later. Collabs and other lanes stay where they are, so the weekly pattern holds. You see every old and new date first; nothing saves until you press Move these dates. A day off never moves posts by itself.",th:"เปิดชิ้นงานแล้วกด เลื่อน 1 ช่อง (โพสต์ที่พลาด) ระบบจะเลื่อนชิ้นนั้นและชิ้นถัดไปในช่องโพสต์เดียวกัน (เช่น Ice โพสต์เดี่ยว หรือ Ice + SRU collab วันอังคาร/ศุกร์) ไปวันโพสต์ถัดไปทีละ 1 ช่อง โพสต์ collab และช่องอื่นไม่ขยับ รูปแบบรายสัปดาห์จึงไม่เพี้ยน จะเห็นวันเดิมและวันใหม่ทุกชิ้นก่อน ไม่มีอะไรถูกบันทึกจนกว่าจะกด ย้ายวันตามนี้ และวันหยุดของทีมจะไม่ทำให้วันโพสต์เลื่อนเอง"}},
               {q:{en:"What does the red number on Today mean?",th:"ตัวเลขสีแดงที่เมนู วันนี้ หมายถึงอะไร"},a:{en:"It counts pieces whose final work is uploaded but have no caption yet. They are listed at the top of Today with an Add caption button, and tagged No caption in Pipeline. Setting Ready to Publish or Published without a caption asks you to confirm first.",th:"คือจำนวนชิ้นงานที่อัปโหลดงานจริงแล้วแต่ยังไม่มีแคปชัน รายการจะอยู่ด้านบนของหน้า วันนี้ พร้อมปุ่ม ใส่แคปชัน และมีป้าย ยังไม่มีแคปชัน ใน Pipeline ถ้าตั้งสถานะเป็น Ready to Publish หรือ Published โดยยังไม่มีแคปชัน ระบบจะถามยืนยันก่อน"}},
+              {q:{en:"What does the number on Next Batch mean?",th:"ตัวเลขที่เมนู Batch ถัดไป หมายถึงอะไร"},a:{en:"How many clients' next-batch proposals need moving. Amber = time to start or keep going. Red = a send or approval date has passed. It clears when the proposal is Approved.",th:"จำนวนลูกค้าที่ข้อเสนอ Batch ถัดไปต้องเดินหน้า สีส้ม = ถึงเวลาเริ่มหรือทำต่อ สีแดง = เลยวันส่งหรือวันอนุมัติแล้ว ตัวเลขจะหายเมื่อข้อเสนออนุมัติแล้ว"}},
               {q:{en:"Why is this red when it is not due for weeks?",th:"ทำไมขึ้นแดงทั้งที่ยังอีกหลายสัปดาห์"},a:{en:"Red Behind is measured against Ready By (about 14 days before posting), not the post date. It is an early warning that the buffer is shrinking.",th:"แดง Behind วัดจาก Ready By (ราว 14 วันก่อนโพสต์) ไม่ใช่วันโพสต์ เป็นสัญญาณเตือนว่า buffer กำลังหด"}},
-              {q:{en:"What is the difference between Behind and Overdue?",th:"Behind กับ Overdue ต่างกันยังไง"},a:{en:"Behind is internal (past Ready By). Overdue is client-facing (within 7 days of posting and still waiting on the client).",th:"Behind เป็นเรื่องภายใน (เลย Ready By) ส่วน Overdue เป็นฝั่งลูกค้า (เหลือไม่ถึง 7 วันก่อนโพสต์และยังรอลูกค้า)"}},
-              {q:{en:"Why is lots of Ready to Publish a good thing?",th:"ทำไมมี Ready to Publish เยอะถึงดี"},a:{en:"It is stored buffer. Finishing early is free and absorbs last-minute client changes without dumping them on editing at the deadline.",th:"มันคือ buffer ที่เก็บไว้ การเสร็จก่อนไม่มีต้นทุนและช่วยรับการแก้นาทีสุดท้าย โดยไม่ทับทีมตัดต่อตอนเดดไลน์"}},
               {q:{en:"Why did it, or did it not, log me out?",th:"ทำไมระบบ logout หรือไม่ logout"},a:{en:"After you sign in once, Orbit keeps you signed in for about 30 days and refreshes each time you use it. You only sign in again after roughly 30 days of not using it.",th:"หลังล็อกอินครั้งแรก Orbit จะจำไว้ราว 30 วัน และต่ออายุทุกครั้งที่ใช้งาน จะต้องล็อกอินใหม่ก็ต่อเมื่อไม่ได้ใช้งานราว 30 วัน"}},
-              {q:{en:"How do I change status or dates on my phone?",th:"แก้สถานะหรือวันที่บนมือถือยังไง"},a:{en:"On Today posts each piece is a card. Tap the status control to change it, or Edit dates. Tapping the title opens the copy; the status and date controls will not open it by mistake.",th:"ในหน้า Today แต่ละชิ้นเป็นการ์ด แตะตัวเลือกสถานะเพื่อแก้ หรือ Edit dates การแตะที่ชื่อจะเปิด copy ส่วนปุ่มสถานะและวันที่จะไม่เผลอเปิด copy"}},
-              {q:{en:"What does the LINE bot send, and to whom?",th:"LINE bot ส่งอะไร ให้ใคร"},a:{en:"A daily brief to the client group each morning except Sunday: today, this week, and what is waiting on the client, plus a calendar link. It only reads and pushes.",th:"สรุปรายวันส่งเข้ากลุ่มลูกค้าทุกเช้ายกเว้นวันอาทิตย์: วันนี้ สัปดาห์นี้ และสิ่งที่รอลูกค้า พร้อมลิงก์ปฏิทิน มันแค่อ่านและส่ง"}},
+              {q:{en:"How do I change status or dates on my phone?",th:"แก้สถานะหรือวันที่บนมือถือยังไง"},a:{en:"On Today posts each piece is a card. Tap the status control to change it, or Edit dates. Tapping the title opens the copy; the status and date controls will not open it by mistake.",th:"ในหน้า วันนี้ แต่ละชิ้นเป็นการ์ด แตะตัวเลือกสถานะเพื่อแก้ หรือ Edit dates การแตะที่ชื่อจะเปิด copy ส่วนปุ่มสถานะและวันที่จะไม่เผลอเปิด copy"}},
+              {q:{en:"What does the LINE bot send, and to whom?",th:"LINE bot ส่งอะไร ให้ใคร"},a:{en:"Each morning except Sunday: a brief to each client group (today, this week, what is waiting on them, a calendar link) and the posting kit for anything Ready to Publish that day, sent to the account that posts it. It only reads and sends; it never changes the Sheet.",th:"ทุกเช้ายกเว้นวันอาทิตย์: สรุปส่งเข้ากลุ่มลูกค้าแต่ละกลุ่ม (วันนี้ สัปดาห์นี้ สิ่งที่รอลูกค้า และลิงก์ปฏิทิน) และชุดโพสต์ของชิ้นที่ Ready to Publish ในวันนั้น ส่งไปยังบัญชีที่โพสต์ มันแค่อ่านและส่ง ไม่แก้ข้อมูลใน Sheet"}},
               {q:{en:"Where do I see what a client caused?",th:"ดูสิ่งที่เกิดจากลูกค้าได้ที่ไหน"},a:{en:"At the bottom of the client calendar page there is a History section (collapsed) listing only client-caused timing events, factually and dated.",th:"ที่ด้านล่างหน้าปฏิทินลูกค้ามีส่วน History (ย่อไว้) แสดงเฉพาะเหตุการณ์เรื่องเวลาที่เกิดจากลูกค้า แบบเป็นข้อเท็จจริงและมีวันที่"}}
             ]},
             { title:{en:"Policies (from the contract)",th:"นโยบาย (จากสัญญา)"}, items:[
@@ -5379,6 +5512,15 @@ sched,
           ]}
       ]
     };
+    // Live from the Clients tab (decision #30), so Help never holds its own copy of the numbers.
+    function helpQuotaText(L){
+      var th=L==='th', cs=(META&&META.clients)||[], g=guestQuotas_(), lines=[];
+      cs.forEach(function(c){ var own=laneQuota(c,c); var parts=[]; if(own) parts.push(c+' '+own);
+        Object.keys(g[c]||{}).forEach(function(o){ if(o!==c && g[c][o]) parts.push(o+' '+g[c][o]); });
+        if(parts.length) lines.push((th?'ฟีด '+c+': ':c+' feed: ')+parts.join(' · ')); });
+      if(!lines.length) return esc(th?'จะแสดงเมื่อ Orbit โหลดแท็บ Clients แล้ว':'Shows once Orbit has loaded the Clients tab.');
+      return lines.map(esc).join('<br>')+'<div class="help-note">'+esc(th?'ตัวเลขมาจากแท็บ Clients แก้ที่นั่นที่เดียว':'Numbers come from the Clients tab. Change them there only.')+'</div>';
+    }
     function renderHelp(){
       var L='en'; try{ if(document.documentElement.getAttribute('lang')==='th' || localStorage.getItem('orbitLang')==='th') L='th'; }catch(e){}
       var H=HELP_CONTENT;
@@ -5389,7 +5531,7 @@ sched,
       var out=[];
       if(tab.intro) out.push('<div class="help-intro">'+esc(tab.intro[L])+'</div>');
       if(tab.ladder) out.push('<div class="help-ladder">'+tab.ladder.map(function(s,i){ return '<span class="help-step">'+esc(s)+'</span>'+(i<tab.ladder.length-1?'<span class="help-arrow">\u2192</span>':''); }).join('')+'</div>');
-      if(tab.cards) tab.cards.forEach(function(c){ out.push('<div class="help-card"><div class="help-card-t">'+esc(c.t[L])+'</div><div class="help-card-b">'+esc(c.b[L])+'</div></div>'); });
+      if(tab.cards) tab.cards.forEach(function(c){ var b=c.live==='quota'?helpQuotaText(L):esc(c.b[L]); out.push('<div class="help-card"><div class="help-card-t">'+esc(c.t[L])+'</div><div class="help-card-b">'+b+'</div></div>'); });
       if(tab.procs) tab.procs.forEach(function(pr){ out.push('<div class="help-proc"><div class="help-proc-t">'+esc(pr.t[L])+'</div><ol class="help-steps">'+pr.steps.map(function(st){ return '<li>'+esc(st[L])+'</li>'; }).join('')+'</ol></div>'); });
       if(tab.groups) tab.groups.forEach(function(g){ out.push('<h3 class="help-h">'+esc(g.title[L])+'</h3><div class="help-faq">'+g.items.map(function(it){ return '<div class="help-q"><button type="button" class="help-qbtn">'+esc(it.q[L])+'</button><div class="help-a">'+esc(it.a[L])+'</div></div>'; }).join('')+'</div>'); });
       if(tab.links) tab.links.forEach(function(lk){ out.push('<a class="help-link" href="'+esc(lk.url)+'" target="_blank" rel="noopener"><div class="help-link-t">'+esc(lk.title[L])+'</div><div class="help-link-d">'+esc(lk.desc[L])+'</div></a>'); });
