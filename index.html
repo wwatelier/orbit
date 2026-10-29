@@ -3773,7 +3773,10 @@
     // The Piece ID names who posts (SDV-ICE-… = Ice; A+B = A). Warn only when Post From is set
     // explicitly to a different account. Blank Post From derives from the ID, so it never warns.
     function idPoster(r){ var p=personCode_(r['Piece ID']); if(!p) return ''; var o=p.indexOf('+')>=0?p.split('+')[0]:p; var nm=personName_(o); return knownClient_(nm)?nm:''; }
-    function posterMismatch(r, pf){ var set=String(pf==null?(r['Post From']||''):pf).trim(); var want=idPoster(r); if(!want||!set||set===want) return null; return { id:want, set:set }; }
+    // An A+B piece may also be posted from B (decision #32: SRU+DIA with Post From = Dianna is her collab), so B is not a mismatch.
+    function posterMismatch(r, pf){ var set=String(pf==null?(r['Post From']||''):pf).trim(); var want=idPoster(r); if(!want||!set||set===want) return null;
+      var pc=personCode_(r['Piece ID']); if(pc && pc.indexOf('+')>=0 && personName_(pc.split('+')[1])===set) return null;
+      return { id:want, set:set }; }
     // English phrases sit in their own spans so the EN/TH overlay can swap them either way.
     function posterMsgHtml(m){ return '<span>Piece ID says</span> <b>'+esc(m.id)+'</b> <span>posts this, but Post From is</span> <b>'+esc(m.set)+'</b>. '+
       '<span>If that is wrong, the LINE brief sends the posting kit to the wrong account.</span>'; }
