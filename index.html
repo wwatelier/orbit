@@ -1792,7 +1792,7 @@
     // behind it, Esc / tap-outside closes, focus returns to the trigger. ask() is the
     // promise-based confirm used instead of window.confirm for new flows.
     const OSheet = (function(){
-      let scrim=null, sheet=null, lastFocus=null, onDone=null;
+      let scrim=null, sheet=null, lastFocus=null, onDone=null, hideT=null;
       function build(){
         if(scrim) return;
         scrim=document.createElement('div'); scrim.className='osheet-scrim';
@@ -1804,7 +1804,7 @@
         document.addEventListener('keydown', function(e){ if(e.key==='Escape' && scrim.classList.contains('show') && !sheet.classList.contains('busy')) close(); });
       }
       function open(o){
-        build(); lastFocus=document.activeElement; onDone=o.onClose||null;
+        build(); if(hideT){ clearTimeout(hideT); hideT=null; } lastFocus=document.activeElement; onDone=o.onClose||null;
         sheet.querySelector('#oshT').textContent=o.title||'';
         const sub=sheet.querySelector('.osh-sub'); sub.innerHTML=o.sub||''; sub.style.display=o.sub?'':'none';
         sheet.querySelector('.osh-body').innerHTML=o.body||'';
@@ -1832,7 +1832,7 @@
       function close(val){
         if(!scrim || !scrim.classList.contains('show')) return;
         scrim.classList.remove('in');
-        setTimeout(function(){ scrim.classList.remove('show'); }, 220);
+        hideT=setTimeout(function(){ hideT=null; scrim.classList.remove('show'); }, 220);
         try{ if(lastFocus && lastFocus.focus) lastFocus.focus({preventScroll:true}); }catch(e){}
         const f=onDone; onDone=null; if(f) f(val);
       }
