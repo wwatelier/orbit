@@ -179,6 +179,13 @@
     .np-toggle input { width:20px; height:20px; margin:0; }
     .np-how { margin:14px 0 4px; font-size:12.5px; color:var(--ink-soft); } .np-how summary { cursor:pointer; min-height:32px; } .np-how p { line-height:1.55; margin:6px 0 0; }
     @media (max-width: 520px){ .np-row { grid-template-columns:44px minmax(0,1fr); } .np-dates { grid-column:2; align-items:flex-start; } .np-sub { white-space:normal; } }
+    .calcell .npbtn { position:absolute; top:4px; right:18px; font-size:10px; line-height:1; padding:4px 7px; min-height:22px; border-radius:999px; border:1px solid var(--line); background:#fff; color:var(--ink-soft); cursor:pointer; opacity:0; transition:opacity .12s ease; }
+    .calcell:hover .npbtn, .calcell:focus-within .npbtn, .calcell .npbtn:focus-visible { opacity:1; }
+    .calcell.nopost .npbtn { opacity:1; color:#b3261e; border-color:#e8b9b4; }
+    .calcell .npbtn:active { transform:scale(.96); }
+    .calcell .npbtn:disabled { opacity:.5; cursor:default; }
+    @media (hover:none){ .calcell .npbtn { opacity:.85; min-height:30px; padding:6px 9px; } }
+    @media (prefers-reduced-motion: reduce){ .calcell .npbtn { transition:none; } }
     .mgrid button.np { box-shadow:inset 0 0 0 2px #d9534f; background:#fdecea; }
     .calcell.nopost { background:#fdecea; }
     .nplabel { font-size:10px; line-height:1.3; color:#b3261e; font-weight:600; margin:2px 0 4px; }
@@ -1379,7 +1386,7 @@
             <strong id="pdCalLabel" style="min-width:150px;text-align:center;display:inline-block"></strong>
             <button class="small" id="pdCalNext">→</button>
             <button class="small" id="pdCalToday">Today</button>
-            <span class="pstatus muted" id="pdCalNote"></span>
+            <span class="pstatus muted" id="pdCalNote"></span><span class="pstatus muted" id="pdNpMsg" role="status" style="display:block;margin-top:6px"></span>
           </div>
           <div class="legend" id="pdCalLegend" style="margin:8px 0"></div>
           <div class="surface" style="padding:14px;margin-top:4px"><div class="tablewrap"><div id="pdCalGrid" class="calgrid"></div></div></div>
@@ -4895,8 +4902,8 @@ sched,
       return jobs; }
     // Remember what a plan moved, so Unblock can offer to put the pieces back (only on this browser).
     function npStoreUndo(plan, sel){
-      try{ var all=JSON.parse(localStorage.getItem('orbitNpUndo')||'{}');
-        plan.moves.forEach(function(m){ if(!sel[m.chain]) return; (all[m.cause]=all[m.cause]||[]).push({row:m.r.row, pieceId:m.r['Piece ID'], from:m.from, to:m.to}); });
+      try{ var all=JSON.parse(localStorage.getItem('orbitNpUndo')||'{}'), stamp=Date.now();
+        plan.moves.forEach(function(m){ if(!sel[m.chain]) return; (all[m.cause]=all[m.cause]||[]).push({row:m.r.row, pieceId:m.r['Piece ID'], from:m.from, to:m.to, grp:stamp+'-'+m.chain}); });
         localStorage.setItem('orbitNpUndo', JSON.stringify(all)); }catch(e){}
     }
     function npRefreshViews(){ try{ renderPipe(); renderToday(); renderTodayPosts(); if(typeof renderAssign==='function') renderAssign(); renderNoPost(); }catch(e){} }
@@ -4908,8 +4915,9 @@ sched,
       rebuild();
       var plan0=state.plan;
       if(!plan0.moves.length && !plan0.locked.length && !plan0.unresolved.length){
-        if(plan0.published.length){ var msg=$('npMsg'); if(msg){ msg.className='pstatus muted'; msg.textContent=plan0.published.length+' published piece(s) sit on this date. They stay as they are.'; } }
-        else { var m2=$('npMsg'); if(m2){ m2.className='pstatus ok'; m2.textContent='No unpublished piece sits on a No Post date.'; } }
+        var em=$('npMsg');
+        if(plan0.published.length){ if(em){ em.className='pstatus muted'; em.textContent=((opts.dates&&opts.dates.length===1)?('Blocked '+opts.dates[0]+'. '):'')+plan0.published.length+' published piece(s) sit on it and stay as they are.'; } }
+        else if(!(opts.dates&&opts.dates.length) && em){ em.className='pstatus muted'; em.textContent='Nothing to plan. Pieces dated before today are left for you to move by hand.'; }
         return null; }
       var dd=(opts.dates&&opts.dates.length) ? opts.dates : null;
       var title=(dd&&dd.length===1) ? (function(){ var l=noPostList().filter(function(x){ return x.date===dd[0] && x.on; })[0]; return (l?l.name:'No Post date')+' · '+niceDate(dd[0]); })() : 'Pieces on No Post dates';
@@ -4986,13 +4994,19 @@ sched,
       var all={}; try{ all=JSON.parse(localStorage.getItem('orbitNpUndo')||'{}'); }catch(e){ return; }
       var list=all[date]; if(!list || !list.length) return;
       var today=todayISO();
-      var back=list.map(function(u){ var r=allRows.filter(function(x){ return x.row===u.row; })[0]; return r?{u:u,r:r}:null; }).filter(function(x){
-        if(!x) return false; var r=x.r, s=r['Stage']||'';
-        if(/Published/i.test(s) || PARKED.indexOf(s)!==-1) return false;
-        if((r['Publish Date']||'')!==x.u.to) return false;                      // someone moved it again: leave it
-        if(x.u.from<=today) return false;
-        if(new Date(x.u.from+'T00:00:00').getDay()===0 || noPostHit(x.u.from, accountsFor(r).accounts)) return false;
-        return !accountClashOnDay(x.u.from, accountsFor(r).accounts, r.row); });             // the old slot must still be free
+      var groups={}; list.forEach(function(u){ var g=u.grp||('s'+u.row); (groups[g]=groups[g]||[]).push(u); });
+      var back=[];
+      Object.keys(groups).forEach(function(g){            // a shifted chain goes back together or not at all
+        var us=groups[g], inGroup={}; us.forEach(function(u){ inGroup[u.row]=1; });
+        var ok=us.every(function(u){ var r=allRows.filter(function(x){ return x.row===u.row; })[0]; if(!r) return false;
+          var st=r['Stage']||''; if(/Published/i.test(st) || PARKED.indexOf(st)!==-1) return false;
+          if((r['Publish Date']||'')!==u.to) return false;                    // someone moved it again: leave it
+          if(u.from<=today) return false;
+          var acc=accountsFor(r).accounts;
+          if(new Date(u.from+'T00:00:00').getDay()===0 || noPostHit(u.from, acc)) return false;
+          return !allRows.some(function(x){ if(inGroup[x.row]) return false; var xs=x['Stage']||''; if(PARKED.indexOf(xs)!==-1) return false;
+            return x['Publish Date']===u.from && accountsFor(x).accounts.some(function(a){ return acc.indexOf(a)>=0; }); }); });
+        if(ok) us.forEach(function(u){ back.push({ u:u, r:allRows.filter(function(x){ return x.row===u.row; })[0] }); }); });
       delete all[date]; try{ localStorage.setItem('orbitNpUndo', JSON.stringify(all)); }catch(e){}
       if(!back.length) return;
       var body='<ul class="osh-list">'+back.map(function(x){ return '<li class="np-row"><span class="np-tickwrap"></span><span class="np-main"><b>'+esc(x.r['Piece ID'])+'</b><span class="np-sub">'+esc(x.r['Title']||'')+'</span></span><span class="np-dates"><span class="osh-dates"><s>'+esc(niceDate(x.u.to))+'</s><i aria-hidden="true">→</i><b>'+esc(niceDate(x.u.from))+'</b></span></span></li>'; }).join('')+'</ul>'
@@ -5009,9 +5023,9 @@ sched,
     // ── No Post card (Team Calendar tab) ──
     function renderCalTab(){ renderYearCal(); renderNoPost(); }
     function npWeekday(ymd){ var d=new Date(ymd+'T00:00:00'); return isNaN(d)?'':d.toLocaleDateString('en-GB',{weekday:'short'}); }
-    function npPieceCount(x){
+    function npPieceCount(x, onList){
       if(!x.on) return 0; var acc=String(x.accounts||'All').split(/[,;]/).map(function(s){return s.trim().toLowerCase();}).filter(String);
-      return piecesOnNoPost().filter(function(r){ return r['Publish Date']===x.date &&
+      return (onList||piecesOnNoPost()).filter(function(r){ return r['Publish Date']===x.date &&
         (acc.indexOf('all')>=0 || accountsFor(r).accounts.some(function(a){ return acc.indexOf(a.toLowerCase())>=0; })); }).length; }
     function renderNoPost(){
       var body=$('npBody'); if(!body) return;
@@ -5024,8 +5038,9 @@ sched,
         if(show==='notyet' && x.on) return false;
         if(show==='blocked' && !x.on) return false;
         return true; }).sort(function(a,b){ return a.date.localeCompare(b.date) || a.name.localeCompare(b.name); });
+      var onList=piecesOnNoPost();
       body.innerHTML = rows.length ? rows.map(function(x){
-        var n=npPieceCount(x);
+        var n=npPieceCount(x, onList);
         return '<tr><td><input type="checkbox" class="npTick" data-row="'+x.row+'" data-date="'+esc(x.date)+'"'+(x.on?' checked':'')+'></td>'+
           '<td>'+esc(x.date)+' <span class="muted">'+esc(npWeekday(x.date))+'</span></td><td>'+esc(x.name)+(x.note?' <span class="muted">· '+esc(x.note)+'</span>':'')+'</td>'+
           '<td>'+esc(x.country)+'</td><td>'+esc(x.type)+'</td><td>'+esc(x.accounts)+'</td>'+
@@ -5045,12 +5060,37 @@ sched,
       var pubOn=(allRows||[]).filter(function(r){ return /Published/i.test(r['Stage']||'') && r['Publish Date'] && r['Publish Date']>=todayISO() && noPostHit(r['Publish Date'], accountsFor(r).accounts); });
       if(pubOn.length) host.insertAdjacentHTML('beforeend','<p class="muted" style="margin:10px 0 0">'+pubOn.length+' published piece(s) sit on a No Post date ('+esc(pubOn.map(function(r){ return r['Piece ID']; }).join(', '))+'). They stay as they are.</p>');
     }
+    // Block / Unblock straight from a Publish Dates calendar cell. Same save, same plan sheet, same undo as Team Calendar.
+    async function npCellToggle(iso, client, btn){
+      var say=function(cls,t){ var m=$('pdNpMsg'); if(m){ m.className='pstatus '+cls; m.textContent=t; } };
+      btn.disabled=true;
+      try{
+        if(!(META&&META.noPost&&META.noPost.exists)){
+          say('muted','Setting up the No Post Dates tab…');
+          var s=await call('setupNoPost',{});
+          if(!s.ok){ say('err',s.error||'Could not set up the No Post Dates tab.'); btn.disabled=false; return; }
+          META.noPost=s.result.noPost;
+        }
+        var applies=function(x){ if(!client) return true; var a=String(x.accounts||'All').split(/[,;]/).map(function(v){return v.trim().toLowerCase();}); return a.indexOf('all')>=0 || a.indexOf(String(client).toLowerCase())>=0; };
+        var list=noPostList().filter(function(x){ return x.date===iso && applies(x); });
+        var on=list.filter(function(x){ return x.on; }), off=list.filter(function(x){ return !x.on; }), payload, turnOn;
+        if(on.length){ turnOn=false; payload={changes:on.map(function(x){ return {row:x.row,date:iso,on:false}; })}; }
+        else if(off.length){ turnOn=true; payload={changes:[{row:off[0].row,date:iso,on:true}]}; }
+        else { turnOn=true; payload={add:[{date:iso,name:'No Post day',country:'All',type:'WWA skip day',accounts:'All',source:'',note:'',on:true}]}; }
+        say('muted','Saving…');
+        var ok=await saveNoPost(payload, iso, turnOn, btn);
+        var src=$('npMsg'), m=$('pdNpMsg');
+        if(m && src){ m.className=src.className; m.textContent=(ok && payload.add) ? ('Blocked '+iso+' as "No Post day". Rename it in Team Calendar if you like.') : src.textContent; }
+      }catch(e){ say('err',shortErr(e.message||e)); }
+      var nb=document.querySelector('#pdCalGrid .npbtn[data-d="'+iso+'"]'); if(nb) nb.disabled=false; btn.disabled=false;
+    }
     function npOfferPlan(dates, trigger){ try{ openNoPostPlan(trigger, { dates:dates }); }catch(e){ var m=$('npMsg'); if(m){ m.className='pstatus err'; m.textContent='Could not build the plan: '+shortErr(e.message||e); } } }
     async function saveNoPost(payload, date, on, el){
       var msg=$('npMsg'); if(msg){ msg.className='pstatus muted'; msg.textContent='Saving…'; }
       var data=await call('setNoPost', payload);
       if(!data.ok){ if(msg){ msg.className='pstatus err'; msg.textContent=data.error||'Could not save.'; } if(el && el.type==='checkbox') el.checked=!on; return false; }
-      META.noPost=data.result.noPost; renderCalTab();
+      META.noPost=data.result.noPost; renderCalTab(); try{ renderPdCalendar(); }catch(e){}
+      if(el && !document.body.contains(el) && date){ el=document.querySelector('#pdCalGrid .calcell[data-d="'+date+'"]')||el; }
       var n=on&&date ? piecesOnNoPost().filter(function(r){ return r['Publish Date']===date; }).length : 0;
       if(msg){ msg.className='pstatus ok';
         msg.textContent = payload.add ? 'Date added.' : (on ? ('Blocked '+date+'.'+(n?' '+n+' unpublished piece(s) sit on it.':'')) : ('Unblocked '+date+'. Nothing moved.')); }
@@ -5378,6 +5418,7 @@ sched,
       for(var d=new Date(from); d<=to; d.setDate(d.getDate()+1)){ var iso=isoOf(d);
         if(d.getDay()===0 || iso===ymd) continue;
         if(accountClashOnDay(iso, acc, r.row)) continue;
+        if(!gridTouches(r) && !clientAllowedDays(accountsFor(r).poster).has(d.getDay())) continue;
         if(hardIssues(r, iso).length) continue;
         c.push({d:iso, fmt:patternIssues(r, iso).some(function(i){ return i.code==='format'; })?1:0}); }
       c.sort(function(a,b){ return a.fmt-b.fmt || Math.abs(new Date(a.d)-mid)-Math.abs(new Date(b.d)-mid) || a.d.localeCompare(b.d); });
@@ -5626,6 +5667,7 @@ sched,
       var cls='calcell'+(isOff?' off':'')+(isPostDay?' postday':'')+(npHit?' nopost':'');
       var html='<div class="'+cls+'" data-d="'+iso+'">'+(isCollabDay?'<span class="collabmark" title="'+esc(TT('Recurring collab day'))+'"></span>':'')+
         '<div class="calnum'+(isToday?' today':'')+'">'+d.getDate()+(onGrid && dow===1 ? '<span class="calwk">W'+(gridWeek(iso)+1)+'</span>' : '')+'</div>';
+      if(!isOff && iso>=todayISO()) html+='<button class="npbtn" data-d="'+iso+'" title="'+esc(npHit?npT('Unblock this day','ปลดวันห้ามโพสต์'):npT('Block this day: nothing publishes','บล็อกวันนี้: ห้ามโพสต์'))+'">'+esc(npHit?npT('Unblock','ปลด'):npT('Block','บล็อก'))+'</button>';
       if(npHit) html+='<div class="nplabel" title="'+esc(npT('No Post date. Nothing publishes today.','วันห้ามโพสต์'))+'">'+esc(npT('No Post','ห้ามโพสต์'))+' · '+esc(npHit.name)+'</div>';
       list.slice(0,cap).forEach(function(o){ html+=pdCard(o, rich, client); });
       if(list.length>cap) html+='<button class="calmore" data-d="'+iso+'">+'+(list.length-cap)+' more</button>';
@@ -5680,6 +5722,9 @@ sched,
       Array.prototype.forEach.call(host.querySelectorAll('.calnum'), function(el){
         el.style.cursor='pointer';
         el.onclick=function(){ const d=el.closest('.calcell').dataset.d; openPdDay(d, byDay[d]||[]); };
+      });
+      Array.prototype.forEach.call(host.querySelectorAll('.npbtn'), function(el){
+        el.onclick=function(e){ e.stopPropagation(); npCellToggle(el.dataset.d, client, el); };
       });
       wirePdDrag(host);
     }
