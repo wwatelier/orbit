@@ -192,7 +192,69 @@
     .np-strow input, .np-strow select { min-width:0; width:100%; }
     .np-sthow { font-size:11.5px; margin:-2px 0 4px 158px; }
     .npStX { min-height:44px; min-width:44px; }
-    @media (max-width:760px){ .np-strow { grid-template-columns:minmax(0,1fr) 44px; } .np-strow > :nth-child(n+2):nth-child(-n+4){ grid-column:1 / -1; } .np-sthow { margin-left:0; } }
+    @media (max-width:760px){ .np-strow { grid-template-columns:minmax(0,1fr) 44px; } .np-sthow { margin-left:0; } }
+    #npControls { align-items:center; }
+    .np-list { display:flex; flex-direction:column; border-top:1px solid var(--line); margin-top:6px; }
+    .np-item { display:grid; grid-template-columns:58px 112px minmax(0,1fr) auto; grid-template-areas:"sw when what end"; align-items:center; gap:2px 10px; padding:6px 0; border-bottom:1px solid var(--line); }
+    .np-sw { grid-area:sw; position:relative; display:flex; align-items:center; justify-content:center; min-width:58px; min-height:48px; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+    .np-sw input { position:absolute; inset:0; width:100%; height:100%; margin:0; opacity:0; cursor:pointer; }
+    .np-swui { width:44px; height:26px; border-radius:13px; background:#d6d6da; position:relative; transition:background .16s ease; flex:none; }
+    .np-swui::after { content:''; position:absolute; top:2px; left:2px; width:22px; height:22px; border-radius:50%; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.28); transition:transform .22s cubic-bezier(.3,1.3,.5,1); }
+    .np-sw input:checked + .np-swui { background:#d9534f; }
+    .np-sw input:checked + .np-swui::after { transform:translateX(18px); }
+    .np-sw:active .np-swui::after { width:26px; }
+    .np-sw input:checked:active + .np-swui::after { transform:translateX(14px); }
+    .np-sw input:focus-visible + .np-swui { outline:2px solid var(--brand); outline-offset:2px; }
+    .np-when b { white-space:nowrap; }
+    .np-add summary::before { content:'+'; font-weight:700; margin-right:10px; color:var(--brand); }
+    .np-add[open] summary::before { content:'\2212'; }
+    .np-when { grid-area:when; display:flex; flex-direction:column; line-height:1.25; font-variant-numeric:tabular-nums; }
+    .np-when span { font-size:12px; color:var(--ink-soft); }
+    .np-what { grid-area:what; min-width:0; }
+    .np-name { font-weight:600; overflow-wrap:anywhere; }
+    .np-meta { font-size:12.5px; color:var(--ink-soft); line-height:1.45; overflow-wrap:anywhere; }
+    .np-end { grid-area:end; display:flex; align-items:center; gap:6px; }
+    .np-pill { background:#fdecea; color:#b3261e; border-radius:999px; padding:4px 10px; font-size:12px; font-weight:600; white-space:nowrap; }
+    .np-edit { min-height:44px; min-width:56px; background:transparent; border-color:transparent; box-shadow:none; color:var(--brand); font-weight:600; }
+    .np-item:not(.on) .np-name, .np-item:not(.on) .np-when b { opacity:.6; }
+    .np-empty { padding:18px 4px; color:var(--ink-soft); }
+    .np-form { display:grid; gap:14px; }
+    .np-form label { display:grid; gap:5px; font-size:13px; color:var(--ink-soft); }
+    .np-form input, .np-form select { min-height:46px; font-size:16px; width:100%; box-sizing:border-box; }
+    .np-fixed { margin:0; font-size:12.5px; line-height:1.5; color:var(--ink-soft); }
+    .np-rm { justify-self:start; background:none; border:none; box-shadow:none; color:#b3261e; font:inherit; font-size:14px; min-height:44px; padding:0; cursor:pointer; }
+    .np-add { margin-top:16px; border-top:1px solid var(--line); padding-top:4px; }
+    .np-add summary { cursor:pointer; min-height:44px; display:flex; align-items:center; font-weight:600; font-size:14px; }
+    .np-addgrid { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; padding:6px 0 4px; }
+    .np-addgrid label { display:grid; gap:5px; font-size:13px; color:var(--ink-soft); }
+    .np-addgrid .wide { grid-column:1 / -1; }
+    .np-addgrid input[type=text], .np-addgrid input[type=date], .np-addgrid select { min-height:46px; font-size:16px; width:100%; box-sizing:border-box; }
+    .np-addgrid .np-chk { display:flex; align-items:center; gap:10px; min-height:44px; color:var(--ink); }
+    .np-addgrid .np-chk input { width:22px; height:22px; min-height:0; }
+    .np-pcs { display:flex; flex-direction:column; border-top:1px solid var(--line); }
+    .np-pc { display:flex; flex-wrap:wrap; gap:2px 14px; align-items:baseline; padding:9px 0; border-bottom:1px solid var(--line); font-size:13.5px; }
+    .np-pc .np-why { color:#b3261e; font-weight:600; }
+    .np-strow input, .np-strow select { min-height:46px; font-size:16px; }
+    .np-strow { grid-template-columns:130px minmax(140px,1fr) 150px 120px 48px; grid-template-areas:"head name type acc x" ". hint hint hint ."; gap:6px 8px; margin:4px 0 8px; }
+    .np-sthead { grid-area:head; } .npStName { grid-area:name; } .npStType { grid-area:type; } .npStAcc { grid-area:acc; } .npStX { grid-area:x; } .np-sthow { grid-area:hint; margin:0; font-size:12px; }
+    .npStX { display:flex; align-items:center; justify-content:center; color:var(--ink-soft); }
+    @media (max-width:760px){
+      .np-strow { grid-template-columns:minmax(0,1.6fr) minmax(0,1fr) 48px; grid-template-areas:"head head x" "name name name" "type acc ." "hint hint hint"; background:#fff; border:1px solid var(--line); border-radius:12px; padding:8px 4px 10px 12px; margin:10px 0; }
+      .np-strow > * { min-width:0; }
+      .np-sthead { align-self:center; font-size:15px; }
+      .np-strow .npStName, .np-strow .npStType, .np-strow .npStAcc { margin-right:8px; width:calc(100% - 8px); }
+      .np-stage .controls .primary { flex:1 1 auto; min-height:48px; }
+      .np-stage .controls .ghost { min-height:46px; }
+      .np-strow input, .np-strow select { height:46px; }
+    }
+    @media (max-width:640px){
+      .np-item { grid-template-columns:58px minmax(0,1fr) auto; grid-template-areas:"sw when end" "sw what what"; padding:8px 0; }
+      .np-sw { grid-row:1 / span 2; align-self:start; }
+      .np-when { flex-direction:row; gap:8px; align-items:baseline; }
+      #npControls .pstatus { flex-basis:100%; }
+      .np-pill { font-size:11.5px; }
+    }
+    @media (prefers-reduced-motion: reduce){ .np-swui, .np-swui::after { transition:none; } }
     .mgrid button.np { box-shadow:inset 0 0 0 2px #d9534f; background:#fdecea; }
     .calcell.nopost { background:#fdecea; }
     .nplabel { font-size:10px; line-height:1.3; color:#b3261e; font-weight:600; margin:2px 0 4px; }
@@ -1515,7 +1577,7 @@
 
         <div class="surface" id="npCard" style="padding:18px;margin-top:16px">
           <h3 style="margin:0 0 4px;font-size:15px">No Post dates <span class="muted" id="npVer" style="font-weight:400;font-size:11px;margin-left:6px">v 15 Nov · edit + undo</span></h3>
-          <p class="sub" style="margin:0 0 12px">Dates nothing may be published on: public holidays, seasons and WWA skip days. Tick <b>No Post</b> to block a date for every account (or only the accounts listed). Un-tick to unblock (you will be asked to confirm, and can undo). Un-ticking never moves a piece back on its own. The Days Off calendar above is separate: it only moves production deadlines. Sundays are always off.</p>
+          <p class="sub" style="margin:0 0 12px">Dates nothing may be published on: public holidays, seasons and WWA skip days. Switch the calendar above to <b>No Post dates</b> and tap days to add them, or use the switches below. You are asked before anything is unblocked, and every change has an Undo. Sundays are always off.</p>
           <div id="npStage" class="hidden"></div>
           <div id="npSetup" class="hidden" style="margin-bottom:12px"><span class="muted">The No Post Dates tab does not exist yet. </span><button class="primary" id="npSetupBtn">Set it up (adds the 7 standing skip days)</button></div>
           <div class="controls" id="npControls">
@@ -1523,18 +1585,18 @@
             <label class="inline">Show <select id="npShow"><option value="upcoming">Upcoming</option><option value="notyet">Not yet blocked</option><option value="blocked">Blocked</option><option value="all">Everything, including past</option></select></label>
             <span class="pstatus muted" id="npMsg"></span>
           </div>
-          <div class="tablewrap"><table><thead><tr><th>No Post</th><th>Date</th><th>Name</th><th>Country</th><th>Type</th><th>Accounts</th><th>Source</th><th>Pieces on it</th><th></th></tr></thead><tbody id="npBody"></tbody></table></div>
-          <h4 style="margin:18px 0 6px;font-size:13px">Add a date</h4>
-          <div class="controls" style="flex-wrap:wrap;gap:8px">
-            <input type="date" id="npAddDate" style="min-width:140px">
-            <input type="text" id="npAddName" placeholder="Name, e.g. Songkran" style="min-width:180px">
-            <select id="npAddCountry"><option value="All">All</option><option value="SG">SG</option><option value="TH">TH</option></select>
-            <select id="npAddType"><option>Public holiday</option><option>Season</option><option selected>WWA skip day</option></select>
-            <input type="text" id="npAddAccounts" value="All" placeholder="All, or e.g. Ice, SRU" style="min-width:140px">
-            <input type="text" id="npAddSource" placeholder="Source link (optional)" style="min-width:200px">
-            <label class="inline"><input type="checkbox" id="npAddOn" checked> Block it now</label>
-            <button class="primary" id="npAddBtn">Add</button>
-          </div>
+          <div class="np-list" id="npBody" role="list"></div>
+          <details class="np-add" id="npAddBox"><summary>Add a date by hand</summary>
+            <div class="np-addgrid">
+              <label>Date<input type="date" id="npAddDate"></label>
+              <label class="wide">Name<input type="text" id="npAddName" placeholder="e.g. Songkran"></label>
+              <label>Country<select id="npAddCountry"><option value="All">All</option><option value="SG">SG</option><option value="TH">TH</option></select></label>
+              <label>Type<select id="npAddType"><option>Public holiday</option><option>Season</option><option selected>WWA skip day</option></select></label>
+              <label>Accounts<input type="text" id="npAddAccounts" value="All" placeholder="All, or e.g. Ice, SRU"></label>
+              <label class="wide">Source link <span class="muted">(optional)</span><input type="text" id="npAddSource"></label>
+              <label class="np-chk wide"><input type="checkbox" id="npAddOn" checked> Block it now</label>
+              <div class="wide"><button class="primary" id="npAddBtn">Add</button></div>
+            </div></details>
           <h4 style="margin:18px 0 6px;font-size:13px">Unpublished pieces sitting on a No Post date</h4>
           <div id="npPieces"></div>
         </div>
@@ -5047,8 +5109,9 @@ sched,
       if(!x.on) return 0; var acc=String(x.accounts||'All').split(/[,;]/).map(function(s){return s.trim().toLowerCase();}).filter(String);
       return (onList||piecesOnNoPost()).filter(function(r){ return r['Publish Date']===x.date &&
         (acc.indexOf('all')>=0 || accountsFor(r).accounts.some(function(a){ return acc.indexOf(a.toLowerCase())>=0; })); }).length; }
-    var _npEd=null;   // row number being edited in the No Post table
+    var _npEd=null;
     function npTypeOpts(cur){ var t=['Public holiday','Season','WWA skip day']; if(cur && t.indexOf(cur)<0) t.push(cur); return t.map(function(o){ return '<option'+(o===cur?' selected':'')+'>'+esc(o)+'</option>'; }).join(''); }
+    function npAccLabel(a){ a=String(a||'All').trim(); return /^all$/i.test(a)?'All accounts':a; }
     function renderNoPost(){
       var body=$('npBody'); if(!body) return;
       var np=(META&&META.noPost)||{exists:false,dates:[]};
@@ -5062,42 +5125,48 @@ sched,
         return true; }).sort(function(a,b){ return a.date.localeCompare(b.date) || a.name.localeCompare(b.name); });
       var onList=piecesOnNoPost();
       body.innerHTML = rows.length ? rows.map(function(x){
-        var n=npPieceCount(x, onList);
-        if(_npEd===x.row) return '<tr class="np-editrow"><td><input type="checkbox" disabled'+(x.on?' checked':'')+'></td><td>'+esc(x.date)+' <span class="muted">'+esc(npWeekday(x.date))+'</span></td>'+
-          '<td><input type="text" id="npEdName" value="'+esc(x.name)+'" placeholder="Name" style="min-width:170px;margin-bottom:6px"><input type="text" id="npEdNote" value="'+esc(x.note||'')+'" placeholder="Note (optional)" style="min-width:170px"></td>'+
-          '<td>'+esc(x.country)+'</td><td><select id="npEdType">'+npTypeOpts(x.type)+'</select></td><td>'+esc(x.accounts)+'</td><td></td><td>'+(n?n:'0')+'</td>'+
-          '<td style="white-space:nowrap"><button class="primary small" id="npEdSave">Save</button> <button class="small ghost" id="npEdCancel">Cancel</button> <button class="small ghost npEdRemove" id="npEdRemove" style="color:#b3261e">Remove</button></td></tr>';
-        return '<tr><td><input type="checkbox" class="npTick" data-row="'+x.row+'" data-date="'+esc(x.date)+'"'+(x.on?' checked':'')+'></td>'+
-          '<td>'+esc(x.date)+' <span class="muted">'+esc(npWeekday(x.date))+'</span></td><td>'+esc(x.name)+(x.note?' <span class="muted">· '+esc(x.note)+'</span>':'')+'</td>'+
-          '<td>'+esc(x.country)+'</td><td>'+esc(x.type)+'</td><td>'+esc(x.accounts)+'</td>'+
-          '<td>'+(/^https?:\/\//i.test(x.source)?'<a href="'+esc(x.source)+'" target="_blank" rel="noopener">link</a>':esc(x.source))+(x.sourceRead?' <span class="muted">read '+esc(x.sourceRead)+'</span>':'')+'</td>'+
-          '<td>'+(n?'<b style="color:#b3261e">'+n+'</b>':'<span class="muted">0</span>')+'</td><td><button class="small ghost npEdit" data-row="'+x.row+'">Edit</button></td></tr>'; }).join('')
-        : '<tr><td colspan="9" class="muted">'+esc(np.exists?'Nothing matches these filters.':'Set up the tab to start.')+'</td></tr>';
+        var n=npPieceCount(x, onList), link=/^https?:\/\//i.test(x.source) ? ' · <a href="'+esc(x.source)+'" target="_blank" rel="noopener">source</a>' : (x.source?' · '+esc(x.source):'');
+        return '<div class="np-item'+(x.on?' on':'')+'" role="listitem">'+
+          '<label class="np-sw" title="'+(x.on?'Blocked. Tap to unblock.':'Not blocked. Tap to block.')+'"><input type="checkbox" class="npTick" data-row="'+x.row+'" data-date="'+esc(x.date)+'"'+(x.on?' checked':'')+' aria-label="No Post: '+esc(x.name)+', '+esc(x.date)+'"><span class="np-swui" aria-hidden="true"></span></label>'+
+          '<div class="np-when"><b>'+esc(niceDate(x.date))+'</b>'+(x.date.slice(0,4)!==today.slice(0,4)?'<span>'+esc(x.date.slice(0,4))+'</span>':'')+'</div>'+
+          '<div class="np-what"><div class="np-name">'+esc(x.name)+'</div><div class="np-meta">'+esc(x.country)+' · '+esc(x.type)+' · '+esc(npAccLabel(x.accounts))+(x.note?' · '+esc(x.note):'')+link+'</div></div>'+
+          '<div class="np-end">'+(n?'<span class="np-pill" title="Unpublished pieces on this date">'+n+' piece'+(n>1?'s':'')+'</span>':'')+'<button type="button" class="np-edit npEdit" data-row="'+x.row+'" aria-label="Edit '+esc(x.name)+'">Edit</button></div></div>'; }).join('')
+        : '<div class="np-empty">'+esc(np.exists?'Nothing matches these filters.':'Set up the tab to start.')+'</div>';
       Array.prototype.forEach.call(body.querySelectorAll('.npTick'), function(cb){
         cb.onchange=async function(){
           if(!cb.checked){ cb.checked=true; var ok=await npConfirmUnblock(cb.dataset.date, cb); if(!ok) return; cb.checked=false; }
           saveNoPost({changes:[{row:Number(cb.dataset.row), date:cb.dataset.date, on:cb.checked}]}, cb.dataset.date, cb.checked, cb); }; });
-      Array.prototype.forEach.call(body.querySelectorAll('.npEdit'), function(b){ b.onclick=function(){ _npEd=Number(b.dataset.row); renderNoPost(); var f=$('npEdName'); if(f){ f.focus(); f.select(); } }; });
-      if(_npEd!==null){
-        var ex=noPostList().filter(function(x){ return x.row===_npEd; })[0];
-        var sv=$('npEdSave'), cn=$('npEdCancel');
-        if(!ex){ _npEd=null; }
-        else if(sv && cn){
-          sv.onclick=function(){ npSaveEdit(ex); }; cn.onclick=function(){ _npEd=null; renderNoPost(); };
-          var rm=$('npEdRemove'); if(rm) rm.onclick=function(){ npRemoveEntry(ex, rm); };
-          ['npEdName','npEdNote'].forEach(function(id){ var f=$(id); if(f) f.onkeydown=function(e){ if(e.key==='Enter'){ e.preventDefault(); npSaveEdit(ex); } else if(e.key==='Escape'){ _npEd=null; renderNoPost(); } }; });
-        }
-      }
+      Array.prototype.forEach.call(body.querySelectorAll('.npEdit'), function(b){
+        b.onclick=function(){ var x=noPostList().filter(function(v){ return v.row===Number(b.dataset.row); })[0]; if(x) npOpenEdit(x, b); }; });
       var ps=piecesOnNoPost(), host=$('npPieces');
       host.innerHTML = ps.length
-        ? '<div class="tablewrap"><table><thead><tr><th>Piece ID</th><th>Client</th><th>Format</th><th>Publish Date</th><th>Why</th></tr></thead><tbody>'+ps.map(function(r){
+        ? '<div class="np-pcs">'+ps.map(function(r){
             var h=noPostHit(r['Publish Date'], accountsFor(r).accounts);
-            return '<tr><td>'+esc(r['Piece ID'])+'</td><td>'+esc(r['Client'])+'</td><td>'+esc(r['Format']||'')+'</td><td>'+esc(r['Publish Date'])+' <span class="muted">'+esc(npWeekday(r['Publish Date']))+'</span></td><td style="color:#b3261e">'+esc(h?h.name:'')+'</td></tr>'; }).join('')+'</tbody></table></div>'+
+            return '<div class="np-pc"><b>'+esc(r['Piece ID'])+'</b><span>'+esc(r['Client'])+' · '+esc(r['Format']||'')+'</span><span>'+esc(r['Publish Date'])+' '+esc(npWeekday(r['Publish Date']))+'</span><span class="np-why">'+esc(h?h.name:'')+'</span></div>'; }).join('')+'</div>'+
           '<div class="controls" style="margin-top:10px"><button class="primary" id="npPlanBtn">Plan the moves</button><span class="muted">Shows where each piece would go. Nothing changes until you accept.</span></div>'
         : '<p class="muted" style="margin:0">None. No unpublished piece sits on a No Post date.</p>';
       var pb=host.querySelector('#npPlanBtn'); if(pb) pb.onclick=function(){ openNoPostPlan(pb, {}); };
       var pubOn=(allRows||[]).filter(function(r){ return /Published/i.test(r['Stage']||'') && r['Publish Date'] && r['Publish Date']>=todayISO() && noPostHit(r['Publish Date'], accountsFor(r).accounts); });
       if(pubOn.length) host.insertAdjacentHTML('beforeend','<p class="muted" style="margin:10px 0 0">'+pubOn.length+' published piece(s) sit on a No Post date ('+esc(pubOn.map(function(r){ return r['Piece ID']; }).join(', '))+'). They stay as they are.</p>');
+    }
+    // Edit Name / Type / Note in a sheet: a bottom sheet on a phone, a centred card on desktop. Cancel changes nothing.
+    function npOpenEdit(x, trigger){
+      var body='<div class="np-form"><label><span>Name</span><input type="text" id="npEdName" value="'+esc(x.name)+'" autocomplete="off"></label>'+
+        '<label><span>Type</span><select id="npEdType">'+npTypeOpts(x.type)+'</select></label>'+
+        '<label><span>Note <span class="muted">(optional)</span></span><input type="text" id="npEdNote" value="'+esc(x.note||'')+'" autocomplete="off"></label>'+
+        '<p class="np-fixed">'+esc(niceDate(x.date))+' '+esc(x.date.slice(0,4))+' · '+esc(x.country)+' · '+esc(npAccLabel(x.accounts))+'. To change the date or the accounts, remove this one and add it again.</p>'+
+        '<button type="button" class="np-rm" id="npEdRm">Remove this date…</button></div>';
+      var h=OSheet.open({ trigger:trigger, narrow:true, title:'Edit No Post date', sub:esc(niceDate(x.date))+' '+esc(x.date.slice(0,4)), body:body,
+        actions:[ {label:'Cancel'}, {label:'Save', kind:'primary', run:async function(sh){
+          var nm=($('npEdName').value||'').trim(), ty=$('npEdType').value, nt=($('npEdNote').value||'').trim();
+          if(!nm){ sh.error('Give the date a name.'); return false; }
+          sh.busy(true); var data=await call('setNoPost',{edits:[{row:x.row,date:x.date,name:nm,type:ty,note:nt}]}); sh.busy(false);
+          if(!data.ok){ sh.error(data.error||'Could not save.'); return false; }
+          META.noPost=data.result.noPost; renderCalTab(); try{ renderPdCalendar(); }catch(e){}
+          npSay('ok','Saved.'); return true; } } ] });
+      var rm=h.el.querySelector('#npEdRm'); if(rm) rm.onclick=function(){ OSheet.close(); setTimeout(function(){ npRemoveEntry(x, trigger); }, 260); };
+      Array.prototype.forEach.call(h.el.querySelectorAll('#npEdName,#npEdNote'), function(f){ f.onkeydown=function(e){ if(e.key==='Enter'){ e.preventDefault(); var p=h.el.querySelector('.osh-actions .primary'); if(p) p.click(); } }; });
+      if(window.matchMedia && window.matchMedia('(hover:hover)').matches) setTimeout(function(){ var f=$('npEdName'); if(f){ f.focus(); f.select(); } }, 80);   // no keyboard pop-up on touch
     }
     // Block / Unblock straight from a Publish Dates calendar cell. Same save, same plan sheet, same undo as Team Calendar.
     async function npCellToggle(iso, client, btn){
@@ -5171,12 +5240,12 @@ sched,
       host.innerHTML='<div class="np-stage"><h4 style="margin:0 0 2px;font-size:14px">'+ks.length+' new No Post date'+(ks.length>1?'s':'')+'</h4>'+
         '<p class="muted" style="margin:0 0 10px">Give each one a name. Suggested names come from your own list and the usual holiday dates, so change any that are wrong. Applies to every account unless you list some.</p>'+
         ks.map(function(d){ var s=NP_SEL[d];
-          return '<div class="np-strow" data-d="'+d+'"><div><b>'+esc(niceDate(d))+'</b></div>'+
-            '<input type="text" class="npStName" value="'+esc(s.name)+'" placeholder="Name it, e.g. Songkran" aria-label="Name for '+esc(d)+'">'+
+          return '<div class="np-strow" data-d="'+d+'"><div class="np-sthead"><b>'+esc(niceDate(d))+'</b>'+(d.slice(0,4)!==todayISO().slice(0,4)?' <span class="muted">'+esc(d.slice(0,4))+'</span>':'')+'</div>'+
+            '<input type="text" class="npStName" value="'+esc(s.name)+'" placeholder="Name it, e.g. Songkran" aria-label="Name for '+esc(d)+'" autocomplete="off">'+
             '<select class="npStType" aria-label="Type">'+npTypeOpts(s.type)+'</select>'+
-            '<input type="text" class="npStAcc" value="'+esc(s.accounts)+'" aria-label="Accounts" title="All, or e.g. Ice, SRU">'+
-            '<button type="button" class="linkbtn npStX" aria-label="Remove '+esc(d)+' from the list">✕</button></div>'+
-            (s.how?'<div class="muted np-sthow">Suggested from '+esc(s.how)+'</div>':''); }).join('')+
+            '<input type="text" class="npStAcc" value="'+esc(s.accounts)+'" aria-label="Accounts" title="All, or e.g. Ice, SRU" autocomplete="off">'+
+            '<button type="button" class="linkbtn npStX" aria-label="Remove '+esc(d)+' from the list">✕</button>'+
+            (s.how?'<div class="muted np-sthow">Suggested from '+esc(s.how)+'. Change it if it is wrong.</div>':'')+'</div>'; }).join('')+
         '<div class="controls" style="margin-top:10px"><button class="primary" id="npStBlock">Block '+ks.length+' date'+(ks.length>1?'s':'')+'</button><button class="ghost" id="npStClear">Clear selection</button></div></div>';
       Array.prototype.forEach.call(host.querySelectorAll('.np-strow'), function(row){
         var d=row.dataset.d;
