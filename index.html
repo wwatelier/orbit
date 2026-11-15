@@ -186,6 +186,13 @@
     .calcell .npbtn:disabled { opacity:.5; cursor:default; }
     @media (hover:none){ .calcell .npbtn { opacity:.85; min-height:30px; padding:6px 9px; } }
     @media (prefers-reduced-motion: reduce){ .calcell .npbtn { transition:none; } }
+    .mgrid button.sel { box-shadow:inset 0 0 0 2px var(--brand); background:var(--brand-soft); font-weight:700; }
+    .np-stage { border:1px solid var(--line); border-radius:12px; padding:14px; margin:0 0 14px; background:#fbfbfa; }
+    .np-strow { display:grid; grid-template-columns:150px minmax(150px,1fr) 150px 100px 44px; gap:8px; align-items:center; margin:6px 0; }
+    .np-strow input, .np-strow select { min-width:0; width:100%; }
+    .np-sthow { font-size:11.5px; margin:-2px 0 4px 158px; }
+    .npStX { min-height:44px; min-width:44px; }
+    @media (max-width:760px){ .np-strow { grid-template-columns:minmax(0,1fr) 44px; } .np-strow > :nth-child(n+2):nth-child(-n+4){ grid-column:1 / -1; } .np-sthow { margin-left:0; } }
     .mgrid button.np { box-shadow:inset 0 0 0 2px #d9534f; background:#fdecea; }
     .calcell.nopost { background:#fdecea; }
     .nplabel { font-size:10px; line-height:1.3; color:#b3261e; font-weight:600; margin:2px 0 4px; }
@@ -1493,6 +1500,7 @@
       <section class="hidden" id="tab-calendar">
         <div class="head"><div><h2>Team Calendar</h2><p class="sub">Mark the days the team is not working. Sundays are always off. Production deadlines move off these days and work is spread out so nobody comes back to a pile-up. Publish dates never move.</p></div></div>
         <div class="controls">
+          <span class="seg" id="calMode" role="group" aria-label="What are you marking?"><button data-m="off" class="on">Team days off</button><button data-m="nopost">No Post dates</button></span>
           <label class="inline">Marking for
             <select id="doScope"><option value="All">Everyone</option><option value="Graphic Designer">Graphic Designer</option><option value="Video Editor">Video Editor</option></select>
           </label>
@@ -1506,15 +1514,16 @@
         <div class="surface" style="padding:18px;margin-top:16px"><div id="doGrid" class="yeargrid"></div></div>
 
         <div class="surface" id="npCard" style="padding:18px;margin-top:16px">
-          <h3 style="margin:0 0 4px;font-size:15px">No Post dates</h3>
-          <p class="sub" style="margin:0 0 12px">Dates nothing may be published on: public holidays, seasons and WWA skip days. Tick <b>No Post</b> to block a date for every account (or only the accounts listed). Un-tick to unblock. Un-ticking never moves a piece back. The Days Off calendar above is separate: it only moves production deadlines. Sundays are always off.</p>
+          <h3 style="margin:0 0 4px;font-size:15px">No Post dates <span class="muted" id="npVer" style="font-weight:400;font-size:11px;margin-left:6px">v 15 Nov · edit + undo</span></h3>
+          <p class="sub" style="margin:0 0 12px">Dates nothing may be published on: public holidays, seasons and WWA skip days. Tick <b>No Post</b> to block a date for every account (or only the accounts listed). Un-tick to unblock (you will be asked to confirm, and can undo). Un-ticking never moves a piece back on its own. The Days Off calendar above is separate: it only moves production deadlines. Sundays are always off.</p>
+          <div id="npStage" class="hidden"></div>
           <div id="npSetup" class="hidden" style="margin-bottom:12px"><span class="muted">The No Post Dates tab does not exist yet. </span><button class="primary" id="npSetupBtn">Set it up (adds the 7 standing skip days)</button></div>
           <div class="controls" id="npControls">
             <label class="inline">Country <select id="npCountry"><option value="">Any</option><option value="SG">SG</option><option value="TH">TH</option><option value="All">All</option></select></label>
             <label class="inline">Show <select id="npShow"><option value="upcoming">Upcoming</option><option value="notyet">Not yet blocked</option><option value="blocked">Blocked</option><option value="all">Everything, including past</option></select></label>
             <span class="pstatus muted" id="npMsg"></span>
           </div>
-          <div class="tablewrap"><table><thead><tr><th>No Post</th><th>Date</th><th>Name</th><th>Country</th><th>Type</th><th>Accounts</th><th>Source</th><th>Pieces on it</th></tr></thead><tbody id="npBody"></tbody></table></div>
+          <div class="tablewrap"><table><thead><tr><th>No Post</th><th>Date</th><th>Name</th><th>Country</th><th>Type</th><th>Accounts</th><th>Source</th><th>Pieces on it</th><th></th></tr></thead><tbody id="npBody"></tbody></table></div>
           <h4 style="margin:18px 0 6px;font-size:13px">Add a date</h4>
           <div class="controls" style="flex-wrap:wrap;gap:8px">
             <input type="date" id="npAddDate" style="min-width:140px">
@@ -3136,6 +3145,8 @@
           var npP=String(b).split(' · '), npW=npP[0]||'', npD=npP[1]||'', npN=npP.slice(2).join(' · ');
           if(npW==='on') return _L('blocked ','ตั้งเป็นวันห้ามโพสต์ ')+_logB(npN||npD)+_logSoft(esc(_logDate(npD)));
           if(npW==='off') return _L('unblocked ','ยกเลิกวันห้ามโพสต์ ')+_logB(npN||npD)+_logSoft(esc(_logDate(npD)));
+          if(npW==='removed') return _L('removed the No Post date ','ลบวันห้ามโพสต์ ')+_logB(npN||npD)+_logSoft(esc(_logDate(npD)));
+          if(npW==='edited') return _L('edited the No Post date ','แก้ไขวันห้ามโพสต์ ')+_logB(npN||npD)+_logSoft(esc(_logDate(npD)));
           if(npW==='added') return _L('added a No Post date: ','เพิ่มวันห้ามโพสต์: ')+_logB(npN||npD)+_logSoft(esc(_logDate(npD)));
           return _L('set up the No Post Dates tab','ตั้งค่าแท็บวันห้ามโพสต์');
         case 'days off':
@@ -4687,6 +4698,7 @@ sched,
         .sort(function(a,b){ return (a['Publish Date']||'').localeCompare(b['Publish Date']||'') || String(a['Piece ID']).localeCompare(String(b['Piece ID'])); });
     }
 
+    var YR_MODE='off', NP_SEL={}, NP_LAST=null;   // year calendar mode; staged No Post dates (iso -> fields)
     function renderYearCal(){
       var host=$('doGrid'); if(!host) return;
       var y=$('doYear'); if(y) y.textContent=DO_YEAR;
@@ -4709,9 +4721,10 @@ sched,
             var inherited=(scope!=='All') && daysOffList().some(function(x){ return x.date===iso && x.scope==='All'; });
             if(own){ cls.push('off'); offCount++; }
             else if(inherited){ cls.push('inh'); offCount++;
-              dis=' disabled title="Off for everyone. Switch to Everyone to change it."'; }
+              if(YR_MODE!=='nopost') dis=' disabled title="Off for everyone. Switch to Everyone to change it."'; }
           }
           if(iso===todayIso) cls.push('today');
+          if(YR_MODE==='nopost' && NP_SEL[iso]) cls.push('sel');
           var _npY=(dt.getDay()!==0) ? noPostHit(iso, []) : null, npTitle='';
           if(_npY){ cls.push('np'); if(dis.indexOf('title=')<0) npTitle=' title="'+esc('No Post: '+_npY.name)+'"'; }
           cells+='<button class="'+cls.join(' ')+'" data-d="'+iso+'"'+dis+npTitle+'>'+day+'</button>';
@@ -4720,6 +4733,7 @@ sched,
               '<div class="mgrid">'+DN.map(function(x){return '<span class="dh">'+x+'</span>';}).join('')+cells+'</div></div>';
       }
       host.innerHTML=html;
+      if(YR_MODE==='nopost'){ npWireYear(host); return; }
       var lastClicked=null;
       Array.prototype.forEach.call(host.querySelectorAll('.mgrid button[data-d]'), function(b){
         b.onclick=function(e){
@@ -4754,6 +4768,12 @@ sched,
     }
     (function(){
       var sc=$('doScope'); if(sc) sc.onchange=renderYearCal;
+      Array.prototype.forEach.call(document.querySelectorAll('#calMode button'), function(b){ b.onclick=function(){
+        YR_MODE=b.dataset.m; NP_SEL={}; NP_LAST=null;
+        Array.prototype.forEach.call(document.querySelectorAll('#calMode button'), function(x){ x.classList.toggle('on', x===b); });
+        var dm=$('doMsg'), s2=$('doScope'); if(s2) s2.disabled=(YR_MODE==='nopost');
+        if(dm){ dm.className='pstatus muted'; dm.textContent = YR_MODE==='nopost' ? 'Click days to pick them, shift-click for a range. Name them in the list below, then Block.' : 'Click a day to mark it off. Click again to clear it. Shift-click to mark a range.'; }
+        renderYearCal(); renderNpStage(); }; });
       var pv=$('doPrevYear'); if(pv) pv.onclick=function(){ DO_YEAR--; renderYearCal(); };
       var nx=$('doNextYear'); if(nx) nx.onclick=function(){ DO_YEAR++; renderYearCal(); };
     })();
@@ -5021,12 +5041,14 @@ sched,
             npRefreshViews(); return true; } } ] });
     }
     // ── No Post card (Team Calendar tab) ──
-    function renderCalTab(){ renderYearCal(); renderNoPost(); }
+    function renderCalTab(){ renderYearCal(); renderNoPost(); renderNpStage(); }
     function npWeekday(ymd){ var d=new Date(ymd+'T00:00:00'); return isNaN(d)?'':d.toLocaleDateString('en-GB',{weekday:'short'}); }
     function npPieceCount(x, onList){
       if(!x.on) return 0; var acc=String(x.accounts||'All').split(/[,;]/).map(function(s){return s.trim().toLowerCase();}).filter(String);
       return (onList||piecesOnNoPost()).filter(function(r){ return r['Publish Date']===x.date &&
         (acc.indexOf('all')>=0 || accountsFor(r).accounts.some(function(a){ return acc.indexOf(a.toLowerCase())>=0; })); }).length; }
+    var _npEd=null;   // row number being edited in the No Post table
+    function npTypeOpts(cur){ var t=['Public holiday','Season','WWA skip day']; if(cur && t.indexOf(cur)<0) t.push(cur); return t.map(function(o){ return '<option'+(o===cur?' selected':'')+'>'+esc(o)+'</option>'; }).join(''); }
     function renderNoPost(){
       var body=$('npBody'); if(!body) return;
       var np=(META&&META.noPost)||{exists:false,dates:[]};
@@ -5041,14 +5063,31 @@ sched,
       var onList=piecesOnNoPost();
       body.innerHTML = rows.length ? rows.map(function(x){
         var n=npPieceCount(x, onList);
+        if(_npEd===x.row) return '<tr class="np-editrow"><td><input type="checkbox" disabled'+(x.on?' checked':'')+'></td><td>'+esc(x.date)+' <span class="muted">'+esc(npWeekday(x.date))+'</span></td>'+
+          '<td><input type="text" id="npEdName" value="'+esc(x.name)+'" placeholder="Name" style="min-width:170px;margin-bottom:6px"><input type="text" id="npEdNote" value="'+esc(x.note||'')+'" placeholder="Note (optional)" style="min-width:170px"></td>'+
+          '<td>'+esc(x.country)+'</td><td><select id="npEdType">'+npTypeOpts(x.type)+'</select></td><td>'+esc(x.accounts)+'</td><td></td><td>'+(n?n:'0')+'</td>'+
+          '<td style="white-space:nowrap"><button class="primary small" id="npEdSave">Save</button> <button class="small ghost" id="npEdCancel">Cancel</button> <button class="small ghost npEdRemove" id="npEdRemove" style="color:#b3261e">Remove</button></td></tr>';
         return '<tr><td><input type="checkbox" class="npTick" data-row="'+x.row+'" data-date="'+esc(x.date)+'"'+(x.on?' checked':'')+'></td>'+
           '<td>'+esc(x.date)+' <span class="muted">'+esc(npWeekday(x.date))+'</span></td><td>'+esc(x.name)+(x.note?' <span class="muted">· '+esc(x.note)+'</span>':'')+'</td>'+
           '<td>'+esc(x.country)+'</td><td>'+esc(x.type)+'</td><td>'+esc(x.accounts)+'</td>'+
           '<td>'+(/^https?:\/\//i.test(x.source)?'<a href="'+esc(x.source)+'" target="_blank" rel="noopener">link</a>':esc(x.source))+(x.sourceRead?' <span class="muted">read '+esc(x.sourceRead)+'</span>':'')+'</td>'+
-          '<td>'+(n?'<b style="color:#b3261e">'+n+'</b>':'<span class="muted">0</span>')+'</td></tr>'; }).join('')
-        : '<tr><td colspan="8" class="muted">'+esc(np.exists?'Nothing matches these filters.':'Set up the tab to start.')+'</td></tr>';
+          '<td>'+(n?'<b style="color:#b3261e">'+n+'</b>':'<span class="muted">0</span>')+'</td><td><button class="small ghost npEdit" data-row="'+x.row+'">Edit</button></td></tr>'; }).join('')
+        : '<tr><td colspan="9" class="muted">'+esc(np.exists?'Nothing matches these filters.':'Set up the tab to start.')+'</td></tr>';
       Array.prototype.forEach.call(body.querySelectorAll('.npTick'), function(cb){
-        cb.onchange=function(){ saveNoPost({changes:[{row:Number(cb.dataset.row), date:cb.dataset.date, on:cb.checked}]}, cb.dataset.date, cb.checked, cb); }; });
+        cb.onchange=async function(){
+          if(!cb.checked){ cb.checked=true; var ok=await npConfirmUnblock(cb.dataset.date, cb); if(!ok) return; cb.checked=false; }
+          saveNoPost({changes:[{row:Number(cb.dataset.row), date:cb.dataset.date, on:cb.checked}]}, cb.dataset.date, cb.checked, cb); }; });
+      Array.prototype.forEach.call(body.querySelectorAll('.npEdit'), function(b){ b.onclick=function(){ _npEd=Number(b.dataset.row); renderNoPost(); var f=$('npEdName'); if(f){ f.focus(); f.select(); } }; });
+      if(_npEd!==null){
+        var ex=noPostList().filter(function(x){ return x.row===_npEd; })[0];
+        var sv=$('npEdSave'), cn=$('npEdCancel');
+        if(!ex){ _npEd=null; }
+        else if(sv && cn){
+          sv.onclick=function(){ npSaveEdit(ex); }; cn.onclick=function(){ _npEd=null; renderNoPost(); };
+          var rm=$('npEdRemove'); if(rm) rm.onclick=function(){ npRemoveEntry(ex, rm); };
+          ['npEdName','npEdNote'].forEach(function(id){ var f=$(id); if(f) f.onkeydown=function(e){ if(e.key==='Enter'){ e.preventDefault(); npSaveEdit(ex); } else if(e.key==='Escape'){ _npEd=null; renderNoPost(); } }; });
+        }
+      }
       var ps=piecesOnNoPost(), host=$('npPieces');
       host.innerHTML = ps.length
         ? '<div class="tablewrap"><table><thead><tr><th>Piece ID</th><th>Client</th><th>Format</th><th>Publish Date</th><th>Why</th></tr></thead><tbody>'+ps.map(function(r){
@@ -5074,26 +5113,144 @@ sched,
         var applies=function(x){ if(!client) return true; var a=String(x.accounts||'All').split(/[,;]/).map(function(v){return v.trim().toLowerCase();}); return a.indexOf('all')>=0 || a.indexOf(String(client).toLowerCase())>=0; };
         var list=noPostList().filter(function(x){ return x.date===iso && applies(x); });
         var on=list.filter(function(x){ return x.on; }), off=list.filter(function(x){ return !x.on; }), payload, turnOn;
-        if(on.length){ turnOn=false; payload={changes:on.map(function(x){ return {row:x.row,date:iso,on:false}; })}; }
+        if(on.length){ turnOn=false; btn.disabled=false; var okU=await npConfirmUnblock(iso, btn); if(!okU){ return; } btn.disabled=true; payload={changes:on.map(function(x){ return {row:x.row,date:iso,on:false}; })}; }
         else if(off.length){ turnOn=true; payload={changes:[{row:off[0].row,date:iso,on:true}]}; }
         else { turnOn=true; payload={add:[{date:iso,name:'No Post day',country:'All',type:'WWA skip day',accounts:'All',source:'',note:'',on:true}]}; }
         say('muted','Saving…');
         var ok=await saveNoPost(payload, iso, turnOn, btn);
-        var src=$('npMsg'), m=$('pdNpMsg');
-        if(m && src){ m.className=src.className; m.textContent=(ok && payload.add) ? ('Blocked '+iso+' as "No Post day". Rename it in Team Calendar if you like.') : src.textContent; }
+        if(ok && payload.add) npSay('ok','Blocked '+iso+' as "No Post day". Rename it with Edit in Team Calendar.');
       }catch(e){ say('err',shortErr(e.message||e)); }
       var nb=document.querySelector('#pdCalGrid .npbtn[data-d="'+iso+'"]'); if(nb) nb.disabled=false; btn.disabled=false;
     }
+    async function npSaveEdit(x){
+      var msg=$('npMsg'), nm=($('npEdName').value||'').trim(), ty=$('npEdType').value, nt=($('npEdNote').value||'').trim(), sb=$('npEdSave');
+      if(!nm){ if(msg){ msg.className='pstatus err'; msg.textContent='Give the date a name.'; } return; }
+      if(sb) sb.disabled=true; if(msg){ msg.className='pstatus muted'; msg.textContent='Saving…'; }
+      var data=await call('setNoPost',{edits:[{row:x.row,date:x.date,name:nm,type:ty,note:nt}]});
+      if(!data.ok){ if(msg){ msg.className='pstatus err'; msg.textContent=data.error||'Could not save.'; } if(sb) sb.disabled=false; return; }
+      META.noPost=data.result.noPost; _npEd=null; renderCalTab(); try{ renderPdCalendar(); }catch(e){}
+      if(msg){ msg.className='pstatus ok'; msg.textContent='Saved.'; }
+    }
+    // ── Pick dates on the year calendar, name them in a list, block them in one go ──
+    var NP_FIXED={'01-01':["New Year's Day",'Public holiday','All'],'04-13':['Songkran','Season','TH'],'04-14':['Songkran','Season','TH'],'04-15':['Songkran','Season','TH'],'05-01':['Labour Day','Public holiday','All'],
+      '07-28':["King's Birthday",'Public holiday','TH'],'08-09':['National Day','Public holiday','SG'],'08-12':["Mother's Day",'Public holiday','TH'],'10-23':['Chulalongkorn Day','Public holiday','TH'],
+      '12-05':["Father's Day",'Public holiday','TH'],'12-10':['Constitution Day','Public holiday','TH'],'12-24':['Christmas Eve','WWA skip day','All'],'12-25':['Christmas Day','WWA skip day','All'],'12-31':["New Year's Eve",'WWA skip day','All']};
+    var NP_FIXED_Y={'2027-02-06':['Chinese New Year','Public holiday','All']};
+    // The system "learns" from your own list first (same month and day in any year), then the usual fixed holiday dates.
+    function npSuggest(iso){
+      var md=iso.slice(5), seen=noPostList().filter(function(x){ return x.date.slice(5)===md && x.name; })[0];
+      if(seen) return {name:seen.name,type:seen.type||'WWA skip day',country:seen.country||'All',how:'same day in your list'};
+      var f=NP_FIXED_Y[iso]||NP_FIXED[md]; if(f) return {name:f[0],type:f[1],country:f[2],how:'the usual date'};
+      return {name:'',type:'WWA skip day',country:'All',how:''};
+    }
+    function npWireYear(host){
+      Array.prototype.forEach.call(host.querySelectorAll('.mgrid button[data-d]'), function(b){
+        b.onclick=function(e){
+          var iso=b.dataset.d, range=[iso];
+          if(e.shiftKey && NP_LAST){
+            var a=NP_LAST<iso?NP_LAST:iso, z=NP_LAST<iso?iso:NP_LAST; range=[]; var d=new Date(a+'T00:00:00'), end=new Date(z+'T00:00:00');
+            while(d<=end){ if(d.getDay()!==0) range.push(isoOf(d)); d=new Date(d.getTime()+86400000); } }
+          NP_LAST=iso;
+          var turnOn=!NP_SEL[iso], skipped=[];
+          range.forEach(function(d){
+            var ex=noPostList().filter(function(x){ return x.date===d; })[0];
+            if(ex){ skipped.push(ex); return; }
+            if(turnOn){ var s=npSuggest(d); NP_SEL[d]={name:s.name,type:s.type,country:s.country,accounts:'All',how:s.how}; } else delete NP_SEL[d]; });
+          if(skipped.length) npSay('muted', skipped.length===1
+            ? (niceDate(skipped[0].date)+' is already in the list as "'+skipped[0].name+'"'+(skipped[0].on?' and blocked.':', not ticked yet. Tick it below.'))
+            : (skipped.length+' of those days are already in the list and were skipped. See the table below.'));
+          else npSay('muted', Object.keys(NP_SEL).length ? 'Name them in the list below, then press Block.' : '');
+          renderYearCal(); renderNpStage();
+        }; });
+    }
+    function renderNpStage(){
+      var host=$('npStage'); if(!host) return;
+      var ks=Object.keys(NP_SEL).sort();
+      if(!ks.length){ host.classList.add('hidden'); host.innerHTML=''; return; }
+      host.classList.remove('hidden');
+      host.innerHTML='<div class="np-stage"><h4 style="margin:0 0 2px;font-size:14px">'+ks.length+' new No Post date'+(ks.length>1?'s':'')+'</h4>'+
+        '<p class="muted" style="margin:0 0 10px">Give each one a name. Suggested names come from your own list and the usual holiday dates, so change any that are wrong. Applies to every account unless you list some.</p>'+
+        ks.map(function(d){ var s=NP_SEL[d];
+          return '<div class="np-strow" data-d="'+d+'"><div><b>'+esc(niceDate(d))+'</b></div>'+
+            '<input type="text" class="npStName" value="'+esc(s.name)+'" placeholder="Name it, e.g. Songkran" aria-label="Name for '+esc(d)+'">'+
+            '<select class="npStType" aria-label="Type">'+npTypeOpts(s.type)+'</select>'+
+            '<input type="text" class="npStAcc" value="'+esc(s.accounts)+'" aria-label="Accounts" title="All, or e.g. Ice, SRU">'+
+            '<button type="button" class="linkbtn npStX" aria-label="Remove '+esc(d)+' from the list">✕</button></div>'+
+            (s.how?'<div class="muted np-sthow">Suggested from '+esc(s.how)+'</div>':''); }).join('')+
+        '<div class="controls" style="margin-top:10px"><button class="primary" id="npStBlock">Block '+ks.length+' date'+(ks.length>1?'s':'')+'</button><button class="ghost" id="npStClear">Clear selection</button></div></div>';
+      Array.prototype.forEach.call(host.querySelectorAll('.np-strow'), function(row){
+        var d=row.dataset.d;
+        row.querySelector('.npStName').oninput=function(e){ NP_SEL[d].name=e.target.value; };
+        row.querySelector('.npStType').onchange=function(e){ NP_SEL[d].type=e.target.value; };
+        row.querySelector('.npStAcc').oninput=function(e){ NP_SEL[d].accounts=e.target.value; };
+        row.querySelector('.npStX').onclick=function(){ delete NP_SEL[d]; renderYearCal(); renderNpStage(); };
+      });
+      $('npStClear').onclick=function(){ NP_SEL={}; npSay('muted',''); renderYearCal(); renderNpStage(); };
+      $('npStBlock').onclick=npSaveStage;
+    }
+    async function npSaveStage(){
+      var ks=Object.keys(NP_SEL).sort(), bad=ks.filter(function(d){ return !String(NP_SEL[d].name||'').trim(); });
+      if(bad.length){ npSay('err','Give '+(bad.length>1?'each date':niceDate(bad[0]))+' a name first.'); var f=document.querySelector('.np-strow[data-d="'+bad[0]+'"] .npStName'); if(f) f.focus(); return; }
+      var btn=$('npStBlock'); if(btn) btn.disabled=true; npSay('muted','Saving…');
+      var data=await call('setNoPost',{add:ks.map(function(d){ var s=NP_SEL[d]; return {date:d,name:s.name.trim(),country:s.country||'All',type:s.type||'WWA skip day',accounts:(s.accounts||'All').trim()||'All',source:'',note:'',on:true}; })});
+      if(!data.ok){ npSay('err',data.error||'Could not save.'); if(btn) btn.disabled=false; return; }
+      META.noPost=data.result.noPost;
+      var made=[]; ks.forEach(function(d){ var nm=NP_SEL[d].name.trim().toLowerCase(); var r=noPostList().filter(function(x){ return x.date===d && x.name.toLowerCase()===nm; })[0]; if(r) made.push({row:r.row,date:d}); });
+      NP_SEL={}; NP_LAST=null; renderCalTab(); try{ renderPdCalendar(); }catch(e){}
+      var n=piecesOnNoPost().filter(function(r){ return ks.indexOf(r['Publish Date'])>=0; }).length;
+      npSay('ok','Blocked '+ks.length+' date'+(ks.length>1?'s':'')+'.'+(n?' '+n+' unpublished piece(s) sit on them.':''), function(b){ npRemoveRows(made, b); });
+      if(n) npOfferPlan(ks, $('npCard'));
+    }
+    async function npRemoveRows(rows, btn){
+      var data=await call('setNoPost',{remove:rows});
+      if(!data.ok){ npSay('err',data.error||'Could not undo.'); if(btn) btn.disabled=false; return; }
+      META.noPost=data.result.noPost; renderCalTab(); try{ renderPdCalendar(); }catch(e){}
+      npSay('ok','Undone. '+rows.length+' date'+(rows.length>1?'s':'')+' removed from the list.');
+    }
+    // Confirm with the SAFE choice as the prominent default (it takes the Enter key).
+    function npAsk(trigger, title, sub, body, doLabel, keepLabel){
+      return new Promise(function(res){ OSheet.open({ trigger:trigger, narrow:true, title:title, sub:sub, body:body, onClose:function(v){ res(v===true); },
+        actions:[ {label:doLabel, value:true}, {label:keepLabel, kind:'primary', value:false} ] }); });
+    }
+    async function npRemoveEntry(x, trigger){
+      var ok=await npAsk(trigger,'Remove '+niceDate(x.date)+' from the list?',esc(x.name),
+        '<p>This deletes the row from the No Post Dates tab'+(x.on?'. The day stops being blocked unless another row covers it':'')+'. There will be an Undo.</p>','Remove it','Keep it');
+      if(!ok) return;
+      var data=await call('setNoPost',{remove:[{row:x.row,date:x.date}]});
+      if(!data.ok){ npSay('err',data.error||'Could not remove.'); return; }
+      META.noPost=data.result.noPost; _npEd=null; renderCalTab(); try{ renderPdCalendar(); }catch(e){}
+      var back={date:x.date,name:x.name,country:x.country,type:x.type,accounts:x.accounts,source:x.source||'',note:x.note||'',on:x.on,force:true};
+      npSay('ok','Removed '+x.date+' · '+x.name+'.', async function(b){
+        var d2=await call('setNoPost',{add:[back]});
+        if(!d2.ok){ npSay('err',d2.error||'Could not undo.'); b.disabled=false; return; }
+        META.noPost=d2.result.noPost; renderCalTab(); try{ renderPdCalendar(); }catch(e){} npSay('ok','Put back '+x.date+' · '+x.name+'.'); });
+    }
     function npOfferPlan(dates, trigger){ try{ openNoPostPlan(trigger, { dates:dates }); }catch(e){ var m=$('npMsg'); if(m){ m.className='pstatus err'; m.textContent='Could not build the plan: '+shortErr(e.message||e); } } }
+    // One status line shown under both calendars. Undo stays until the next action: no timer to race.
+    function npSay(cls, text, undo){
+      ['npMsg','pdNpMsg'].forEach(function(id){ var m=$(id); if(!m) return;
+        m.className='pstatus '+cls; m.textContent=text;
+        if(undo){ var b=document.createElement('button'); b.type='button'; b.className='linkbtn npUndo'; b.textContent='Undo'; b.style.cssText='margin-left:8px;color:var(--brand);font-weight:600;min-height:32px';
+          b.onclick=function(){ b.disabled=true; if(typeof undo==='function') undo(b); else saveNoPost({changes:undo}, undo[0].date, undo[0].on, b); }; m.appendChild(b); } });
+    }
+    async function npConfirmUnblock(date, trigger){
+      var names=noPostList().filter(function(x){ return x.date===date && x.on; }).map(function(x){ return x.name; });
+      var short=niceDate(date);
+      return new Promise(function(res){
+        OSheet.open({ trigger:trigger, narrow:true, title:'Unblock '+short+'?', sub:esc(names.join(', ')),
+          body:'<p>Posts can be scheduled on this day again, and imports will accept it. Nothing is moved or deleted. You can block it again, and there will be an Undo.</p>',
+          onClose:function(v){ res(v===true); },
+          actions:[ {label:'Unblock '+short, value:true}, {label:'Keep blocked', kind:'primary', value:false} ] }); });
+    }
     async function saveNoPost(payload, date, on, el){
-      var msg=$('npMsg'); if(msg){ msg.className='pstatus muted'; msg.textContent='Saving…'; }
+      npSay('muted','Saving…');
       var data=await call('setNoPost', payload);
-      if(!data.ok){ if(msg){ msg.className='pstatus err'; msg.textContent=data.error||'Could not save.'; } if(el && el.type==='checkbox') el.checked=!on; return false; }
+      if(!data.ok){ npSay('err', data.error||'Could not save.'); if(el && el.type==='checkbox') el.checked=!on; return false; }
       META.noPost=data.result.noPost; renderCalTab(); try{ renderPdCalendar(); }catch(e){}
       if(el && !document.body.contains(el) && date){ el=document.querySelector('#pdCalGrid .calcell[data-d="'+date+'"]')||el; }
       var n=on&&date ? piecesOnNoPost().filter(function(r){ return r['Publish Date']===date; }).length : 0;
-      if(msg){ msg.className='pstatus ok';
-        msg.textContent = payload.add ? 'Date added.' : (on ? ('Blocked '+date+'.'+(n?' '+n+' unpublished piece(s) sit on it.':'')) : ('Unblocked '+date+'. Nothing moved.')); }
+      var inv = (payload.changes && payload.changes.length) ? payload.changes.map(function(c){ return {row:c.row,date:c.date,on:!c.on}; }) : null;
+      npSay('ok', payload.add ? 'Date added.' : (on ? ('Blocked '+date+'.'+(n?' '+n+' unpublished piece(s) sit on it.':'')) : ('Unblocked '+date+'. Nothing moved.')), inv);
       if(on && date) npOfferPlan([date], el || $('npAddBtn'));
       else if(!on && date && !payload.add) npOfferUndo(date, el);
       return true;
