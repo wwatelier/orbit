@@ -179,13 +179,6 @@
     .np-toggle input { width:20px; height:20px; margin:0; }
     .np-how { margin:14px 0 4px; font-size:12.5px; color:var(--ink-soft); } .np-how summary { cursor:pointer; min-height:32px; } .np-how p { line-height:1.55; margin:6px 0 0; }
     @media (max-width: 520px){ .np-row { grid-template-columns:44px minmax(0,1fr); } .np-dates { grid-column:2; align-items:flex-start; } .np-sub { white-space:normal; } }
-    .calcell .npbtn { position:absolute; top:4px; right:18px; font-size:10px; line-height:1; padding:4px 7px; min-height:22px; border-radius:999px; border:1px solid var(--line); background:#fff; color:var(--ink-soft); cursor:pointer; opacity:0; transition:opacity .12s ease; }
-    .calcell:hover .npbtn, .calcell:focus-within .npbtn, .calcell .npbtn:focus-visible { opacity:1; }
-    .calcell.nopost .npbtn { opacity:1; color:#b3261e; border-color:#e8b9b4; }
-    .calcell .npbtn:active { transform:scale(.96); }
-    .calcell .npbtn:disabled { opacity:.5; cursor:default; }
-    @media (hover:none){ .calcell .npbtn { opacity:.85; min-height:30px; padding:6px 9px; } }
-    @media (prefers-reduced-motion: reduce){ .calcell .npbtn { transition:none; } }
     .mgrid button.sel { box-shadow:inset 0 0 0 2px var(--brand); background:var(--brand-soft); font-weight:700; }
     .np-stage { border:1px solid var(--line); border-radius:12px; padding:14px; margin:0 0 14px; background:#fbfbfa; }
     .np-strow { display:grid; grid-template-columns:150px minmax(150px,1fr) 150px 100px 44px; gap:8px; align-items:center; margin:6px 0; }
@@ -5168,29 +5161,6 @@ sched,
       Array.prototype.forEach.call(h.el.querySelectorAll('#npEdName,#npEdNote'), function(f){ f.onkeydown=function(e){ if(e.key==='Enter'){ e.preventDefault(); var p=h.el.querySelector('.osh-actions .primary'); if(p) p.click(); } }; });
       if(window.matchMedia && window.matchMedia('(hover:hover)').matches) setTimeout(function(){ var f=$('npEdName'); if(f){ f.focus(); f.select(); } }, 80);   // no keyboard pop-up on touch
     }
-    // Block / Unblock straight from a Publish Dates calendar cell. Same save, same plan sheet, same undo as Team Calendar.
-    async function npCellToggle(iso, client, btn){
-      var say=function(cls,t){ var m=$('pdNpMsg'); if(m){ m.className='pstatus '+cls; m.textContent=t; } };
-      btn.disabled=true;
-      try{
-        if(!(META&&META.noPost&&META.noPost.exists)){
-          say('muted','Setting up the No Post Dates tab…');
-          var s=await call('setupNoPost',{});
-          if(!s.ok){ say('err',s.error||'Could not set up the No Post Dates tab.'); btn.disabled=false; return; }
-          META.noPost=s.result.noPost;
-        }
-        var applies=function(x){ if(!client) return true; var a=String(x.accounts||'All').split(/[,;]/).map(function(v){return v.trim().toLowerCase();}); return a.indexOf('all')>=0 || a.indexOf(String(client).toLowerCase())>=0; };
-        var list=noPostList().filter(function(x){ return x.date===iso && applies(x); });
-        var on=list.filter(function(x){ return x.on; }), off=list.filter(function(x){ return !x.on; }), payload, turnOn;
-        if(on.length){ turnOn=false; btn.disabled=false; var okU=await npConfirmUnblock(iso, btn); if(!okU){ return; } btn.disabled=true; payload={changes:on.map(function(x){ return {row:x.row,date:iso,on:false}; })}; }
-        else if(off.length){ turnOn=true; payload={changes:[{row:off[0].row,date:iso,on:true}]}; }
-        else { turnOn=true; payload={add:[{date:iso,name:'No Post day',country:'All',type:'WWA skip day',accounts:'All',source:'',note:'',on:true}]}; }
-        say('muted','Saving…');
-        var ok=await saveNoPost(payload, iso, turnOn, btn);
-        if(ok && payload.add) npSay('ok','Blocked '+iso+' as "No Post day". Rename it with Edit in Team Calendar.');
-      }catch(e){ say('err',shortErr(e.message||e)); }
-      var nb=document.querySelector('#pdCalGrid .npbtn[data-d="'+iso+'"]'); if(nb) nb.disabled=false; btn.disabled=false;
-    }
     async function npSaveEdit(x){
       var msg=$('npMsg'), nm=($('npEdName').value||'').trim(), ty=$('npEdType').value, nt=($('npEdNote').value||'').trim(), sb=$('npEdSave');
       if(!nm){ if(msg){ msg.className='pstatus err'; msg.textContent='Give the date a name.'; } return; }
@@ -5893,7 +5863,6 @@ sched,
       var cls='calcell'+(isOff?' off':'')+(isPostDay?' postday':'')+(npHit?' nopost':'');
       var html='<div class="'+cls+'" data-d="'+iso+'">'+(isCollabDay?'<span class="collabmark" title="'+esc(TT('Recurring collab day'))+'"></span>':'')+
         '<div class="calnum'+(isToday?' today':'')+'">'+d.getDate()+(onGrid && dow===1 ? '<span class="calwk">W'+(gridWeek(iso)+1)+'</span>' : '')+'</div>';
-      if(!isOff && iso>=todayISO()) html+='<button class="npbtn" data-d="'+iso+'" title="'+esc(npHit?npT('Unblock this day','ปลดวันห้ามโพสต์'):npT('Block this day: nothing publishes','บล็อกวันนี้: ห้ามโพสต์'))+'">'+esc(npHit?npT('Unblock','ปลด'):npT('Block','บล็อก'))+'</button>';
       if(npHit) html+='<div class="nplabel" title="'+esc(npT('No Post date. Nothing publishes today.','วันห้ามโพสต์'))+'">'+esc(npT('No Post','ห้ามโพสต์'))+' · '+esc(npHit.name)+'</div>';
       list.slice(0,cap).forEach(function(o){ html+=pdCard(o, rich, client); });
       if(list.length>cap) html+='<button class="calmore" data-d="'+iso+'">+'+(list.length-cap)+' more</button>';
@@ -5948,9 +5917,6 @@ sched,
       Array.prototype.forEach.call(host.querySelectorAll('.calnum'), function(el){
         el.style.cursor='pointer';
         el.onclick=function(){ const d=el.closest('.calcell').dataset.d; openPdDay(d, byDay[d]||[]); };
-      });
-      Array.prototype.forEach.call(host.querySelectorAll('.npbtn'), function(el){
-        el.onclick=function(e){ e.stopPropagation(); npCellToggle(el.dataset.d, client, el); };
       });
       wirePdDrag(host);
     }
