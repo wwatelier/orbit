@@ -2489,7 +2489,9 @@
         const d=await call('importBatch',{tsv:tsv}); b.disabled=false;
         if(!d.ok){ acStatus(d.error,'err'); return; }
         acStatus(_L('Added ','เพิ่มแล้ว ')+id+(_o&&_o.lane.quota?_L(' · piece '+_o.n+' of '+_o.lane.quota+' for '+quotaLaneLabel(_o.lane)+', batch '+_o.lane.batch,' · ชิ้นที่ '+_o.n+' จาก '+_o.lane.quota+' ของ '+quotaLaneLabel(_o.lane)+' Batch '+_o.lane.batch):'')+_L('.',''),'ok'); $('acId').value='';$('acTitle').value='';$('acPlatform').value='';$('acDate').value='';
-        loadRows();
+        await loadRows();
+        if(cm){ var _nr=allRows.filter(function(x){ return x['Piece ID']===id; })[0];
+          if(!isClientMade(_nr)) acStatus(_L('Added, but “Produced by client” did not save. Redeploy Apps Script, then tick it in the piece panel.','เพิ่มแล้ว แต่ “ลูกค้าทำเอง” ไม่ถูกบันทึก ให้ Deploy Apps Script ใหม่ แล้วติ๊กอีกครั้งในหน้าชิ้นงาน'),'err'); }
       };
     })();
 
